@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\ProductReturnController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\ReportController;
+use App\Http\Controllers\Api\DashboardController;
 
 /*
 |--------------------------------------------------------------------------
@@ -103,6 +104,17 @@ Route::middleware('auth:sanctum')->group(function () {
     // Roles routes
     Route::apiResource('roles', RoleController::class);
     Route::post('roles/{role}/permissions', [RoleController::class, 'updatePermissions']);
+
+    // Dashboard routes
+    Route::get('dashboard', [DashboardController::class, 'index']);
+    Route::get('dashboard/sales-analytics', [DashboardController::class, 'salesAnalytics']);
+    Route::get('dashboard/purchase-analytics', [DashboardController::class, 'purchaseAnalytics']);
+    Route::get('dashboard/product-analytics', [DashboardController::class, 'productAnalytics']);
+    Route::get('dashboard/top-customers', [DashboardController::class, 'topCustomers']);
+    Route::get('dashboard/top-suppliers', [DashboardController::class, 'topSuppliers']);
+    Route::get('dashboard/product-movement/{productId}', [DashboardController::class, 'productMovement']);
+    Route::post('dashboard/clear-cache', [DashboardController::class, 'clearCache']);
+    Route::post('dashboard/refresh-cache', [DashboardController::class, 'refreshCache']);
 
     // Reports routes
     Route::get('reports/profit', [ReportController::class, 'profitReport']);
