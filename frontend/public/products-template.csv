@@ -1,16 +1,16 @@
-name,name_ar,sku,barcode,category_id,category_name,brand_id,brand_name,unit_id,unit_name,purchase_price,selling_price,quantity,reorder_level,description
-Premium Coffee,قهوة فاخرة,PRD-001,1234567890001,,,,,,,50.00,100.00,100,20,Premium Arabic Coffee Beans
-Fresh Milk,حليب طازج,PRD-002,1234567890002,,,,,,,10.00,15.00,50,10,Fresh Full Fat Milk 1L
-Chocolate Bar,شوكولاتة,PRD-003,1234567890003,,,,,,,5.00,10.00,200,30,Dark Chocolate 100g
-White Bread,خبز أبيض,PRD-004,1234567890004,,,,,,,3.00,5.00,80,15,Fresh White Bread Loaf
-Turmeric Powder,كركم مطحون,PRD-005,1234567890005,,,,,,,15.00,25.00,60,10,Organic Turmeric Powder 250g
-Orange Juice,عصير برتقال,PRD-006,1234567890006,,,,,,,8.00,12.00,40,10,Fresh Orange Juice 1L
-Yogurt,لبن زبادي,PRD-007,1234567890007,,,,,,,4.00,7.00,100,20,Natural Yogurt 500g
-Potato Chips,شيبس بطاطس,PRD-008,1234567890008,,,,,,,6.00,10.00,150,25,Crispy Potato Chips 150g
-Croissant,كرواسون,PRD-009,1234567890009,,,,,,,4.00,8.00,60,10,Butter Croissant
-Black Pepper,فلفل أسود,PRD-010,1234567890010,,,,,,,20.00,35.00,40,8,Ground Black Pepper 100g
-Green Tea,شاي أخضر,PRD-011,1234567890011,,,,,,,12.00,20.00,80,15,Premium Green Tea Bags
-Cheese,جبنة,PRD-012,1234567890012,,,,,,,25.00,40.00,50,10,Cheddar Cheese 500g
-Cookies,بسكويت,PRD-013,1234567890013,,,,,,,8.00,15.00,120,20,Chocolate Chip Cookies 300g
-Cake,كيك,PRD-014,1234567890014,,,,,,,15.00,25.00,30,5,Vanilla Cake Slice
-Cinnamon,قرفة,PRD-015,1234567890015,,,,,,,18.00,30.00,35,7,Ground Cinnamon 100g
+name,name_ar,sku,barcode,category,brand,unit,purchase_price,selling_price,quantity,reorder_level,description
+Premium Coffee,قهوة فاخرة,PRD-001,1234567890001,Drinks,Premium,Piece,50.00,100.00,100,20,Premium Arabic Coffee Beans
+Fresh Milk,حليب طازج,PRD-002,1234567890002,Dairy,Fresh,Liter,10.00,15.00,50,10,Fresh Full Fat Milk 1L
+Chocolate Bar,شوكولاتة,PRD-003,1234567890003,Snacks,Delicious,Piece,5.00,10.00,200,30,Dark Chocolate 100g
+White Bread,خبز أبيض,PRD-004,1234567890004,Bakery,Fresh,Piece,3.00,5.00,80,15,Fresh White Bread Loaf
+Turmeric Powder,كركم مطحون,PRD-005,1234567890005,Spices,Organic,Kilogram,15.00,25.00,60,10,Organic Turmeric Powder 250g
+Orange Juice,عصير برتقال,PRD-006,1234567890006,Drinks,Fresh,Liter,8.00,12.00,40,10,Fresh Orange Juice 1L
+Yogurt,لبن زبادي,PRD-007,1234567890007,Dairy,Natural,Piece,4.00,7.00,100,20,Natural Yogurt 500g
+Potato Chips,شيبس بطاطس,PRD-008,1234567890008,Snacks,Crispy,Piece,6.00,10.00,150,25,Crispy Potato Chips 150g
+Croissant,كرواسون,PRD-009,1234567890009,Bakery,Premium,Piece,4.00,8.00,60,10,Butter Croissant
+Black Pepper,فلفل أسود,PRD-010,1234567890010,Spices,Organic,Kilogram,20.00,35.00,40,8,Ground Black Pepper 100g
+Green Tea,شاي أخضر,PRD-011,1234567890011,Drinks,Premium,Box,12.00,20.00,80,15,Premium Green Tea Bags
+Cheese,جبنة,PRD-012,1234567890012,Dairy,Delicious,Kilogram,25.00,40.00,50,10,Cheddar Cheese 500g
+Cookies,بسكويت,PRD-013,1234567890013,Snacks,Sweet,Box,8.00,15.00,120,20,Chocolate Chip Cookies 300g
+Cake,كيك,PRD-014,1234567890014,Bakery,Premium,Piece,15.00,25.00,30,5,Vanilla Cake Slice
+Cinnamon,قرفة,PRD-015,1234567890015,Spices,Organic,Kilogram,18.00,30.00,35,7,Ground Cinnamon 100g

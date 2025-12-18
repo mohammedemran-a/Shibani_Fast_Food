@@ -45,14 +45,23 @@ class ImportController extends Controller
                     // Map CSV row to array
                     $data = array_combine($headers, $row);
                     
-                    // Get or create category
-                    $category = $this->getOrCreateCategory($data);
+                    // Get or create category (using 'category' field)
+                    $categoryName = $data['category'] ?? null;
+                    if (empty($categoryName)) {
+                        throw new \Exception('Category is required');
+                    }
+                    $category = $this->getOrCreateCategory($categoryName);
                     
-                    // Get or create brand (optional)
-                    $brand = !empty($data['brand_id']) ? $this->getOrCreateBrand($data) : null;
+                    // Get or create brand (optional, using 'brand' field)
+                    $brandName = $data['brand'] ?? null;
+                    $brand = !empty($brandName) ? $this->getOrCreateBrand($brandName) : null;
                     
-                    // Get or create unit
-                    $unit = $this->getOrCreateUnit($data);
+                    // Get or create unit (using 'unit' field)
+                    $unitName = $data['unit'] ?? null;
+                    if (empty($unitName)) {
+                        throw new \Exception('Unit is required');
+                    }
+                    $unit = $this->getOrCreateUnit($unitName);
                     
                     // Create product
                     Product::create([
@@ -102,105 +111,67 @@ class ImportController extends Controller
     }
     
     /**
-     * Get or create category
+     * Get or create category by name
      */
-    private function getOrCreateCategory($data)
+    private function getOrCreateCategory(string $name)
     {
-        // Try to find by ID first
-        if (!empty($data['category_id']) && is_numeric($data['category_id'])) {
-            $category = Category::find($data['category_id']);
-            if ($category) {
-                return $category;
-            }
+        // Try to find by name (English or Arabic)
+        $category = Category::where('name', $name)
+            ->orWhere('name_ar', $name)
+            ->first();
+        
+        if ($category) {
+            return $category;
         }
         
-        // Try to find by name
-        if (!empty($data['category_name'])) {
-            $category = Category::where('name', $data['category_name'])
-                ->orWhere('name_ar', $data['category_name'])
-                ->first();
-            
-            if ($category) {
-                return $category;
-            }
-            
-            // Create new category
-            return Category::create([
-                'name' => $data['category_name'],
-                'name_ar' => $data['category_name'],
-            ]);
-        }
-        
-        // If category_id is provided but not found, throw error
-        throw new \Exception('Category not found or invalid');
+        // Create new category
+        return Category::create([
+            'name' => $name,
+            'name_ar' => $name,
+        ]);
     }
     
     /**
-     * Get or create brand
+     * Get or create brand by name
      */
-    private function getOrCreateBrand($data)
+    private function getOrCreateBrand(string $name)
     {
-        // Try to find by ID first
-        if (!empty($data['brand_id']) && is_numeric($data['brand_id'])) {
-            $brand = Brand::find($data['brand_id']);
-            if ($brand) {
-                return $brand;
-            }
+        // Try to find by name (English or Arabic)
+        $brand = Brand::where('name', $name)
+            ->orWhere('name_ar', $name)
+            ->first();
+        
+        if ($brand) {
+            return $brand;
         }
         
-        // Try to find by name
-        if (!empty($data['brand_name'])) {
-            $brand = Brand::where('name', $data['brand_name'])
-                ->orWhere('name_ar', $data['brand_name'])
-                ->first();
-            
-            if ($brand) {
-                return $brand;
-            }
-            
-            // Create new brand
-            return Brand::create([
-                'name' => $data['brand_name'],
-                'name_ar' => $data['brand_name'],
-            ]);
-        }
-        
-        return null;
+        // Create new brand
+        return Brand::create([
+            'name' => $name,
+            'name_ar' => $name,
+        ]);
     }
     
     /**
-     * Get or create unit
+     * Get or create unit by name
      */
-    private function getOrCreateUnit($data)
+    private function getOrCreateUnit(string $name)
     {
-        // Try to find by ID first
-        if (!empty($data['unit_id']) && is_numeric($data['unit_id'])) {
-            $unit = Unit::find($data['unit_id']);
-            if ($unit) {
-                return $unit;
-            }
+        // Try to find by name, name_ar, or abbreviation
+        $unit = Unit::where('name', $name)
+            ->orWhere('name_ar', $name)
+            ->orWhere('abbreviation', $name)
+            ->first();
+        
+        if ($unit) {
+            return $unit;
         }
         
-        // Try to find by name or abbreviation
-        if (!empty($data['unit_name'])) {
-            $unit = Unit::where('name', $data['unit_name'])
-                ->orWhere('name_ar', $data['unit_name'])
-                ->orWhere('abbreviation', $data['unit_name'])
-                ->first();
-            
-            if ($unit) {
-                return $unit;
-            }
-            
-            // Create new unit
-            return Unit::create([
-                'name' => $data['unit_name'],
-                'name_ar' => $data['unit_name'],
-                'abbreviation' => strtolower(substr($data['unit_name'], 0, 3)),
-            ]);
-        }
-        
-        // If unit_id is provided but not found, throw error
-        throw new \Exception('Unit not found or invalid');
+        // Create new unit with auto-generated abbreviation
+        return Unit::create([
+            'name' => $name,
+            'name_ar' => $name,
+            'abbreviation' => strtolower(substr($name, 0, 3)),
+        ]);
     }
 }
