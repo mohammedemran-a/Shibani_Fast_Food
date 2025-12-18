@@ -1,11 +1,12 @@
 import React, { useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
-import { Search, ScanBarcode } from 'lucide-react';
+import { Search, ScanBarcode, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { useProducts } from '@/hooks/useProducts';
 
 const categories = [
   { id: 'all', nameKey: 'pos.all' },
@@ -15,23 +16,19 @@ const categories = [
   { id: 'bakery', nameKey: 'categories.bakery' },
 ];
 
-const products = [
-  { id: 1, name: 'قهوة عربية', nameEn: 'Arabic Coffee', barcode: '6281000001234', price: 3.00, category: 'drinks', stock: 50, image: '☕' },
-  { id: 2, name: 'شاي أخضر', nameEn: 'Green Tea', barcode: '6281000001235', price: 2.00, category: 'drinks', stock: 80, image: '🍵' },
-  { id: 3, name: 'عصير برتقال', nameEn: 'Orange Juice', barcode: '6281000001236', price: 3.50, category: 'drinks', stock: 30, image: '🍊' },
-  { id: 4, name: 'ماء معدني', nameEn: 'Mineral Water', barcode: '6281000001237', price: 1.00, category: 'drinks', stock: 100, image: '💧' },
-  { id: 5, name: 'بسكويت شوكولاتة', nameEn: 'Chocolate Biscuit', barcode: '6281000001238', price: 2.00, category: 'snacks', stock: 45, image: '🍪' },
-  { id: 6, name: 'شيبس', nameEn: 'Chips', barcode: '6281000001239', price: 1.50, category: 'snacks', stock: 60, image: '🥔' },
-  { id: 7, name: 'حليب طازج', nameEn: 'Fresh Milk', barcode: '6281000001240', price: 2.50, category: 'dairy', stock: 25, image: '🥛' },
-  { id: 8, name: 'جبنة', nameEn: 'Cheese', barcode: '6281000001241', price: 4.00, category: 'dairy', stock: 20, image: '🧀' },
-  { id: 9, name: 'خبز', nameEn: 'Bread', barcode: '6281000001242', price: 1.00, category: 'bakery', stock: 40, image: '🍞' },
-  { id: 10, name: 'كرواسون', nameEn: 'Croissant', barcode: '6281000001243', price: 2.50, category: 'bakery', stock: 35, image: '🥐' },
-  { id: 11, name: 'كولا', nameEn: 'Cola', barcode: '6281000001244', price: 1.50, category: 'drinks', stock: 70, image: '🥤' },
-  { id: 12, name: 'زبادي', nameEn: 'Yogurt', barcode: '6281000001245', price: 1.50, category: 'dairy', stock: 55, image: '🥛' },
-];
+interface Product {
+  id: number;
+  name: string;
+  name_ar: string;
+  barcode: string;
+  selling_price: number;
+  category_id: number;
+  quantity: number;
+  image?: string;
+}
 
 interface ProductsGridProps {
-  onAddToCart: (product: typeof products[0]) => void;
+  onAddToCart: (product: any) => void;
 }
 
 export const ProductsGrid: React.FC<ProductsGridProps> = ({ onAddToCart }) => {
@@ -40,6 +37,13 @@ export const ProductsGrid: React.FC<ProductsGridProps> = ({ onAddToCart }) => {
   const [searchQuery, setSearchQuery] = React.useState('');
   const [barcodeInput, setBarcodeInput] = React.useState('');
   const barcodeInputRef = useRef<HTMLInputElement>(null);
+
+  // Fetch products from API
+  const { data: productsData, isLoading } = useProducts({
+    is_active: true,
+  });
+
+  const products = productsData?.data?.data || [];
 
   // Auto-focus barcode input on mount and keep focus
   useEffect(() => {
@@ -52,10 +56,19 @@ export const ProductsGrid: React.FC<ProductsGridProps> = ({ onAddToCart }) => {
   const handleBarcodeKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && barcodeInput.trim()) {
       e.preventDefault();
-      const product = products.find(p => p.barcode === barcodeInput.trim());
+      const product = products.find((p: Product) => p.barcode === barcodeInput.trim());
       if (product) {
-        onAddToCart(product);
-        toast.success(`${t('pos.addedToCart')} ${i18n.language === 'ar' ? product.name : product.nameEn}`);
+        const cartProduct = {
+          id: product.id,
+          name: product.name_ar,
+          nameEn: product.name,
+          barcode: product.barcode,
+          price: product.selling_price,
+          stock: product.quantity,
+          image: product.image || '📦',
+        };
+        onAddToCart(cartProduct);
+        toast.success(`${t('pos.addedToCart')} ${i18n.language === 'ar' ? product.name_ar : product.name}`);
       } else {
         toast.error(t('pos.productNotFound'));
       }
@@ -72,12 +85,13 @@ export const ProductsGrid: React.FC<ProductsGridProps> = ({ onAddToCart }) => {
     }
   };
 
-  const filteredProducts = products.filter(product => {
-    const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
+  const filteredProducts = products.filter((product: Product) => {
+    // For now, show all products (category filtering can be added later with category names)
+    const matchesCategory = selectedCategory === 'all';
     const searchLower = searchQuery.toLowerCase();
     const matchesSearch = 
+      product.name_ar.toLowerCase().includes(searchLower) ||
       product.name.toLowerCase().includes(searchLower) ||
-      product.nameEn.toLowerCase().includes(searchLower) ||
       product.barcode.includes(searchQuery);
     return matchesCategory && matchesSearch;
   });
@@ -98,19 +112,21 @@ export const ProductsGrid: React.FC<ProductsGridProps> = ({ onAddToCart }) => {
         />
       </div>
 
-      {/* Search */}
-      <div className="relative mb-4">
-        <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input
-          placeholder={t('pos.searchProducts')}
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="ps-10 bg-card border-border"
-        />
+      {/* Search and Filter */}
+      <div className="flex gap-3 mb-3">
+        <div className="relative flex-1">
+          <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder={t('pos.searchProducts')}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="ps-10"
+          />
+        </div>
       </div>
 
       {/* Categories */}
-      <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
+      <div className="flex gap-2 mb-3 overflow-x-auto pb-2 scrollbar-thin">
         {categories.map((category) => (
           <Button
             key={category.id}
@@ -118,7 +134,7 @@ export const ProductsGrid: React.FC<ProductsGridProps> = ({ onAddToCart }) => {
             size="sm"
             onClick={() => setSelectedCategory(category.id)}
             className={cn(
-              'shrink-0 transition-all',
+              'whitespace-nowrap transition-all',
               selectedCategory === category.id && 'gradient-primary border-0'
             )}
           >
@@ -129,30 +145,64 @@ export const ProductsGrid: React.FC<ProductsGridProps> = ({ onAddToCart }) => {
 
       {/* Products Grid */}
       <div className="flex-1 overflow-y-auto">
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-          {filteredProducts.map((product, index) => (
-            <motion.div
-              key={product.id}
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.2, delay: index * 0.03 }}
-              className="pos-product-card"
-              onClick={(e) => {
-                e.stopPropagation();
-                onAddToCart(product);
-              }}
-            >
-              <div className="text-4xl mb-2 text-center">{product.image}</div>
-              <h4 className="font-medium text-foreground text-sm truncate">
-                {i18n.language === 'ar' ? product.name : product.nameEn}
-              </h4>
-              <div className="flex items-center justify-between mt-2">
-                <span className="font-bold text-primary">${product.price.toFixed(2)}</span>
-                <span className="text-xs text-muted-foreground">{product.stock} {t('pos.available')}</span>
-              </div>
-            </motion.div>
-          ))}
-        </div>
+        {isLoading ? (
+          <div className="flex items-center justify-center h-full">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          </div>
+        ) : filteredProducts.length === 0 ? (
+          <div className="flex items-center justify-center h-full text-muted-foreground">
+            {t('pos.noProducts')}
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 pb-4">
+            {filteredProducts.map((product: Product, index: number) => {
+              const cartProduct = {
+                id: product.id,
+                name: product.name_ar,
+                nameEn: product.name,
+                barcode: product.barcode,
+                price: product.selling_price,
+                stock: product.quantity,
+                image: product.image || '📦',
+              };
+
+              return (
+                <motion.button
+                  key={product.id}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: index * 0.02 }}
+                  onClick={() => {
+                    onAddToCart(cartProduct);
+                    toast.success(`${t('pos.addedToCart')} ${i18n.language === 'ar' ? product.name_ar : product.name}`);
+                  }}
+                  className={cn(
+                    'glass-card p-3 text-start hover:scale-105 transition-all',
+                    'hover:border-primary/50 hover:shadow-lg hover:shadow-primary/20',
+                    product.quantity === 0 && 'opacity-50 cursor-not-allowed'
+                  )}
+                  disabled={product.quantity === 0}
+                >
+                  <div className="text-3xl mb-2 text-center">{product.image || '📦'}</div>
+                  <h4 className="font-medium text-sm mb-1 line-clamp-2 min-h-[2.5rem]">
+                    {i18n.language === 'ar' ? product.name_ar : product.name}
+                  </h4>
+                  <div className="flex items-center justify-between mt-2">
+                    <span className="text-lg font-bold text-primary">
+                      ${product.selling_price.toFixed(2)}
+                    </span>
+                    <span className={cn(
+                      'text-xs px-2 py-0.5 rounded-full',
+                      product.quantity > 10 ? 'bg-success/20 text-success' : 'bg-warning/20 text-warning'
+                    )}>
+                      {product.quantity}
+                    </span>
+                  </div>
+                </motion.button>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );

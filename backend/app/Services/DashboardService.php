@@ -159,7 +159,7 @@ class DashboardService
         return [
             'total_count' => Product::count(),
             'active_count' => Product::where('is_active', true)->count(),
-            'low_stock_count' => Product::whereRaw('quantity <= min_quantity')->count(),
+            'low_stock_count' => Product::whereRaw('quantity <= reorder_level')->count(),
             'out_of_stock_count' => Product::where('quantity', 0)->count(),
             'total_value' => (float) Product::selectRaw('SUM(quantity * purchase_price) as total')->value('total'),
         ];

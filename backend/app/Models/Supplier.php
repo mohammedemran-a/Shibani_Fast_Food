@@ -8,4 +8,25 @@ use Illuminate\Database\Eloquent\Model;
 class Supplier extends Model
 {
     use HasFactory;
+
+    protected $fillable = [
+        'name',
+        'name_ar',
+        'email',
+        'phone',
+        'address',
+        'city',
+        'country',
+        'notes',
+        'is_active',
+    ];
+
+    protected $casts = [
+        'is_active' => 'boolean',
+    ];
+
+    public function purchaseInvoices()
+    {
+        return $this->hasMany(PurchaseInvoice::class);
+    }
 }

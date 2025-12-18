@@ -70,7 +70,13 @@ class ProductController extends Controller
             'reorder_level' => 'integer|min:0',
             'expiry_date' => 'nullable|date',
             'description' => 'nullable|string',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
+
+        // Handle image upload
+        if ($request->hasFile('image')) {
+            $validated['image'] = $request->file('image')->store('products', 'public');
+        }
 
         $product = Product::create($validated);
 
@@ -138,7 +144,17 @@ class ProductController extends Controller
             'expiry_date' => 'nullable|date',
             'description' => 'nullable|string',
             'is_active' => 'boolean',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
+
+        // Handle image upload
+        if ($request->hasFile('image')) {
+            // Delete old image if exists
+            if ($product->image && \Storage::disk('public')->exists($product->image)) {
+                \Storage::disk('public')->delete($product->image);
+            }
+            $validated['image'] = $request->file('image')->store('products', 'public');
+        }
 
         $product->update($validated);
 
@@ -161,6 +177,11 @@ class ProductController extends Controller
                 'success' => false,
                 'message' => 'Product not found',
             ], 404);
+        }
+
+        // Delete image if exists
+        if ($product->image && \Storage::disk('public')->exists($product->image)) {
+            \Storage::disk('public')->delete($product->image);
         }
 
         $product->delete();

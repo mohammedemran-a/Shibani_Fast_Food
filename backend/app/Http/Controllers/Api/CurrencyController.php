@@ -3,63 +3,67 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Currency;
 use Illuminate\Http\Request;
 
 class CurrencyController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
     public function index()
     {
-        //
+        $currencies = Currency::all();
+        return response()->json(['success' => true, 'data' => $currencies]);
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
     {
-        //
+        $validated = $request->validate([
+            'name' => 'required|string',
+            'code' => 'required|string|unique:currencies',
+            'symbol' => 'required|string',
+            'exchange_rate' => 'numeric|min:0',
+            'is_default' => 'boolean',
+        ]);
+
+        $currency = Currency::create($validated);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Currency created successfully',
+            'data' => $currency,
+        ], 201);
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
+    public function show(Currency $currency)
     {
-        //
+        return response()->json(['success' => true, 'data' => $currency]);
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(string $id)
+    public function update(Request $request, Currency $currency)
     {
-        //
+        $validated = $request->validate([
+            'name' => 'string',
+            'code' => 'string|unique:currencies,code,' . $currency->id,
+            'symbol' => 'string',
+            'exchange_rate' => 'numeric|min:0',
+            'is_default' => 'boolean',
+        ]);
+
+        $currency->update($validated);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Currency updated successfully',
+            'data' => $currency,
+        ]);
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, string $id)
+    public function destroy(Currency $currency)
     {
-        //
-    }
+        $currency->delete();
 
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(string $id)
-    {
-        //
+        return response()->json([
+            'success' => true,
+            'message' => 'Currency deleted successfully',
+        ]);
     }
 }

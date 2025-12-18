@@ -2,7 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowRight, ArrowLeft, Save, Plus, Trash2, Barcode } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Save, Plus, Trash2, Barcode, Upload, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -35,6 +35,8 @@ const AddProduct: React.FC = () => {
     expiryDate: '',
     hasMultipleBarcodes: false,
   });
+  const [imageFile, setImageFile] = React.useState<File | null>(null);
+  const [imagePreview, setImagePreview] = React.useState<string>('');
   const [barcodeVariants, setBarcodeVariants] = React.useState<BarcodeVariant[]>([]);
 
   const BackIcon = isRTL ? ArrowRight : ArrowLeft;
@@ -42,6 +44,23 @@ const AddProduct: React.FC = () => {
 
   const generateBarcode = () => {
     return Math.random().toString().slice(2, 15);
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setImageFile(null);
+    setImagePreview('');
   };
 
   const handleAddBarcodeVariant = () => {
@@ -114,6 +133,45 @@ const AddProduct: React.FC = () => {
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 required
               />
+            </div>
+
+            {/* Image Upload */}
+            <div className="space-y-2">
+              <Label>{t('products.image')}</Label>
+              <div className="flex items-center gap-4">
+                {imagePreview ? (
+                  <div className="relative">
+                    <img
+                      src={imagePreview}
+                      alt="Product preview"
+                      className="w-24 h-24 object-cover rounded-lg border-2 border-border"
+                    />
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="destructive"
+                      className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
+                      onClick={handleRemoveImage}
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <label className="flex flex-col items-center justify-center w-24 h-24 border-2 border-dashed border-border rounded-lg cursor-pointer hover:border-primary transition-colors">
+                    <Upload className="w-6 h-6 text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground mt-1">{t('common.upload')}</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleImageChange}
+                    />
+                  </label>
+                )}
+                <div className="text-sm text-muted-foreground">
+                  <p>{t('products.imageHint')}</p>
+                </div>
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
