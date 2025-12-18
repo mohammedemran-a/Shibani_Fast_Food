@@ -1,7 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
-import { Plus, Edit2, Trash2, Bookmark } from 'lucide-react';
+import { Plus, Trash2, Award, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,36 +13,60 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-
-const initialBrands = [
-  { id: 1, name: 'المراعي', productsCount: 15, country: 'السعودية' },
-  { id: 2, name: 'ندى', productsCount: 12, country: 'السعودية' },
-  { id: 3, name: 'نستله', productsCount: 20, country: 'سويسرا' },
-  { id: 4, name: 'ليبتون', productsCount: 8, country: 'المملكة المتحدة' },
-  { id: 5, name: 'أوريو', productsCount: 5, country: 'أمريكا' },
-];
+import { useBrands, useCreateBrand, useDeleteBrand } from '@/hooks/useBrands';
 
 const Brands: React.FC = () => {
   const { t } = useTranslation();
-  const [brands, setBrands] = React.useState(initialBrands);
   const [isOpen, setIsOpen] = React.useState(false);
-  const [newBrand, setNewBrand] = React.useState({ name: '', country: '' });
+  const [newBrand, setNewBrand] = React.useState({ name: '', name_ar: '', description: '' });
 
-  const handleAdd = () => {
-    if (!newBrand.name) {
+  // Fetch brands from API
+  const { data: brandsData, isLoading } = useBrands();
+  const createBrand = useCreateBrand();
+  const deleteBrand = useDeleteBrand();
+
+  const brands = brandsData?.data || [];
+
+  const handleAdd = async () => {
+    if (!newBrand.name && !newBrand.name_ar) {
       toast.error('يرجى إدخال اسم العلامة التجارية');
       return;
     }
-    setBrands([...brands, { id: Date.now(), ...newBrand, productsCount: 0 }]);
-    setNewBrand({ name: '', country: '' });
-    setIsOpen(false);
-    toast.success('تم إضافة العلامة التجارية بنجاح');
+
+    try {
+      await createBrand.mutateAsync({
+        name: newBrand.name || newBrand.name_ar,
+        name_ar: newBrand.name_ar || newBrand.name,
+        description: newBrand.description,
+      });
+      setNewBrand({ name: '', name_ar: '', description: '' });
+      setIsOpen(false);
+      toast.success('تم إضافة العلامة التجارية بنجاح');
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'فشل في إضافة العلامة التجارية');
+    }
   };
 
-  const handleDelete = (id: number) => {
-    setBrands(brands.filter(b => b.id !== id));
-    toast.success('تم حذف العلامة التجارية');
+  const handleDelete = async (id: number) => {
+    if (!confirm('هل أنت متأكد من حذف هذه العلامة التجارية؟')) {
+      return;
+    }
+
+    try {
+      await deleteBrand.mutateAsync(id);
+      toast.success('تم حذف العلامة التجارية');
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'فشل في حذف العلامة التجارية');
+    }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -64,27 +88,42 @@ const Brands: React.FC = () => {
             </DialogHeader>
             <div className="space-y-4 pt-4">
               <div className="space-y-2">
-                <Label>اسم العلامة التجارية</Label>
+                <Label>الاسم (English)</Label>
                 <Input
                   value={newBrand.name}
                   onChange={(e) => setNewBrand({ ...newBrand, name: e.target.value })}
-                  placeholder="مثال: سامسونج"
+                  placeholder="Samsung"
                 />
               </div>
               <div className="space-y-2">
-                <Label>بلد المنشأ</Label>
+                <Label>الاسم (عربي)</Label>
                 <Input
-                  value={newBrand.country}
-                  onChange={(e) => setNewBrand({ ...newBrand, country: e.target.value })}
-                  placeholder="مثال: كوريا الجنوبية"
+                  value={newBrand.name_ar}
+                  onChange={(e) => setNewBrand({ ...newBrand, name_ar: e.target.value })}
+                  placeholder="سامسونج"
                 />
               </div>
-              <div className="flex justify-end gap-2 pt-4">
+              <div className="space-y-2">
+                <Label>الوصف (اختياري)</Label>
+                <Input
+                  value={newBrand.description}
+                  onChange={(e) => setNewBrand({ ...newBrand, description: e.target.value })}
+                  placeholder="وصف العلامة التجارية"
+                />
+              </div>
+              <div className="flex gap-3 justify-end pt-4">
                 <Button variant="outline" onClick={() => setIsOpen(false)}>
-                  {t('common.cancel')}
+                  إلغاء
                 </Button>
-                <Button onClick={handleAdd} className="gradient-primary border-0">
-                  {t('common.add')}
+                <Button onClick={handleAdd} disabled={createBrand.isPending}>
+                  {createBrand.isPending ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                      جاري الإضافة...
+                    </>
+                  ) : (
+                    'إضافة'
+                  )}
                 </Button>
               </div>
             </div>
@@ -92,50 +131,63 @@ const Brands: React.FC = () => {
         </Dialog>
       </div>
 
-      <div className="glass-card overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-muted/50">
-            <tr>
-              <th className="text-start py-4 px-4 font-medium text-muted-foreground">العلامة التجارية</th>
-              <th className="text-start py-4 px-4 font-medium text-muted-foreground">بلد المنشأ</th>
-              <th className="text-start py-4 px-4 font-medium text-muted-foreground">عدد المنتجات</th>
-              <th className="text-start py-4 px-4 font-medium text-muted-foreground">{t('common.actions')}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {brands.map((brand, index) => (
-              <motion.tr
-                key={brand.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.05 }}
-                className="border-t border-border hover:bg-muted/30 transition-colors"
-              >
-                <td className="py-4 px-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center">
-                      <Bookmark className="w-4 h-4 text-accent" />
-                    </div>
-                    <span className="font-medium text-foreground">{brand.name}</span>
-                  </div>
-                </td>
-                <td className="py-4 px-4 text-muted-foreground">{brand.country}</td>
-                <td className="py-4 px-4 text-muted-foreground">{brand.productsCount} منتج</td>
-                <td className="py-4 px-4">
-                  <div className="flex items-center gap-1">
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <Edit2 className="w-4 h-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleDelete(brand.id)}>
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </td>
-              </motion.tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {brands.map((brand: any, index: number) => (
+          <motion.div
+            key={brand.id}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.05 }}
+            className="glass-card p-6 hover:shadow-lg transition-all duration-300 group"
+          >
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-3 flex-1">
+                <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-accent/20 to-accent/10 flex items-center justify-center">
+                  <Award className="w-6 h-6 text-accent" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-foreground text-lg">
+                    {brand.name_ar || brand.name}
+                  </h3>
+                  {brand.description && (
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {brand.description}
+                    </p>
+                  )}
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {brand.name !== brand.name_ar && brand.name}
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                  onClick={() => handleDelete(brand.id)}
+                  disabled={deleteBrand.isPending}
+                >
+                  {deleteBrand.isPending ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Trash2 className="w-4 h-4" />
+                  )}
+                </Button>
+              </div>
+            </div>
+          </motion.div>
+        ))}
       </div>
+
+      {brands.length === 0 && (
+        <div className="text-center py-12">
+          <Award className="w-16 h-16 mx-auto text-muted-foreground/50 mb-4" />
+          <p className="text-muted-foreground">لا توجد علامات تجارية بعد</p>
+          <p className="text-sm text-muted-foreground mt-2">
+            ابدأ بإضافة علامة تجارية جديدة باستخدام الزر أعلاه
+          </p>
+        </div>
+      )}
     </div>
   );
 };

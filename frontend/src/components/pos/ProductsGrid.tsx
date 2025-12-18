@@ -43,7 +43,7 @@ export const ProductsGrid: React.FC<ProductsGridProps> = ({ onAddToCart }) => {
     is_active: true,
   });
 
-  const products = productsData?.data?.data || [];
+  const products = productsData?.data || [];
 
   // Auto-focus barcode input on mount and keep focus
   useEffect(() => {

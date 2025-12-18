@@ -31,9 +31,9 @@ const AddProduct: React.FC = () => {
   const { data: brandsData } = useBrands();
   const { data: unitsData } = useUnits();
   
-  const categories = categoriesData?.data?.data || [];
-  const brands = brandsData?.data?.data || [];
-  const units = unitsData?.data?.data || [];
+  const categories = categoriesData?.data || [];
+  const brands = brandsData?.data || [];
+  const units = unitsData?.data || [];
   const [formData, setFormData] = React.useState({
     name: '',
     sku: '',

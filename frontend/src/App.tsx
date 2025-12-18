@@ -12,7 +12,7 @@ import "@/i18n";
 import Login from "@/pages/Login";
 import Dashboard from "@/pages/Dashboard";
 import POS from "@/pages/POS";
-import { ProductsList, AddProduct, ImportProducts } from "@/pages/Products";
+import { ProductsList, AddProduct, ImportProducts, EditProduct } from "@/pages/Products";
 import Sales from "@/pages/Sales";
 import Returns from "@/pages/Returns";
 import { ProfitReport, PurchasesReport, SalesSummary, PurchasesSummary } from "@/pages/Reports";
@@ -42,6 +42,7 @@ const App = () => (
               <Route path="/pos" element={<POS />} />
               <Route path="/products" element={<ProductsList />} />
               <Route path="/products/add" element={<AddProduct />} />
+              <Route path="/products/edit/:id" element={<EditProduct />} />
               <Route path="/products/import" element={<ImportProducts />} />
               <Route path="/sales" element={<Sales />} />
               <Route path="/purchases" element={<Purchases />} />

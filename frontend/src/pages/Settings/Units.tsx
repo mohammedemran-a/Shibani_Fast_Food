@@ -1,7 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
-import { Plus, Edit2, Trash2, Scale } from 'lucide-react';
+import { Plus, Trash2, Ruler, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,36 +13,64 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-
-const initialUnits = [
-  { id: 1, name: 'قطعة', symbol: 'pc', isBase: true },
-  { id: 2, name: 'كرتون', symbol: 'ctn', isBase: false },
-  { id: 3, name: 'كيلوجرام', symbol: 'kg', isBase: true },
-  { id: 4, name: 'لتر', symbol: 'L', isBase: true },
-  { id: 5, name: 'علبة', symbol: 'box', isBase: false },
-];
+import { useUnits, useCreateUnit, useDeleteUnit } from '@/hooks/useUnits';
 
 const Units: React.FC = () => {
   const { t } = useTranslation();
-  const [units, setUnits] = React.useState(initialUnits);
   const [isOpen, setIsOpen] = React.useState(false);
-  const [newUnit, setNewUnit] = React.useState({ name: '', symbol: '' });
+  const [newUnit, setNewUnit] = React.useState({ name: '', name_ar: '', abbreviation: '' });
 
-  const handleAdd = () => {
-    if (!newUnit.name || !newUnit.symbol) {
-      toast.error('يرجى ملء جميع الحقول');
+  // Fetch units from API
+  const { data: unitsData, isLoading } = useUnits();
+  const createUnit = useCreateUnit();
+  const deleteUnit = useDeleteUnit();
+
+  const units = unitsData?.data || [];
+
+  const handleAdd = async () => {
+    if (!newUnit.name && !newUnit.name_ar) {
+      toast.error('يرجى إدخال اسم الوحدة');
       return;
     }
-    setUnits([...units, { id: Date.now(), ...newUnit, isBase: false }]);
-    setNewUnit({ name: '', symbol: '' });
-    setIsOpen(false);
-    toast.success('تم إضافة الوحدة بنجاح');
+    if (!newUnit.abbreviation) {
+      toast.error('يرجى إدخال الاختصار');
+      return;
+    }
+
+    try {
+      await createUnit.mutateAsync({
+        name: newUnit.name || newUnit.name_ar,
+        name_ar: newUnit.name_ar || newUnit.name,
+        abbreviation: newUnit.abbreviation,
+      });
+      setNewUnit({ name: '', name_ar: '', abbreviation: '' });
+      setIsOpen(false);
+      toast.success('تم إضافة الوحدة بنجاح');
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'فشل في إضافة الوحدة');
+    }
   };
 
-  const handleDelete = (id: number) => {
-    setUnits(units.filter(u => u.id !== id));
-    toast.success('تم حذف الوحدة');
+  const handleDelete = async (id: number) => {
+    if (!confirm('هل أنت متأكد من حذف هذه الوحدة؟')) {
+      return;
+    }
+
+    try {
+      await deleteUnit.mutateAsync(id);
+      toast.success('تم حذف الوحدة');
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'فشل في حذف الوحدة');
+    }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -60,31 +88,46 @@ const Units: React.FC = () => {
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>إضافة وحدة جديدة</DialogTitle>
+              <DialogTitle>إضافة وحدة قياس جديدة</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 pt-4">
               <div className="space-y-2">
-                <Label>اسم الوحدة</Label>
+                <Label>الاسم (English)</Label>
                 <Input
                   value={newUnit.name}
                   onChange={(e) => setNewUnit({ ...newUnit, name: e.target.value })}
-                  placeholder="مثال: كرتون"
+                  placeholder="Kilogram"
                 />
               </div>
               <div className="space-y-2">
-                <Label>الرمز</Label>
+                <Label>الاسم (عربي)</Label>
                 <Input
-                  value={newUnit.symbol}
-                  onChange={(e) => setNewUnit({ ...newUnit, symbol: e.target.value })}
-                  placeholder="مثال: ctn"
+                  value={newUnit.name_ar}
+                  onChange={(e) => setNewUnit({ ...newUnit, name_ar: e.target.value })}
+                  placeholder="كيلوجرام"
                 />
               </div>
-              <div className="flex justify-end gap-2 pt-4">
+              <div className="space-y-2">
+                <Label>الاختصار</Label>
+                <Input
+                  value={newUnit.abbreviation}
+                  onChange={(e) => setNewUnit({ ...newUnit, abbreviation: e.target.value })}
+                  placeholder="kg"
+                />
+              </div>
+              <div className="flex gap-3 justify-end pt-4">
                 <Button variant="outline" onClick={() => setIsOpen(false)}>
-                  {t('common.cancel')}
+                  إلغاء
                 </Button>
-                <Button onClick={handleAdd} className="gradient-primary border-0">
-                  {t('common.add')}
+                <Button onClick={handleAdd} disabled={createUnit.isPending}>
+                  {createUnit.isPending ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                      جاري الإضافة...
+                    </>
+                  ) : (
+                    'إضافة'
+                  )}
                 </Button>
               </div>
             </div>
@@ -92,54 +135,61 @@ const Units: React.FC = () => {
         </Dialog>
       </div>
 
-      <div className="glass-card overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-muted/50">
-            <tr>
-              <th className="text-start py-4 px-4 font-medium text-muted-foreground">الوحدة</th>
-              <th className="text-start py-4 px-4 font-medium text-muted-foreground">الرمز</th>
-              <th className="text-start py-4 px-4 font-medium text-muted-foreground">النوع</th>
-              <th className="text-start py-4 px-4 font-medium text-muted-foreground">{t('common.actions')}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {units.map((unit, index) => (
-              <motion.tr
-                key={unit.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.05 }}
-                className="border-t border-border hover:bg-muted/30 transition-colors"
-              >
-                <td className="py-4 px-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                      <Scale className="w-4 h-4 text-primary" />
-                    </div>
-                    <span className="font-medium text-foreground">{unit.name}</span>
-                  </div>
-                </td>
-                <td className="py-4 px-4 text-muted-foreground font-mono">{unit.symbol}</td>
-                <td className="py-4 px-4">
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${unit.isBase ? 'bg-success/10 text-success' : 'bg-muted text-muted-foreground'}`}>
-                    {unit.isBase ? 'أساسية' : 'فرعية'}
-                  </span>
-                </td>
-                <td className="py-4 px-4">
-                  <div className="flex items-center gap-1">
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <Edit2 className="w-4 h-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleDelete(unit.id)}>
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </td>
-              </motion.tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {units.map((unit: any, index: number) => (
+          <motion.div
+            key={unit.id}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.05 }}
+            className="glass-card p-6 hover:shadow-lg transition-all duration-300 group"
+          >
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-3 flex-1">
+                <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-success/20 to-success/10 flex items-center justify-center">
+                  <Ruler className="w-6 h-6 text-success" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-foreground text-lg">
+                    {unit.name_ar || unit.name}
+                  </h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {unit.abbreviation}
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {unit.name !== unit.name_ar && unit.name}
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                  onClick={() => handleDelete(unit.id)}
+                  disabled={deleteUnit.isPending}
+                >
+                  {deleteUnit.isPending ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Trash2 className="w-4 h-4" />
+                  )}
+                </Button>
+              </div>
+            </div>
+          </motion.div>
+        ))}
       </div>
+
+      {units.length === 0 && (
+        <div className="text-center py-12">
+          <Ruler className="w-16 h-16 mx-auto text-muted-foreground/50 mb-4" />
+          <p className="text-muted-foreground">لا توجد وحدات قياس بعد</p>
+          <p className="text-sm text-muted-foreground mt-2">
+            ابدأ بإضافة وحدة قياس جديدة باستخدام الزر أعلاه
+          </p>
+        </div>
+      )}
     </div>
   );
 };
