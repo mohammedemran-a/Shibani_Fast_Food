@@ -91,13 +91,38 @@ const AddProduct: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // TODO: Map formData to CreateProductRequest format
-    // For now, just show success message
     try {
-      // await createProduct.mutateAsync(productData);
+      // Create FormData for file upload support
+      const submitData = new FormData();
+      
+      // Add all form fields
+      submitData.append('name', formData.name);
+      submitData.append('name_ar', formData.name);
+      submitData.append('sku', formData.sku || `PRD-${Date.now()}`);
+      submitData.append('barcode', formData.sku || `${Date.now()}`);
+      submitData.append('category_id', formData.category);
+      submitData.append('brand_id', formData.brand || '');
+      submitData.append('unit_id', formData.unit);
+      submitData.append('purchase_price', formData.totalPurchasePrice.toString());
+      submitData.append('selling_price', formData.salePrice.toString());
+      submitData.append('quantity', formData.quantity.toString());
+      submitData.append('reorder_level', '10');
+      
+      if (formData.expiryDate) {
+        submitData.append('expiry_date', formData.expiryDate);
+      }
+      
+      // Add image if selected
+      if (imageFile) {
+        submitData.append('image', imageFile);
+      }
+      
+      await createProduct.mutateAsync(submitData as any);
+      toast.success(t('products.productAdded'));
       navigate('/products');
     } catch (error) {
       // Error is handled by the hook
+      toast.error(t('common.error'));
     }
   };
 

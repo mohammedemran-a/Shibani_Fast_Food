@@ -56,7 +56,7 @@ export function useCreateProduct() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: CreateProductRequest) => productService.createProduct(data),
+    mutationFn: (data: CreateProductRequest | FormData) => productService.createProduct(data),
     onSuccess: (response) => {
       // Invalidate and refetch products list
       queryClient.invalidateQueries({ queryKey: productKeys.lists() });

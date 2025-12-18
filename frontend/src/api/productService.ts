@@ -101,11 +101,16 @@ class ProductService {
   /**
    * Create new product
    */
-  async createProduct(data: CreateProductRequest): Promise<ProductResponse> {
+  async createProduct(data: CreateProductRequest | FormData): Promise<ProductResponse> {
     try {
       const response = await apiClient.post<ProductResponse>(
         PRODUCTS_ENDPOINTS.CREATE,
-        data
+        data,
+        {
+          headers: data instanceof FormData ? {
+            'Content-Type': 'multipart/form-data',
+          } : undefined,
+        }
       );
       return response.data;
     } catch (error) {
@@ -118,12 +123,17 @@ class ProductService {
    */
   async updateProduct(
     id: number,
-    data: UpdateProductRequest
+    data: UpdateProductRequest | FormData
   ): Promise<ProductResponse> {
     try {
       const response = await apiClient.put<ProductResponse>(
         PRODUCTS_ENDPOINTS.UPDATE(id),
-        data
+        data,
+        {
+          headers: data instanceof FormData ? {
+            'Content-Type': 'multipart/form-data',
+          } : undefined,
+        }
       );
       return response.data;
     } catch (error) {
