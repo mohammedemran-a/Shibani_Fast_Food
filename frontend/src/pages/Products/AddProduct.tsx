@@ -108,6 +108,9 @@ const AddProduct: React.FC = () => {
       // Create FormData for file upload support
       const submitData = new FormData();
       
+      // Debug: Log formData
+      console.log('FormData before submit:', formData);
+      
         // Add all form fields
         submitData.append('name', formData.name);
       submitData.append('sku', formData.sku || `PRD-${Date.now()}`);

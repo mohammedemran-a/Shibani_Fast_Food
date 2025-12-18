@@ -44,11 +44,14 @@ export const ProductsGrid: React.FC<ProductsGridProps> = ({ onAddToCart }) => {
 
   const products = Array.isArray(productsData?.data) ? productsData.data : (productsData?.data?.data || []);
 
-  // Auto-focus barcode input on mount and keep focus
+  // Auto-focus barcode input on mount only
   useEffect(() => {
-    if (barcodeInputRef.current) {
-      barcodeInputRef.current.focus();
-    }
+    const timer = setTimeout(() => {
+      if (barcodeInputRef.current) {
+        barcodeInputRef.current.focus();
+      }
+    }, 100);
+    return () => clearTimeout(timer);
   }, []);
 
   // Handle barcode scanner input (Enter key)
@@ -76,12 +79,7 @@ export const ProductsGrid: React.FC<ProductsGridProps> = ({ onAddToCart }) => {
     }
   };
 
-  // Keep focus on barcode input when clicking elsewhere in POS
-  const handleContainerClick = () => {
-    if (barcodeInputRef.current) {
-      barcodeInputRef.current.focus();
-    }
-  };
+  // Removed auto-focus on click to allow search input focus
 
   const filteredProducts = products.filter((product: Product) => {
     // For now, show all products (category filtering can be added later with category names)
@@ -97,7 +95,7 @@ export const ProductsGrid: React.FC<ProductsGridProps> = ({ onAddToCart }) => {
   console.log('POS Products:', products.length, 'Filtered:', filteredProducts.length);
 
   return (
-    <div className="flex flex-col h-full" onClick={handleContainerClick}>
+    <div className="flex flex-col h-full">
       {/* Barcode Scanner Input - Always visible and focused */}
       <div className="relative mb-3">
         <ScanBarcode className="absolute start-3 top-1/2 -translate-y-1/2 w-5 h-5 text-primary" />
@@ -179,9 +177,8 @@ export const ProductsGrid: React.FC<ProductsGridProps> = ({ onAddToCart }) => {
                   className={cn(
                     'glass-card p-3 text-start hover:scale-105 transition-all',
                     'hover:border-primary/50 hover:shadow-lg hover:shadow-primary/20',
-                    product.quantity === 0 && 'opacity-50 cursor-not-allowed'
+                    product.quantity === 0 && 'opacity-70'
                   )}
-                  disabled={product.quantity === 0}
                 >
                   <div className="aspect-square mb-2 rounded-lg overflow-hidden bg-muted">
                     <img 

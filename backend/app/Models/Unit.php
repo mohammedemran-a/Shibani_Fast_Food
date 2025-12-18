@@ -13,7 +13,26 @@ class Unit extends Model
         'name',
         'name_ar',
         'abbreviation',
+        'parent_unit_id',
+        'conversion_factor',
     ];
+
+    protected $casts = [
+        'conversion_factor' => 'float',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+    ];
+
+    // Relations
+    public function parentUnit()
+    {
+        return $this->belongsTo(Unit::class, 'parent_unit_id');
+    }
+
+    public function subUnits()
+    {
+        return $this->hasMany(Unit::class, 'parent_unit_id');
+    }
 
     public function products()
     {
