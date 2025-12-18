@@ -90,11 +90,14 @@ export const ProductsGrid: React.FC<ProductsGridProps> = ({ onAddToCart }) => {
     const matchesCategory = selectedCategory === 'all';
     const searchLower = searchQuery.toLowerCase();
     const matchesSearch = 
-      product.name_ar.toLowerCase().includes(searchLower) ||
-      product.name.toLowerCase().includes(searchLower) ||
-      product.barcode.includes(searchQuery);
+      product.name_ar?.toLowerCase().includes(searchLower) ||
+      product.name?.toLowerCase().includes(searchLower) ||
+      product.barcode?.includes(searchQuery);
     return matchesCategory && matchesSearch;
   });
+
+  // Debug: Log products count
+  console.log('POS Products:', products.length, 'Filtered:', filteredProducts.length);
 
   return (
     <div className="flex flex-col h-full" onClick={handleContainerClick}>

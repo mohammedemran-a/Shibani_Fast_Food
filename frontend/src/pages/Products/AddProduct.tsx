@@ -9,6 +9,9 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useCreateProduct } from '@/hooks/useProducts';
+import { useCategories } from '@/hooks/useCategories';
+import { useBrands } from '@/hooks/useBrands';
+import { useUnits } from '@/hooks/useUnits';
 
 interface BarcodeVariant {
   id: number;
@@ -22,6 +25,15 @@ const AddProduct: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { isRTL } = useTheme();
+  
+  // Fetch data from API
+  const { data: categoriesData } = useCategories();
+  const { data: brandsData } = useBrands();
+  const { data: unitsData } = useUnits();
+  
+  const categories = categoriesData?.data?.data || [];
+  const brands = brandsData?.data?.data || [];
+  const units = unitsData?.data?.data || [];
   const [formData, setFormData] = React.useState({
     name: '',
     sku: '',
@@ -230,11 +242,11 @@ const AddProduct: React.FC = () => {
                     <SelectValue placeholder={t('products.selectCategory')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="drinks">{t('categories.drinks')}</SelectItem>
-                    <SelectItem value="snacks">{t('categories.snacks')}</SelectItem>
-                    <SelectItem value="dairy">{t('categories.dairy')}</SelectItem>
-                    <SelectItem value="bakery">{t('categories.bakery')}</SelectItem>
-                    <SelectItem value="spices">{t('categories.spices')}</SelectItem>
+                    {categories.map((category: any) => (
+                      <SelectItem key={category.id} value={category.id.toString()}>
+                        {category.name_ar || category.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -245,9 +257,11 @@ const AddProduct: React.FC = () => {
                     <SelectValue placeholder={t('products.selectBrand')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="brand1">المراعي</SelectItem>
-                    <SelectItem value="brand2">ندى</SelectItem>
-                    <SelectItem value="brand3">نستله</SelectItem>
+                    {brands.map((brand: any) => (
+                      <SelectItem key={brand.id} value={brand.id.toString()}>
+                        {brand.name_ar || brand.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -271,11 +285,11 @@ const AddProduct: React.FC = () => {
                     <SelectValue placeholder={t('products.selectUnit')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="piece">{t('units.piece')}</SelectItem>
-                    <SelectItem value="box">{t('units.box')}</SelectItem>
-                    <SelectItem value="kg">{t('units.kg')}</SelectItem>
-                    <SelectItem value="liter">{t('units.liter')}</SelectItem>
-                    <SelectItem value="gram">{t('units.gram')}</SelectItem>
+                    {units.map((unit: any) => (
+                      <SelectItem key={unit.id} value={unit.id.toString()}>
+                        {unit.name_ar || unit.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
