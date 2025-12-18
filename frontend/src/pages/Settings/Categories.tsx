@@ -18,7 +18,7 @@ import { useCategories, useCreateCategory, useDeleteCategory } from '@/hooks/use
 const Categories: React.FC = () => {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = React.useState(false);
-  const [newCategory, setNewCategory] = React.useState({ name: '', name_ar: '', description: '' });
+  const [newCategory, setNewCategory] = React.useState({ name: '', description: '' });
 
   // Fetch categories from API
   const { data: categoriesData, isLoading } = useCategories();
@@ -147,7 +147,7 @@ const Categories: React.FC = () => {
                 </div>
                 <div className="flex-1">
                   <h3 className="font-semibold text-foreground text-lg">
-                    {category.name_ar || category.name}
+                    {category.name}
                   </h3>
                   {category.description && (
                     <p className="text-sm text-muted-foreground mt-1">

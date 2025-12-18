@@ -19,7 +19,6 @@ const categories = [
 interface Product {
   id: number;
   name: string;
-  name_ar: string;
   barcode: string;
   selling_price: number;
   category_id: number;
@@ -60,15 +59,14 @@ export const ProductsGrid: React.FC<ProductsGridProps> = ({ onAddToCart }) => {
       if (product) {
         const cartProduct = {
           id: product.id,
-          name: product.name_ar,
-          nameEn: product.name,
+          name: product.name,
           barcode: product.barcode,
           price: Number(product.selling_price || 0),
           stock: Number(product.quantity || 0),
           image: product.image || '📦',
         };
         onAddToCart(cartProduct);
-        toast.success(`${t('pos.addedToCart')} ${i18n.language === 'ar' ? product.name_ar : product.name}`);
+        toast.success(`${t('pos.addedToCart')} ${product.name}`);
       } else {
         toast.error(t('pos.productNotFound'));
       }
@@ -90,7 +88,6 @@ export const ProductsGrid: React.FC<ProductsGridProps> = ({ onAddToCart }) => {
     const matchesCategory = selectedCategory === 'all';
     const searchLower = searchQuery.toLowerCase();
     const matchesSearch = 
-      product.name_ar?.toLowerCase().includes(searchLower) ||
       product.name?.toLowerCase().includes(searchLower) ||
       product.barcode?.includes(searchQuery);
     return matchesCategory && matchesSearch;
@@ -177,7 +174,7 @@ export const ProductsGrid: React.FC<ProductsGridProps> = ({ onAddToCart }) => {
                   transition={{ delay: index * 0.02 }}
                   onClick={() => {
                     onAddToCart(cartProduct);
-                    toast.success(`${t('pos.addedToCart')} ${i18n.language === 'ar' ? product.name_ar : product.name}`);
+                    toast.success(`${t('pos.addedToCart')} ${product.name}`);
                   }}
                   className={cn(
                     'glass-card p-3 text-start hover:scale-105 transition-all',
@@ -189,7 +186,7 @@ export const ProductsGrid: React.FC<ProductsGridProps> = ({ onAddToCart }) => {
                   <div className="aspect-square mb-2 rounded-lg overflow-hidden bg-muted">
                     <img 
                       src={product.image || '/no-image.svg'} 
-                      alt={product.name_ar || product.name}
+                      alt={product.name}
                       className="w-full h-full object-cover"
                       onError={(e) => {
                         (e.target as HTMLImageElement).src = '/no-image.svg';
@@ -197,7 +194,7 @@ export const ProductsGrid: React.FC<ProductsGridProps> = ({ onAddToCart }) => {
                     />
                   </div>
                   <h4 className="font-medium text-sm mb-1 line-clamp-2 min-h-[2.5rem]">
-                    {i18n.language === 'ar' ? product.name_ar : product.name}
+                    {product.name}
                   </h4>
                   <div className="flex items-center justify-between mt-2">
                     <span className="text-lg font-bold text-primary">

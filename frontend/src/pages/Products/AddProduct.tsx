@@ -110,11 +110,8 @@ const AddProduct: React.FC = () => {
       
         // Add all form fields
         submitData.append('name', formData.name);
-        if (formData.name) {
-          submitData.append('name_ar', formData.name);
-        }
       submitData.append('sku', formData.sku || `PRD-${Date.now()}`);
-      submitData.append('barcode', formData.sku || `${Date.now()}`);
+      submitData.append('barcode', formData.barcode || formData.sku || `${Date.now()}`);
       submitData.append('category_id', formData.category);
       submitData.append('brand_id', formData.brand || '');
       submitData.append('unit_id', formData.unit);
@@ -133,8 +130,10 @@ const AddProduct: React.FC = () => {
       }
       
       await createProduct.mutateAsync(submitData as any);
-      toast.success(t('products.productAdded'));
-      navigate('/products');
+      // Wait a bit for cache to update
+      setTimeout(() => {
+        navigate('/products');
+      }, 500);
     } catch (error) {
       // Error is handled by the hook
       toast.error(t('common.error'));
@@ -245,7 +244,7 @@ const AddProduct: React.FC = () => {
                   <SelectContent>
                     {categories.map((category: any) => (
                       <SelectItem key={category.id} value={category.id.toString()}>
-                        {category.name_ar || category.name}
+                        {category.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -260,7 +259,7 @@ const AddProduct: React.FC = () => {
                   <SelectContent>
                     {brands.map((brand: any) => (
                       <SelectItem key={brand.id} value={brand.id.toString()}>
-                        {brand.name_ar || brand.name}
+                        {brand.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -288,7 +287,7 @@ const AddProduct: React.FC = () => {
                   <SelectContent>
                     {units.map((unit: any) => (
                       <SelectItem key={unit.id} value={unit.id.toString()}>
-                        {unit.name_ar || unit.name}
+                        {unit.name}
                       </SelectItem>
                     ))}
                   </SelectContent>

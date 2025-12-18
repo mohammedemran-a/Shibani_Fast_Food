@@ -18,7 +18,7 @@ import { useBrands, useCreateBrand, useDeleteBrand } from '@/hooks/useBrands';
 const Brands: React.FC = () => {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = React.useState(false);
-  const [newBrand, setNewBrand] = React.useState({ name: '', name_ar: '', description: '' });
+  const [newBrand, setNewBrand] = React.useState({ name: '', description: '' });
 
   // Fetch brands from API
   const { data: brandsData, isLoading } = useBrands();
@@ -147,7 +147,7 @@ const Brands: React.FC = () => {
                 </div>
                 <div className="flex-1">
                   <h3 className="font-semibold text-foreground text-lg">
-                    {brand.name_ar || brand.name}
+                    {brand.name}
                   </h3>
                   {brand.description && (
                     <p className="text-sm text-muted-foreground mt-1">

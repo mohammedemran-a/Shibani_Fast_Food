@@ -137,9 +137,6 @@ const EditProduct: React.FC = () => {
       
         // Add all form fields
         submitData.append('name', formData.name);
-        if (formData.name) {
-          submitData.append('name_ar', formData.name);
-        }
       submitData.append('sku', formData.sku || `PRD-${Date.now()}`);
       submitData.append('barcode', formData.sku || `${Date.now()}`);
       submitData.append('category_id', formData.category);
@@ -289,7 +286,7 @@ const EditProduct: React.FC = () => {
                   <SelectContent>
                     {categories.map((category: any) => (
                       <SelectItem key={category.id} value={category.id.toString()}>
-                        {category.name_ar || category.name}
+                        {category.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -304,7 +301,7 @@ const EditProduct: React.FC = () => {
                   <SelectContent>
                     {brands.map((brand: any) => (
                       <SelectItem key={brand.id} value={brand.id.toString()}>
-                        {brand.name_ar || brand.name}
+                        {brand.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -332,7 +329,7 @@ const EditProduct: React.FC = () => {
                   <SelectContent>
                     {units.map((unit: any) => (
                       <SelectItem key={unit.id} value={unit.id.toString()}>
-                        {unit.name_ar || unit.name}
+                        {unit.name}
                       </SelectItem>
                     ))}
                   </SelectContent>

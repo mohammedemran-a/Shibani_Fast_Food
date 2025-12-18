@@ -18,7 +18,7 @@ class CategoryController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|unique:categories',
-            'name_ar' => 'required|string|unique:categories',
+            'name_ar' => 'nullable|string|unique:categories',
             'description' => 'nullable|string',
         ]);
 
@@ -40,7 +40,7 @@ class CategoryController extends Controller
     {
         $validated = $request->validate([
             'name' => 'string|unique:categories,name,' . $category->id,
-            'name_ar' => 'string|unique:categories,name_ar,' . $category->id,
+            'name_ar' => 'nullable|string|unique:categories,name_ar,' . $category->id,
             'description' => 'nullable|string',
         ]);
 

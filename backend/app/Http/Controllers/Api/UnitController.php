@@ -18,7 +18,6 @@ class UnitController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|unique:units',
-            'name_ar' => 'required|string|unique:units',
             'abbreviation' => 'required|string',
         ]);
 
@@ -40,7 +39,6 @@ class UnitController extends Controller
     {
         $validated = $request->validate([
             'name' => 'string|unique:units,name,' . $unit->id,
-            'name_ar' => 'string|unique:units,name_ar,' . $unit->id,
             'abbreviation' => 'string',
         ]);
 

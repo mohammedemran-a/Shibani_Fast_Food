@@ -18,7 +18,7 @@ class BrandController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|unique:brands',
-            'name_ar' => 'required|string|unique:brands',
+            'name_ar' => 'nullable|string|unique:brands',
             'description' => 'nullable|string',
         ]);
 
@@ -40,7 +40,7 @@ class BrandController extends Controller
     {
         $validated = $request->validate([
             'name' => 'string|unique:brands,name,' . $brand->id,
-            'name_ar' => 'string|unique:brands,name_ar,' . $brand->id,
+            'name_ar' => 'nullable|string|unique:brands,name_ar,' . $brand->id,
             'description' => 'nullable|string',
         ]);
 
