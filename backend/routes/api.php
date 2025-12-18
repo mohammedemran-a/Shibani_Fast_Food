@@ -20,6 +20,7 @@ use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\AnalyticsController;
+use App\Http\Controllers\Api\ImportController;
 
 /*
 |--------------------------------------------------------------------------
@@ -46,7 +47,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Products routes
     Route::apiResource('products', ProductController::class);
-    Route::post('products/import', [ProductController::class, 'import']);
+    Route::post('products/import', [ImportController::class, 'importProducts']);
     Route::post('products/{product}/barcode', [ProductController::class, 'generateBarcode']);
 
     // Categories routes

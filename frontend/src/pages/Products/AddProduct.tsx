@@ -95,9 +95,11 @@ const AddProduct: React.FC = () => {
       // Create FormData for file upload support
       const submitData = new FormData();
       
-      // Add all form fields
-      submitData.append('name', formData.name);
-      submitData.append('name_ar', formData.name);
+        // Add all form fields
+        submitData.append('name', formData.name);
+        if (formData.name) {
+          submitData.append('name_ar', formData.name);
+        }
       submitData.append('sku', formData.sku || `PRD-${Date.now()}`);
       submitData.append('barcode', formData.sku || `${Date.now()}`);
       submitData.append('category_id', formData.category);

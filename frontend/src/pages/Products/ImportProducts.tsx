@@ -6,6 +6,8 @@ import { ArrowRight, ArrowLeft, Upload, FileSpreadsheet, Download } from 'lucide
 import { Button } from '@/components/ui/button';
 import { useTheme } from '@/contexts/ThemeContext';
 import { toast } from 'sonner';
+import apiClient from '@/api/apiClient';
+import { PRODUCTS_ENDPOINTS } from '@/api/endpoints';
 
 const ImportProducts: React.FC = () => {
   const { t } = useTranslation();
@@ -24,10 +26,45 @@ const ImportProducts: React.FC = () => {
     }
   };
 
-  const handleFile = (file: File) => {
+  const handleFile = async (file: File) => {
     if (file.type === 'text/csv' || file.name.endsWith('.csv')) {
-      toast.success(`تم رفع الملف: ${file.name}`);
-      // TODO: Process CSV file and import products
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      try {
+        toast.loading('جاري استيراد المنتجات...');
+        
+        const response = await apiClient.post(
+          PRODUCTS_ENDPOINTS.IMPORT,
+          formData,
+          {
+            headers: {
+              'Content-Type': 'multipart/form-data',
+            },
+          }
+        );
+        
+        toast.dismiss();
+        
+        if (response.data.success) {
+          toast.success(response.data.message || `تم استيراد ${response.data.imported} منتج بنجاح`);
+          
+          // Show errors if any
+          if (response.data.errors && response.data.errors.length > 0) {
+            toast.warning(`تم تخطي ${response.data.errors.length} صف بسبب أخطاء`);
+            console.error('Import errors:', response.data.errors);
+          }
+          
+          // Navigate to products page after 2 seconds
+          setTimeout(() => {
+            navigate('/products');
+          }, 2000);
+        }
+      } catch (error: any) {
+        toast.dismiss();
+        toast.error(error.response?.data?.message || 'فشل في استيراد المنتجات');
+        console.error('Import error:', error);
+      }
     } else {
       toast.error('يرجى رفع ملف CSV فقط');
     }
