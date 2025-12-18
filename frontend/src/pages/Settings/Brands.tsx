@@ -1,7 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
-import { Plus, Trash2, Award, Loader2 } from 'lucide-react';
+import { Plus, Edit2, Trash2, Award, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -160,6 +160,21 @@ const Brands: React.FC = () => {
                 </div>
               </div>
               <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10"
+                  onClick={() => {
+                    setNewBrand({
+                      name: brand.name || '',
+                      name_ar: brand.name_ar || '',
+                      description: brand.description || ''
+                    });
+                    setIsOpen(true);
+                  }}
+                >
+                  <Edit2 className="w-4 h-4" />
+                </Button>
                 <Button
                   variant="ghost"
                   size="icon"

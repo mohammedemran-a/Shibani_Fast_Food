@@ -1,127 +1,190 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowRight, ArrowLeft, Save, Loader2 } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Save, Plus, Trash2, Barcode, Upload, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
 import { useTheme } from '@/contexts/ThemeContext';
+import { toast } from 'sonner';
 import { useProduct, useUpdateProduct } from '@/hooks/useProducts';
 import { useCategories } from '@/hooks/useCategories';
 import { useBrands } from '@/hooks/useBrands';
 import { useUnits } from '@/hooks/useUnits';
-import { toast } from 'sonner';
+
+interface BarcodeVariant {
+  id: number;
+  weight: number;
+  weightUnit: string;
+  barcode: string;
+  price: number;
+}
 
 const EditProduct: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { isRTL } = useTheme();
-
-  // Fetch data
-  const { data: productData, isLoading: isLoadingProduct } = useProduct(Number(id));
+  
+  // Fetch product data
+  const { data: productData, isLoading: isLoadingProduct } = useProduct(id!);
+  const product = productData?.data;
+  
+  // Fetch data from API
   const { data: categoriesData } = useCategories();
   const { data: brandsData } = useBrands();
   const { data: unitsData } = useUnits();
-
-  const product = productData?.data;
+  
   const categories = categoriesData?.data || [];
   const brands = brandsData?.data || [];
   const units = unitsData?.data || [];
-
   const [formData, setFormData] = React.useState({
     name: '',
-    name_ar: '',
     sku: '',
-    barcode: '',
-    category_id: '',
-    brand_id: '',
-    unit_id: '',
-    purchase_price: '',
-    selling_price: '',
-    quantity: '',
-    reorder_level: '',
-    description: '',
+    category: '',
+    brand: '',
+    unit: '',
+    innerUnits: 1,
+    totalPurchasePrice: 0,
+    salePrice: 0,
+    quantity: 0,
+    expiryDate: '',
+    hasMultipleBarcodes: false,
   });
-
-  const updateProduct = useUpdateProduct();
-  const BackIcon = isRTL ? ArrowRight : ArrowLeft;
-
+  
   // Load product data into form
-  useEffect(() => {
+  React.useEffect(() => {
     if (product) {
       setFormData({
         name: product.name || '',
-        name_ar: product.name_ar || '',
         sku: product.sku || '',
-        barcode: product.barcode || '',
-        category_id: product.category_id?.toString() || '',
-        brand_id: product.brand_id?.toString() || '',
-        unit_id: product.unit_id?.toString() || '',
-        purchase_price: product.purchase_price?.toString() || '',
-        selling_price: product.selling_price?.toString() || '',
-        quantity: product.quantity?.toString() || '',
-        reorder_level: product.reorder_level?.toString() || '',
-        description: product.description || '',
+        category: product.category_id?.toString() || '',
+        brand: product.brand_id?.toString() || '',
+        unit: product.unit_id?.toString() || '',
+        innerUnits: 1,
+        totalPurchasePrice: Number(product.purchase_price) || 0,
+        salePrice: Number(product.selling_price) || 0,
+        quantity: Number(product.quantity) || 0,
+        expiryDate: product.expiry_date || '',
+        hasMultipleBarcodes: false,
       });
+      if (product.image) {
+        setImagePreview(product.image);
+      }
     }
   }, [product]);
+  const [imageFile, setImageFile] = React.useState<File | null>(null);
+  const [imagePreview, setImagePreview] = React.useState<string>('');
+  const [barcodeVariants, setBarcodeVariants] = React.useState<BarcodeVariant[]>([]);
+
+  const BackIcon = isRTL ? ArrowRight : ArrowLeft;
+  const unitPrice = formData.innerUnits > 0 ? formData.totalPurchasePrice / formData.innerUnits : 0;
+
+  const generateBarcode = () => {
+    return Math.random().toString().slice(2, 15);
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setImageFile(null);
+    setImagePreview('');
+  };
+
+  const handleAddBarcodeVariant = () => {
+    setBarcodeVariants([...barcodeVariants, {
+      id: Date.now(),
+      weight: 0,
+      weightUnit: 'g',
+      barcode: generateBarcode(),
+      price: 0,
+    }]);
+  };
+
+  const handleRemoveBarcodeVariant = (id: number) => {
+    setBarcodeVariants(barcodeVariants.filter(v => v.id !== id));
+  };
+
+  const handleBarcodeVariantChange = (id: number, field: string, value: string | number) => {
+    setBarcodeVariants(barcodeVariants.map(v => {
+      if (v.id === id) {
+        return { ...v, [field]: value };
+      }
+      return v;
+    }));
+  };
+
+  const updateProduct = useUpdateProduct();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
+    
     try {
+      // Create FormData for file upload support
       const submitData = new FormData();
-      submitData.append('name', formData.name);
-      if (formData.name_ar) {
-        submitData.append('name_ar', formData.name_ar);
+      
+        // Add all form fields
+        submitData.append('name', formData.name);
+        if (formData.name) {
+          submitData.append('name_ar', formData.name);
+        }
+      submitData.append('sku', formData.sku || `PRD-${Date.now()}`);
+      submitData.append('barcode', formData.sku || `${Date.now()}`);
+      submitData.append('category_id', formData.category);
+      submitData.append('brand_id', formData.brand || '');
+      submitData.append('unit_id', formData.unit);
+      submitData.append('purchase_price', formData.totalPurchasePrice.toString());
+      submitData.append('selling_price', formData.salePrice.toString());
+      submitData.append('quantity', formData.quantity.toString());
+      submitData.append('reorder_level', '10');
+      
+      if (formData.expiryDate) {
+        submitData.append('expiry_date', formData.expiryDate);
       }
-      submitData.append('sku', formData.sku);
-      submitData.append('barcode', formData.barcode);
-      submitData.append('category_id', formData.category_id);
-      if (formData.brand_id) {
-        submitData.append('brand_id', formData.brand_id);
+      
+      // Add image if selected
+      if (imageFile) {
+        submitData.append('image', imageFile);
       }
-      submitData.append('unit_id', formData.unit_id);
-      submitData.append('purchase_price', formData.purchase_price);
-      submitData.append('selling_price', formData.selling_price);
-      submitData.append('quantity', formData.quantity);
-      submitData.append('reorder_level', formData.reorder_level || '10');
-      if (formData.description) {
-        submitData.append('description', formData.description);
-      }
-
-      await updateProduct.mutateAsync({
-        id: Number(id),
-        data: submitData,
-      });
-
+      
+      await updateProduct.mutateAsync({ id: id!, data: submitData as any });
       toast.success('تم تحديث المنتج بنجاح');
       navigate('/products');
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'فشل في تحديث المنتج');
+    } catch (error) {
+      // Error is handled by the hook
+      toast.error(t('common.error'));
     }
   };
 
   if (isLoadingProduct) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      <div className="flex items-center justify-center h-96">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
   }
-
+  
   if (!product) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <p className="text-muted-foreground">المنتج غير موجود</p>
+      <div className="flex flex-col items-center justify-center h-96">
+        <p className="text-muted-foreground">لم يتم العثور على المنتج</p>
+        <Button onClick={() => navigate('/products')} className="mt-4">العودة إلى المنتجات</Button>
       </div>
     );
   }
-
+  
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
@@ -131,22 +194,23 @@ const EditProduct: React.FC = () => {
         </Button>
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-foreground">تعديل منتج</h1>
-          <p className="text-muted-foreground mt-1">تحديث معلومات المنتج</p>
+          <p className="text-muted-foreground mt-1">تحديث بيانات المنتج</p>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Basic Info */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="glass-card p-6 space-y-4"
-        >
-          <h3 className="font-semibold text-foreground text-lg">المعلومات الأساسية</h3>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* Form */}
+      <form onSubmit={handleSubmit}>
+        <div className="grid gap-6 lg:grid-cols-2">
+          {/* Basic Info */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="glass-card p-6 space-y-4"
+          >
+            <h3 className="font-semibold text-foreground text-lg">{t('products.basicInfo')}</h3>
+            
             <div className="space-y-2">
-              <Label htmlFor="name">الاسم (English)</Label>
+              <Label htmlFor="name">{t('products.name')} *</Label>
               <Input
                 id="name"
                 value={formData.name}
@@ -154,170 +218,306 @@ const EditProduct: React.FC = () => {
                 required
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="name_ar">الاسم (عربي)</Label>
-              <Input
-                id="name_ar"
-                value={formData.name_ar}
-                onChange={(e) => setFormData({ ...formData, name_ar: e.target.value })}
-              />
-            </div>
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Image Upload */}
             <div className="space-y-2">
-              <Label htmlFor="sku">SKU</Label>
-              <Input
-                id="sku"
-                value={formData.sku}
-                onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
-                required
-              />
+              <Label>{t('products.image')}</Label>
+              <div className="flex items-center gap-4">
+                {imagePreview ? (
+                  <div className="relative">
+                    <img
+                      src={imagePreview}
+                      alt="Product preview"
+                      className="w-24 h-24 object-cover rounded-lg border-2 border-border"
+                    />
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="destructive"
+                      className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
+                      onClick={handleRemoveImage}
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <label className="flex flex-col items-center justify-center w-24 h-24 border-2 border-dashed border-border rounded-lg cursor-pointer hover:border-primary transition-colors">
+                    <Upload className="w-6 h-6 text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground mt-1">{t('common.upload')}</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleImageChange}
+                    />
+                  </label>
+                )}
+                <div className="text-sm text-muted-foreground">
+                  <p>{t('products.imageHint')}</p>
+                </div>
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="barcode">الباركود</Label>
-              <Input
-                id="barcode"
-                value={formData.barcode}
-                onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
-                required
-              />
-            </div>
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label>الفئة</Label>
-              <Select value={formData.category_id} onValueChange={(value) => setFormData({ ...formData, category_id: value })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="اختر الفئة" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map((category: any) => (
-                    <SelectItem key={category.id} value={category.id.toString()}>
-                      {category.name_ar || category.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="sku">{t('products.sku')}</Label>
+                <Input
+                  id="sku"
+                  value={formData.sku}
+                  onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
+                  placeholder="PRD-001"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="expiryDate">{t('products.expiryDate')}</Label>
+                <Input
+                  id="expiryDate"
+                  type="date"
+                  value={formData.expiryDate}
+                  onChange={(e) => setFormData({ ...formData, expiryDate: e.target.value })}
+                />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label>العلامة التجارية</Label>
-              <Select value={formData.brand_id} onValueChange={(value) => setFormData({ ...formData, brand_id: value })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="اختر العلامة" />
-                </SelectTrigger>
-                <SelectContent>
-                  {brands.map((brand: any) => (
-                    <SelectItem key={brand.id} value={brand.id.toString()}>
-                      {brand.name_ar || brand.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>الوحدة</Label>
-              <Select value={formData.unit_id} onValueChange={(value) => setFormData({ ...formData, unit_id: value })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="اختر الوحدة" />
-                </SelectTrigger>
-                <SelectContent>
-                  {units.map((unit: any) => (
-                    <SelectItem key={unit.id} value={unit.id.toString()}>
-                      {unit.name_ar || unit.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </motion.div>
 
-        {/* Pricing & Stock */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>{t('products.category')}</Label>
+                <Select onValueChange={(value) => setFormData({ ...formData, category: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={t('products.selectCategory')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((category: any) => (
+                      <SelectItem key={category.id} value={category.id.toString()}>
+                        {category.name_ar || category.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>{t('products.brand')}</Label>
+                <Select onValueChange={(value) => setFormData({ ...formData, brand: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={t('products.selectBrand')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {brands.map((brand: any) => (
+                      <SelectItem key={brand.id} value={brand.id.toString()}>
+                        {brand.name_ar || brand.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Pricing Info */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="glass-card p-6 space-y-4"
+          >
+            <h3 className="font-semibold text-foreground text-lg">{t('products.pricingUnits')}</h3>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>{t('products.unit')}</Label>
+                <Select onValueChange={(value) => setFormData({ ...formData, unit: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={t('products.selectUnit')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {units.map((unit: any) => (
+                      <SelectItem key={unit.id} value={unit.id.toString()}>
+                        {unit.name_ar || unit.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="innerUnits">{t('products.innerUnits')}</Label>
+                <Input
+                  id="innerUnits"
+                  type="number"
+                  min="1"
+                  value={formData.innerUnits}
+                  onChange={(e) => setFormData({ ...formData, innerUnits: Number(e.target.value) })}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="totalPurchasePrice">{t('products.totalPurchasePrice')}</Label>
+                <Input
+                  id="totalPurchasePrice"
+                  type="number"
+                  step="0.01"
+                  value={formData.totalPurchasePrice}
+                  onChange={(e) => setFormData({ ...formData, totalPurchasePrice: Number(e.target.value) })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>{t('products.unitPrice')} ({t('common.auto')})</Label>
+                <Input
+                  value={`$${unitPrice.toFixed(2)}`}
+                  readOnly
+                  className="bg-muted"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="salePrice">{t('products.salePrice')}</Label>
+                <Input
+                  id="salePrice"
+                  type="number"
+                  step="0.01"
+                  value={formData.salePrice}
+                  onChange={(e) => setFormData({ ...formData, salePrice: Number(e.target.value) })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="quantity">{t('products.initialQuantity')}</Label>
+                <Input
+                  id="quantity"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={formData.quantity}
+                  onChange={(e) => setFormData({ ...formData, quantity: Number(e.target.value) })}
+                />
+              </div>
+            </div>
+
+            {/* Profit Preview */}
+            {formData.salePrice > 0 && unitPrice > 0 && (
+              <div className="p-4 bg-success/10 rounded-lg">
+                <p className="text-sm text-muted-foreground">{t('products.expectedProfit')}:</p>
+                <p className="text-xl font-bold text-success">
+                  ${(formData.salePrice - unitPrice).toFixed(2)} ({((formData.salePrice - unitPrice) / unitPrice * 100).toFixed(1)}%)
+                </p>
+              </div>
+            )}
+          </motion.div>
+        </div>
+
+        {/* Multiple Barcodes Section */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="glass-card p-6 space-y-4"
+          transition={{ delay: 0.2 }}
+          className="glass-card p-6 space-y-4 mt-6"
         >
-          <h3 className="font-semibold text-foreground text-lg">الأسعار والمخزون</h3>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="purchase_price">سعر الشراء</Label>
-              <Input
-                id="purchase_price"
-                type="number"
-                step="0.01"
-                value={formData.purchase_price}
-                onChange={(e) => setFormData({ ...formData, purchase_price: e.target.value })}
-                required
-              />
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-semibold text-foreground text-lg flex items-center gap-2">
+                <Barcode className="w-5 h-5 text-primary" />
+                {t('products.multipleBarcodes')}
+              </h3>
+              <p className="text-sm text-muted-foreground mt-1">{t('products.multipleBarcodesDesc')}</p>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="selling_price">سعر البيع</Label>
-              <Input
-                id="selling_price"
-                type="number"
-                step="0.01"
-                value={formData.selling_price}
-                onChange={(e) => setFormData({ ...formData, selling_price: e.target.value })}
-                required
-              />
-            </div>
+            <Button type="button" variant="outline" size="sm" onClick={handleAddBarcodeVariant} className="gap-2">
+              <Plus className="w-4 h-4" />
+              {t('products.addVariant')}
+            </Button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="quantity">الكمية</Label>
-              <Input
-                id="quantity"
-                type="number"
-                value={formData.quantity}
-                onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
-                required
-              />
+          {barcodeVariants.length > 0 && (
+            <div className="space-y-3">
+              {barcodeVariants.map((variant, index) => (
+                <motion.div
+                  key={variant.id}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                  className="grid grid-cols-12 gap-3 items-end p-4 bg-muted/30 rounded-lg"
+                >
+                  <div className="col-span-6 sm:col-span-2 space-y-2">
+                    <Label>{t('products.weight')}</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={variant.weight}
+                      onChange={(e) => handleBarcodeVariantChange(variant.id, 'weight', Number(e.target.value))}
+                    />
+                  </div>
+                  <div className="col-span-6 sm:col-span-2 space-y-2">
+                    <Label>{t('products.weightUnit')}</Label>
+                    <Select 
+                      value={variant.weightUnit}
+                      onValueChange={(value) => handleBarcodeVariantChange(variant.id, 'weightUnit', value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="g">{t('units.gram')}</SelectItem>
+                        <SelectItem value="kg">{t('units.kg')}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="col-span-6 sm:col-span-3 space-y-2">
+                    <Label>{t('products.barcode')}</Label>
+                    <Input
+                      value={variant.barcode}
+                      onChange={(e) => handleBarcodeVariantChange(variant.id, 'barcode', e.target.value)}
+                    />
+                  </div>
+                  <div className="col-span-6 sm:col-span-2 space-y-2">
+                    <Label>{t('products.salePrice')}</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={variant.price}
+                      onChange={(e) => handleBarcodeVariantChange(variant.id, 'price', Number(e.target.value))}
+                    />
+                  </div>
+                  <div className="col-span-6 sm:col-span-2 space-y-2">
+                    <Label>{t('products.stockDeduction')}</Label>
+                    <Input
+                      value={variant.weightUnit === 'g' ? `${(variant.weight / 1000).toFixed(3)} ${t('units.kg')}` : `${variant.weight} ${t('units.kg')}`}
+                      readOnly
+                      className="bg-muted text-muted-foreground"
+                    />
+                  </div>
+                  <div className="col-span-6 sm:col-span-1">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleRemoveBarcodeVariant(variant.id)}
+                      className="text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </motion.div>
+              ))}
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="reorder_level">مستوى إعادة الطلب</Label>
-              <Input
-                id="reorder_level"
-                type="number"
-                value={formData.reorder_level}
-                onChange={(e) => setFormData({ ...formData, reorder_level: e.target.value })}
-              />
-            </div>
-          </div>
+          )}
 
-          <div className="space-y-2">
-            <Label htmlFor="description">الوصف</Label>
-            <Textarea
-              id="description"
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              rows={3}
-            />
-          </div>
+          {barcodeVariants.length === 0 && (
+            <div className="text-center py-8 text-muted-foreground">
+              <Barcode className="w-12 h-12 mx-auto mb-2 opacity-50" />
+              <p>{t('products.noBarcodeVariants')}</p>
+            </div>
+          )}
         </motion.div>
 
         {/* Actions */}
-        <div className="flex gap-3 justify-end">
+        <div className="flex justify-end gap-4 mt-6">
           <Button type="button" variant="outline" onClick={() => navigate(-1)}>
-            إلغاء
+            {t('common.cancel')}
           </Button>
-          <Button type="submit" className="gap-2" disabled={updateProduct.isPending}>
-            {updateProduct.isPending ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                جاري الحفظ...
-              </>
-            ) : (
-              <>
-                <Save className="w-4 h-4" />
-                حفظ التغييرات
-              </>
-            )}
+          <Button type="submit" className="gradient-primary border-0 gap-2">
+            <Save className="w-4 h-4" />
+            {t('common.save')}
           </Button>
         </div>
       </form>
