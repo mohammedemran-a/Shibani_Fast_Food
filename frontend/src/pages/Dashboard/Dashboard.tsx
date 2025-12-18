@@ -1,24 +1,22 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useQuery } from '@tanstack/react-query';
 import { DollarSign, ShoppingCart, TrendingUp, Package, Users, Truck, RotateCcw, Wallet } from 'lucide-react';
 import { StatsCard, SalesChart, RecentSalesTable, TopProductsList, SmartInsights, SalesForecast } from '@/components/dashboard';
-import { reportService, productService } from '@/api';
+import { useDashboard } from '@/hooks/useDashboard';
+import { useLowStockProducts } from '@/hooks/useProducts';
+import DateRangeFilter from '@/components/common/DateRangeFilter';
 
 const Dashboard: React.FC = () => {
   const { t } = useTranslation();
+  const [period, setPeriod] = useState('all');
+  const [startDate, setStartDate] = useState<string>();
+  const [endDate, setEndDate] = useState<string>();
 
-  // Fetch dashboard statistics from API
-  const { data: stats, isLoading } = useQuery({
-    queryKey: ['dashboard-stats'],
-    queryFn: reportService.getDashboardStats,
-  });
+  // Fetch dashboard statistics with caching (5 minutes)
+  const { data: stats, isLoading } = useDashboard(period, startDate, endDate);
 
-  // Fetch low stock products count
-  const { data: lowStockData } = useQuery({
-    queryKey: ['low-stock-products'],
-    queryFn: productService.getLowStockProducts,
-  });
+  // Fetch low stock products with caching (2 minutes)
+  const { data: lowStockData } = useLowStockProducts();
 
   if (isLoading) {
     return (
@@ -31,45 +29,57 @@ const Dashboard: React.FC = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Page Header */}
-      <div>
-        <h1 className="text-2xl md:text-3xl font-bold text-foreground">
-          {t('dashboard.title')}
-        </h1>
-        <p className="text-muted-foreground mt-1">
-          {t('dashboard.welcome')}! {t('dashboard.overview')}
-        </p>
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground">
+            {t('dashboard.title')}
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            {t('dashboard.welcome')}! {t('dashboard.overview')}
+          </p>
+        </div>
+        <div className="w-full md:w-auto">
+          <DateRangeFilter
+            period={period}
+            onPeriodChange={setPeriod}
+            startDate={startDate}
+            endDate={endDate}
+            onStartDateChange={setStartDate}
+            onEndDateChange={setEndDate}
+          />
+        </div>
       </div>
 
       {/* Primary Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatsCard
           title={t('dashboard.totalSales')}
-          value={`$${stats?.data?.total_sales?.toLocaleString() || '0'}`}
-          change={`+12.5% ${t('dashboard.fromLastWeek')}`}
+          value={`$${stats?.data?.sales?.total?.toLocaleString() || '0'}`}
+          change={`${stats?.data?.sales?.count || 0} ${t('dashboard.transactions')}`}
           changeType="positive"
           icon={DollarSign}
           variant="primary"
         />
         <StatsCard
           title={t('dashboard.totalPurchases')}
-          value={`$${stats?.data?.total_purchases?.toLocaleString() || '0'}`}
-          change={`+8.2% ${t('dashboard.fromLastWeek')}`}
+          value={`$${stats?.data?.purchases?.total?.toLocaleString() || '0'}`}
+          change={`${stats?.data?.purchases?.count || 0} ${t('dashboard.transactions')}`}
           changeType="positive"
           icon={ShoppingCart}
           variant="accent"
         />
         <StatsCard
           title={t('dashboard.totalProfit')}
-          value={`$${stats?.data?.total_profit?.toLocaleString() || '0'}`}
-          change={`+15.3% ${t('dashboard.fromLastWeek')}`}
+          value={`$${stats?.data?.profit?.total?.toLocaleString() || '0'}`}
+          change={`${stats?.data?.profit?.margin?.toFixed(1) || 0}% ${t('dashboard.margin')}`}
           changeType="positive"
           icon={TrendingUp}
           variant="success"
         />
         <StatsCard
           title={t('dashboard.totalProducts')}
-          value={lowStockData?.data?.total || '0'}
-          change={`${lowStockData?.data?.data?.length || 0} ${t('dashboard.lowStock')}`}
+          value={stats?.data?.products?.total_count || '0'}
+          change={`${stats?.data?.products?.low_stock_count || 0} ${t('dashboard.lowStock')}`}
           changeType="warning"
           icon={Package}
           variant="warning"
@@ -80,33 +90,33 @@ const Dashboard: React.FC = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatsCard
           title={t('dashboard.totalCustomers')}
-          value="142"
-          change={`+5 ${t('dashboard.thisMonth')}`}
+          value={stats?.data?.people?.customers_count || '0'}
+          change={`${stats?.data?.people?.active_customers || 0} ${t('dashboard.active')}`}
           changeType="positive"
           icon={Users}
           variant="primary"
         />
         <StatsCard
           title={t('dashboard.totalSuppliers')}
-          value="18"
-          change={`+2 ${t('dashboard.thisMonth')}`}
+          value={stats?.data?.people?.suppliers_count || '0'}
+          change={t('dashboard.active')}
           changeType="positive"
           icon={Truck}
           variant="accent"
         />
         <StatsCard
-          title={t('dashboard.totalReturns')}
-          value="$450"
-          change={`-3.2% ${t('dashboard.fromLastWeek')}`}
-          changeType="negative"
+          title={t('dashboard.totalExpenses')}
+          value={`$${stats?.data?.expenses?.total?.toLocaleString() || '0'}`}
+          change={`${stats?.data?.expenses?.count || 0} ${t('dashboard.transactions')}`}
+          changeType="neutral"
           icon={RotateCcw}
           variant="warning"
         />
         <StatsCard
-          title={t('dashboard.cashInHand')}
-          value={`$${stats?.data?.total_expenses?.toLocaleString() || '0'}`}
-          change={t('dashboard.currentBalance')}
-          changeType="neutral"
+          title={t('dashboard.netProfit')}
+          value={`$${stats?.data?.profit?.total?.toLocaleString() || '0'}`}
+          change={t('dashboard.afterExpenses')}
+          changeType="positive"
           icon={Wallet}
           variant="success"
         />

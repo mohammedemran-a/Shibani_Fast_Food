@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useTheme } from '@/contexts/ThemeContext';
-import { toast } from 'sonner';
+import { useCreateProduct } from '@/hooks/useProducts';
 
 interface BarcodeVariant {
   id: number;
@@ -67,10 +67,19 @@ const AddProduct: React.FC = () => {
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const createProduct = useCreateProduct();
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast.success(t('products.productAdded'));
-    navigate('/products');
+    
+    // TODO: Map formData to CreateProductRequest format
+    // For now, just show success message
+    try {
+      // await createProduct.mutateAsync(productData);
+      navigate('/products');
+    } catch (error) {
+      // Error is handled by the hook
+    }
   };
 
   return (

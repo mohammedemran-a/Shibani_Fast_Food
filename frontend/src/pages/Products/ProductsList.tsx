@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { Plus, Search, Filter, Edit2, Trash2, Eye, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -17,31 +16,17 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { toast } from 'sonner';
-import productService from '@/api/productService';
+import { useProducts, useDeleteProduct } from '@/hooks/useProducts';
 
 const ProductsList: React.FC = () => {
   const { t } = useTranslation();
   const [search, setSearch] = useState('');
-  const queryClient = useQueryClient();
 
-  // Fetch products from API
-  const { data: productsData, isLoading, error } = useQuery({
-    queryKey: ['products', search],
-    queryFn: () => productService.getProducts({ search }),
-  });
+  // Fetch products with caching (5 minutes)
+  const { data: productsData, isLoading, error } = useProducts({ search });
 
   // Delete product mutation
-  const deleteMutation = useMutation({
-    mutationFn: productService.deleteProduct,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['products'] });
-      toast.success(t('products.deleteProduct'));
-    },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Failed to delete product');
-    },
-  });
+  const deleteMutation = useDeleteProduct();
 
   const getStatusBadge = (quantity: number) => {
     let status = 'active';

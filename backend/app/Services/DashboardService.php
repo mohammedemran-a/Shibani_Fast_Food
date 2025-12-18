@@ -21,16 +21,24 @@ class DashboardService
 
     /**
      * Get all dashboard statistics with caching
+     * @param string|null $period - today, week, month, all
+     * @param string|null $start_date - Custom start date
+     * @param string|null $end_date - Custom end date
      */
-    public static function getStats()
+    public static function getStats($period = 'all', $start_date = null, $end_date = null)
     {
-        return Cache::remember('dashboard_stats', self::CACHE_DURATION, function () {
+        $cacheKey = 'dashboard_stats_' . $period . '_' . $start_date . '_' . $end_date;
+        
+        return Cache::remember($cacheKey, self::CACHE_DURATION, function () use ($period, $start_date, $end_date) {
+            // تحديد الفترة الزمنية
+            $dateRange = self::getDateRange($period, $start_date, $end_date);
+            
             return [
                 // المبيعات
-                'sales' => self::getSalesStats(),
+                'sales' => self::getSalesStats($dateRange),
                 
                 // المشتريات
-                'purchases' => self::getPurchasesStats(),
+                'purchases' => self::getPurchasesStats($dateRange),
                 
                 // المنتجات
                 'products' => self::getProductsStats(),
@@ -39,55 +47,107 @@ class DashboardService
                 'people' => self::getPeopleStats(),
                 
                 // الأرباح
-                'profit' => self::getProfitStats(),
+                'profit' => self::getProfitStats($dateRange),
                 
                 // المصروفات
-                'expenses' => self::getExpensesStats(),
+                'expenses' => self::getExpensesStats($dateRange),
                 
                 // أفضل المنتجات مبيعاً (Top 5)
-                'top_products' => self::getTopProducts(),
+                'top_products' => self::getTopProducts($dateRange),
                 
                 // مبيعات آخر 7 أيام
-                'sales_chart' => self::getLast7DaysSales(),
+                'sales_chart' => self::getLast7DaysSales($dateRange),
                 
                 // مشتريات آخر 7 أيام
-                'purchases_chart' => self::getLast7DaysPurchases(),
+                'purchases_chart' => self::getLast7DaysPurchases($dateRange),
+                
+                // الفترة المحددة
+                'period' => $period,
+                'date_range' => $dateRange,
                 
                 // وقت آخر تحديث
                 'last_updated' => now()->toDateTimeString(),
             ];
         });
     }
+    
+    /**
+     * تحديد نطاق التاريخ
+     */
+    private static function getDateRange($period, $start_date = null, $end_date = null)
+    {
+        $now = Carbon::now();
+        
+        switch ($period) {
+            case 'today':
+                return [
+                    'start' => Carbon::today(),
+                    'end' => Carbon::today()->endOfDay(),
+                ];
+            
+            case 'week':
+                return [
+                    'start' => $now->copy()->subDays(7),
+                    'end' => $now,
+                ];
+            
+            case 'month':
+                return [
+                    'start' => $now->copy()->subDays(30),
+                    'end' => $now,
+                ];
+            
+            case 'custom':
+                if ($start_date && $end_date) {
+                    return [
+                        'start' => Carbon::parse($start_date),
+                        'end' => Carbon::parse($end_date)->endOfDay(),
+                    ];
+                }
+                // fallthrough to 'all' if custom dates not provided
+            
+            case 'all':
+            default:
+                return [
+                    'start' => null,
+                    'end' => null,
+                ];
+        }
+    }
 
     /**
      * إحصائيات المبيعات
      */
-    private static function getSalesStats()
+    private static function getSalesStats($dateRange = null)
     {
+        $query = SalesInvoice::query();
+        
+        if ($dateRange && $dateRange['start'] && $dateRange['end']) {
+            $query->whereBetween('created_at', [$dateRange['start'], $dateRange['end']]);
+        }
+        
         return [
-            'total' => (float) SalesInvoice::sum('total_amount'),
-            'today' => (float) SalesInvoice::whereDate('created_at', today())->sum('total_amount'),
-            'this_month' => (float) SalesInvoice::whereMonth('created_at', now()->month)
-                ->whereYear('created_at', now()->year)
-                ->sum('total_amount'),
-            'count' => SalesInvoice::count(),
-            'today_count' => SalesInvoice::whereDate('created_at', today())->count(),
+            'total' => (float) $query->sum('total_amount'),
+            'count' => $query->count(),
+            'average' => $query->count() > 0 ? (float) $query->avg('total_amount') : 0,
         ];
     }
 
     /**
      * إحصائيات المشتريات
      */
-    private static function getPurchasesStats()
+    private static function getPurchasesStats($dateRange = null)
     {
+        $query = PurchaseInvoice::query();
+        
+        if ($dateRange && $dateRange['start'] && $dateRange['end']) {
+            $query->whereBetween('created_at', [$dateRange['start'], $dateRange['end']]);
+        }
+        
         return [
-            'total' => (float) PurchaseInvoice::sum('total_amount'),
-            'today' => (float) PurchaseInvoice::whereDate('created_at', today())->sum('total_amount'),
-            'this_month' => (float) PurchaseInvoice::whereMonth('created_at', now()->month)
-                ->whereYear('created_at', now()->year)
-                ->sum('total_amount'),
-            'count' => PurchaseInvoice::count(),
-            'today_count' => PurchaseInvoice::whereDate('created_at', today())->count(),
+            'total' => (float) $query->sum('total_amount'),
+            'count' => $query->count(),
+            'average' => $query->count() > 0 ? (float) $query->avg('total_amount') : 0,
         ];
     }
 
@@ -123,43 +183,42 @@ class DashboardService
     /**
      * إحصائيات الأرباح
      */
-    private static function getProfitStats()
+    private static function getProfitStats($dateRange = null)
     {
-        $totalSales = (float) SalesInvoice::sum('total_amount');
-        $totalPurchases = (float) PurchaseInvoice::sum('total_amount');
-        $totalExpenses = (float) Expense::sum('amount');
+        $salesQuery = SalesInvoice::query();
+        $purchasesQuery = PurchaseInvoice::query();
+        $expensesQuery = Expense::query();
         
-        $monthlySales = (float) SalesInvoice::whereMonth('created_at', now()->month)
-            ->whereYear('created_at', now()->year)
-            ->sum('total_amount');
-            
-        $monthlyPurchases = (float) PurchaseInvoice::whereMonth('created_at', now()->month)
-            ->whereYear('created_at', now()->year)
-            ->sum('total_amount');
-            
-        $monthlyExpenses = (float) Expense::whereMonth('date', now()->month)
-            ->whereYear('date', now()->year)
-            ->sum('amount');
+        if ($dateRange && $dateRange['start'] && $dateRange['end']) {
+            $salesQuery->whereBetween('created_at', [$dateRange['start'], $dateRange['end']]);
+            $purchasesQuery->whereBetween('created_at', [$dateRange['start'], $dateRange['end']]);
+            $expensesQuery->whereBetween('date', [$dateRange['start'], $dateRange['end']]);
+        }
+        
+        $totalSales = (float) $salesQuery->sum('total_amount');
+        $totalPurchases = (float) $purchasesQuery->sum('total_amount');
+        $totalExpenses = (float) $expensesQuery->sum('amount');
 
         return [
-            'total_profit' => $totalSales - $totalPurchases - $totalExpenses,
-            'monthly_profit' => $monthlySales - $monthlyPurchases - $monthlyExpenses,
-            'profit_margin' => $totalSales > 0 ? (($totalSales - $totalPurchases) / $totalSales) * 100 : 0,
+            'total' => $totalSales - $totalPurchases - $totalExpenses,
+            'margin' => $totalSales > 0 ? (($totalSales - $totalPurchases) / $totalSales) * 100 : 0,
         ];
     }
 
     /**
      * إحصائيات المصروفات
      */
-    private static function getExpensesStats()
+    private static function getExpensesStats($dateRange = null)
     {
+        $query = Expense::query();
+        
+        if ($dateRange && $dateRange['start'] && $dateRange['end']) {
+            $query->whereBetween('date', [$dateRange['start'], $dateRange['end']]);
+        }
+        
         return [
-            'total' => (float) Expense::sum('amount'),
-            'today' => (float) Expense::whereDate('date', today())->sum('amount'),
-            'this_month' => (float) Expense::whereMonth('date', now()->month)
-                ->whereYear('date', now()->year)
-                ->sum('amount'),
-            'count' => Expense::count(),
+            'total' => (float) $query->sum('amount'),
+            'count' => $query->count(),
         ];
     }
 
@@ -167,12 +226,18 @@ class DashboardService
      * أفضل 5 منتجات مبيعاً
      * محسّن للبيانات الكبيرة
      */
-    private static function getTopProducts()
+    private static function getTopProducts($dateRange = null)
     {
         try {
-            return DB::table('sales_invoice_items')
+            $query = DB::table('sales_invoice_items')
                 ->join('products', 'sales_invoice_items.product_id', '=', 'products.id')
-                ->select(
+                ->join('sales_invoices', 'sales_invoice_items.sales_invoice_id', '=', 'sales_invoices.id');
+            
+            if ($dateRange && $dateRange['start'] && $dateRange['end']) {
+                $query->whereBetween('sales_invoices.created_at', [$dateRange['start'], $dateRange['end']]);
+            }
+            
+            return $query->select(
                     'products.id',
                     'products.name',
                     'products.name_ar',
@@ -201,12 +266,13 @@ class DashboardService
     /**
      * مبيعات آخر 7 أيام
      */
-    private static function getLast7DaysSales()
+    private static function getLast7DaysSales($dateRange = null)
     {
         $last7Days = [];
+        $endDate = $dateRange && $dateRange['end'] ? Carbon::parse($dateRange['end']) : Carbon::today();
         
         for ($i = 6; $i >= 0; $i--) {
-            $date = Carbon::today()->subDays($i);
+            $date = $endDate->copy()->subDays($i);
             $last7Days[] = [
                 'date' => $date->format('Y-m-d'),
                 'day' => $date->format('D'),
@@ -221,12 +287,13 @@ class DashboardService
     /**
      * مشتريات آخر 7 أيام
      */
-    private static function getLast7DaysPurchases()
+    private static function getLast7DaysPurchases($dateRange = null)
     {
         $last7Days = [];
+        $endDate = $dateRange && $dateRange['end'] ? Carbon::parse($dateRange['end']) : Carbon::today();
         
         for ($i = 6; $i >= 0; $i--) {
-            $date = Carbon::today()->subDays($i);
+            $date = $endDate->copy()->subDays($i);
             $last7Days[] = [
                 'date' => $date->format('Y-m-d'),
                 'day' => $date->format('D'),

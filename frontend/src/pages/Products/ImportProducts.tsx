@@ -27,9 +27,20 @@ const ImportProducts: React.FC = () => {
   const handleFile = (file: File) => {
     if (file.type === 'text/csv' || file.name.endsWith('.csv')) {
       toast.success(`تم رفع الملف: ${file.name}`);
+      // TODO: Process CSV file and import products
     } else {
       toast.error('يرجى رفع ملف CSV فقط');
     }
+  };
+
+  const handleDownloadTemplate = () => {
+    const link = document.createElement('a');
+    link.href = '/products-template.csv';
+    link.download = 'products-template.csv';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success(t('products.downloadTemplate') + ' تم بنجاح');
   };
 
   return (
@@ -109,9 +120,9 @@ const ImportProducts: React.FC = () => {
             </div>
           </div>
 
-          <Button variant="outline" className="w-full mt-6 gap-2">
+          <Button variant="outline" className="w-full mt-6 gap-2" onClick={handleDownloadTemplate}>
             <Download className="w-4 h-4" />
-            تحميل القالب
+            {t('products.downloadTemplate')}
           </Button>
         </motion.div>
       </div>
