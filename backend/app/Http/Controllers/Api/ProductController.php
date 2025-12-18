@@ -18,7 +18,6 @@ class ProductController extends Controller
         if ($request->has('search')) {
             $search = $request->search;
             $query->where('name', 'like', "%$search%")
-                  ->orWhere('name_ar', 'like', "%$search%")
                   ->orWhere('sku', 'like', "%$search%")
                   ->orWhere('barcode', 'like', "%$search%");
         }
@@ -58,7 +57,6 @@ class ProductController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string',
-            'name_ar' => 'nullable|string',
             'sku' => 'required|unique:products',
             'barcode' => 'required|unique:products',
             'category_id' => 'required|exists:categories,id',
@@ -131,7 +129,6 @@ class ProductController extends Controller
 
         $validated = $request->validate([
             'name' => 'string',
-            'name_ar' => 'nullable|string',
             'sku' => 'unique:products,sku,' . $product->id,
             'barcode' => 'unique:products,barcode,' . $product->id,
             'category_id' => 'exists:categories,id',

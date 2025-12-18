@@ -15,7 +15,6 @@ return new class extends Migration
         Schema::create('units', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->string('name_ar');
             $table->string('abbreviation');
             $table->timestamps();
         });
@@ -35,7 +34,6 @@ return new class extends Migration
         Schema::create('categories', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->string('name_ar');
             $table->text('description')->nullable();
             $table->string('image')->nullable();
             $table->timestamps();
@@ -45,7 +43,6 @@ return new class extends Migration
         Schema::create('brands', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->string('name_ar');
             $table->text('description')->nullable();
             $table->string('logo')->nullable();
             $table->timestamps();
@@ -55,7 +52,6 @@ return new class extends Migration
         Schema::create('products', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->string('name_ar');
             $table->string('sku')->unique();
             $table->string('barcode')->unique();
             $table->text('description')->nullable();
@@ -87,7 +83,6 @@ return new class extends Migration
         Schema::create('suppliers', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->string('name_ar');
             $table->string('email')->nullable();
             $table->string('phone');
             $table->string('address')->nullable();
@@ -153,7 +148,6 @@ return new class extends Migration
         Schema::create('customers', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->string('name_ar');
             $table->string('email')->nullable();
             $table->string('phone');
             $table->string('address')->nullable();
