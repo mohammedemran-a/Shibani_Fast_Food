@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { Plus, Search, Filter, Eye, FileDown, Trash2, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Link } from 'react-router-dom';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,18 +18,36 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
-
-const initialSalesData = [
-  { id: 'INV-001', customer: 'أحمد محمد', date: '2024-01-15', items: 3, total: 250.00, status: 'completed' },
-  { id: 'INV-002', customer: 'سارة علي', date: '2024-01-15', items: 2, total: 180.50, status: 'completed' },
-  { id: 'INV-003', customer: 'محمد خالد', date: '2024-01-14', items: 5, total: 420.00, status: 'pending' },
-  { id: 'INV-004', customer: 'فاطمة أحمد', date: '2024-01-14', items: 1, total: 95.00, status: 'completed' },
-  { id: 'INV-005', customer: 'عمر حسن', date: '2024-01-13', items: 4, total: 310.75, status: 'completed' },
-];
+import salesService from '@/api/salesService';
 
 const Sales: React.FC = () => {
   const { t } = useTranslation();
-  const [salesData, setSalesData] = useState(initialSalesData);
+  const [search, setSearch] = useState('');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+  const queryClient = useQueryClient();
+
+  // Fetch sales invoices from API
+  const { data: salesData, isLoading, error } = useQuery({
+    queryKey: ['sales', fromDate, toDate, search],
+    queryFn: () => salesService.getSalesInvoices({ 
+      from_date: fromDate, 
+      to_date: toDate,
+      search 
+    }),
+  });
+
+  // Delete sales invoice mutation
+  const deleteMutation = useMutation({
+    mutationFn: salesService.deleteSalesInvoice,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sales'] });
+      toast.success('Invoice deleted successfully');
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Failed to delete invoice');
+    },
+  });
 
   const getStatusBadge = (status: string) => {
     const styles = {
@@ -42,20 +62,37 @@ const Sales: React.FC = () => {
     };
     return (
       <span className={`px-2 py-1 rounded-full text-xs font-medium ${styles[status as keyof typeof styles]}`}>
-        {labels[status as keyof typeof labels]}
+        {labels[status as keyof typeof labels] || status}
       </span>
     );
   };
 
-  const handleDeleteAll = () => {
-    setSalesData([]);
-    toast.success(t('sales.deleteAllSuccess'));
+  const handleDeleteSingle = (id: number) => {
+    deleteMutation.mutate(id);
   };
 
-  const handleDeleteSingle = (id: string) => {
-    setSalesData(salesData.filter(s => s.id !== id));
-    toast.success(t('common.delete'));
-  };
+  const sales = salesData?.data?.data || [];
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <p className="text-destructive mb-4">Error loading sales</p>
+          <Button onClick={() => queryClient.invalidateQueries({ queryKey: ['sales'] })}>
+            Retry
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -65,55 +102,47 @@ const Sales: React.FC = () => {
           <p className="text-muted-foreground mt-1">{t('sales.subtitle')}</p>
         </div>
         <div className="flex gap-2">
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="destructive" className="gap-2" disabled={salesData.length === 0}>
-                <Trash2 className="w-4 h-4" />
-                {t('sales.deleteAll')}
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle className="flex items-center gap-2">
-                  <AlertTriangle className="w-5 h-5 text-destructive" />
-                  {t('common.warning')}
-                </AlertDialogTitle>
-                <AlertDialogDescription>
-                  {t('sales.deleteAllConfirm')}
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDeleteAll} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                  {t('common.confirm')}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
           <Button variant="outline" className="gap-2">
             <FileDown className="w-4 h-4" />
             {t('products.export')}
           </Button>
-          <Button className="gradient-primary border-0 gap-2">
-            <Plus className="w-4 h-4" />
-            {t('sales.newInvoice')}
-          </Button>
+          <Link to="/pos">
+            <Button className="gradient-primary border-0 gap-2">
+              <Plus className="w-4 h-4" />
+              {t('sales.newInvoice')}
+            </Button>
+          </Link>
         </div>
       </div>
 
+      {/* Filters */}
       <div className="glass-card p-4">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="relative flex-1">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="relative">
             <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input placeholder={t('common.search')} className="ps-10" />
+            <Input 
+              placeholder={t('common.search')} 
+              className="ps-10"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
           </div>
-          <Button variant="outline" className="gap-2">
-            <Filter className="w-4 h-4" />
-            {t('products.filter')}
-          </Button>
+          <Input 
+            type="date" 
+            placeholder="From Date"
+            value={fromDate}
+            onChange={(e) => setFromDate(e.target.value)}
+          />
+          <Input 
+            type="date" 
+            placeholder="To Date"
+            value={toDate}
+            onChange={(e) => setToDate(e.target.value)}
+          />
         </div>
       </div>
 
+      {/* Table */}
       <div className="glass-card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -124,12 +153,12 @@ const Sales: React.FC = () => {
                 <th className="text-start py-4 px-4 font-medium text-muted-foreground">{t('sales.date')}</th>
                 <th className="text-start py-4 px-4 font-medium text-muted-foreground">{t('sales.items')}</th>
                 <th className="text-start py-4 px-4 font-medium text-muted-foreground">{t('sales.total')}</th>
-                <th className="text-start py-4 px-4 font-medium text-muted-foreground">{t('sales.status')}</th>
+                <th className="text-start py-4 px-4 font-medium text-muted-foreground">{t('common.status')}</th>
                 <th className="text-start py-4 px-4 font-medium text-muted-foreground">{t('common.actions')}</th>
               </tr>
             </thead>
             <tbody>
-              {salesData.map((sale, index) => (
+              {sales.map((sale: any, index: number) => (
                 <motion.tr
                   key={sale.id}
                   initial={{ opacity: 0, y: 10 }}
@@ -137,30 +166,53 @@ const Sales: React.FC = () => {
                   transition={{ delay: index * 0.05 }}
                   className="border-t border-border hover:bg-muted/30 transition-colors"
                 >
-                  <td className="py-4 px-4 font-mono text-primary">{sale.id}</td>
-                  <td className="py-4 px-4 font-medium text-foreground">{sale.customer}</td>
-                  <td className="py-4 px-4 text-muted-foreground">{sale.date}</td>
-                  <td className="py-4 px-4 text-muted-foreground">{sale.items}</td>
-                  <td className="py-4 px-4 font-semibold text-success">${sale.total.toFixed(2)}</td>
+                  <td className="py-4 px-4 font-medium text-foreground">{sale.invoice_number}</td>
+                  <td className="py-4 px-4 text-muted-foreground">{sale.customer?.name || 'Walk-in Customer'}</td>
+                  <td className="py-4 px-4 text-muted-foreground">{new Date(sale.invoice_date).toLocaleDateString()}</td>
+                  <td className="py-4 px-4 text-muted-foreground">{sale.items?.length || 0}</td>
+                  <td className="py-4 px-4 font-semibold text-primary">${sale.total_amount?.toFixed(2)}</td>
                   <td className="py-4 px-4">{getStatusBadge(sale.status)}</td>
                   <td className="py-4 px-4">
                     <div className="flex items-center gap-1">
                       <Button variant="ghost" size="icon" className="h-8 w-8">
                         <Eye className="w-4 h-4" />
                       </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-8 w-8 text-destructive hover:text-destructive"
-                        onClick={() => handleDeleteSingle(sale.id)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8 text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle className="flex items-center gap-2">
+                              <AlertTriangle className="w-5 h-5 text-destructive" />
+                              {t('common.warning')}
+                            </AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to delete this invoice?
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+                            <AlertDialogAction 
+                              onClick={() => handleDeleteSingle(sale.id)} 
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              {t('common.confirm')}
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </div>
                   </td>
                 </motion.tr>
               ))}
-              {salesData.length === 0 && (
+              {sales.length === 0 && (
                 <tr>
                   <td colSpan={7} className="py-8 text-center text-muted-foreground">
                     {t('common.noData')}
