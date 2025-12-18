@@ -70,7 +70,7 @@ class ProductController extends Controller
             'reorder_level' => 'integer|min:0',
             'expiry_date' => 'nullable|date',
             'description' => 'nullable|string',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:10240',
         ]);
 
         // Handle image upload
@@ -144,7 +144,7 @@ class ProductController extends Controller
             'expiry_date' => 'nullable|date',
             'description' => 'nullable|string',
             'is_active' => 'boolean',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:10240',
         ]);
 
         // Handle image upload
