@@ -63,8 +63,8 @@ export const ProductsGrid: React.FC<ProductsGridProps> = ({ onAddToCart }) => {
           name: product.name_ar,
           nameEn: product.name,
           barcode: product.barcode,
-          price: product.selling_price,
-          stock: product.quantity,
+          price: Number(product.selling_price || 0),
+          stock: Number(product.quantity || 0),
           image: product.image || '📦',
         };
         onAddToCart(cartProduct);
@@ -161,8 +161,8 @@ export const ProductsGrid: React.FC<ProductsGridProps> = ({ onAddToCart }) => {
                 name: product.name_ar,
                 nameEn: product.name,
                 barcode: product.barcode,
-                price: product.selling_price,
-                stock: product.quantity,
+                price: Number(product.selling_price || 0),
+                stock: Number(product.quantity || 0),
                 image: product.image || '📦',
               };
 
@@ -189,7 +189,7 @@ export const ProductsGrid: React.FC<ProductsGridProps> = ({ onAddToCart }) => {
                   </h4>
                   <div className="flex items-center justify-between mt-2">
                     <span className="text-lg font-bold text-primary">
-                      ${product.selling_price.toFixed(2)}
+                      ${Number(product.selling_price || 0).toFixed(2)}
                     </span>
                     <span className={cn(
                       'text-xs px-2 py-0.5 rounded-full',

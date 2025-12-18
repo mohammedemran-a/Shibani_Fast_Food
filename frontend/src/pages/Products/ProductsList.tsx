@@ -148,8 +148,8 @@ const ProductsList: React.FC = () => {
                   <td className="py-4 px-4 font-medium text-foreground">{product.name}</td>
                   <td className="py-4 px-4 text-muted-foreground">{product.sku}</td>
                   <td className="py-4 px-4 text-muted-foreground">{product.category?.name || '-'}</td>
-                  <td className="py-4 px-4 text-muted-foreground">${product.purchase_price?.toFixed(2)}</td>
-                  <td className="py-4 px-4 font-semibold text-primary">${product.selling_price?.toFixed(2)}</td>
+                  <td className="py-4 px-4 text-muted-foreground">${Number(product.purchase_price || 0).toFixed(2)}</td>
+                  <td className="py-4 px-4 font-semibold text-primary">${Number(product.selling_price || 0).toFixed(2)}</td>
                   <td className="py-4 px-4 text-muted-foreground">{product.quantity}</td>
                   <td className="py-4 px-4">{getStatusBadge(product.quantity)}</td>
                   <td className="py-4 px-4">

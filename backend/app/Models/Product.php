@@ -29,10 +29,9 @@ class Product extends Model
     ];
 
     protected $casts = [
-        'purchase_price' => 'decimal:2',
-        'selling_price' => 'decimal:2',
+        'purchase_price' => 'float',
+        'selling_price' => 'float',
         'quantity' => 'integer',
-
         'reorder_level' => 'integer',
         'is_active' => 'boolean',
         'expiry_date' => 'date',
