@@ -1,5 +1,5 @@
 import { apiClient } from './apiClient';
-import { API_ENDPOINTS } from './endpoints';
+import { CATEGORIES_ENDPOINTS, BRANDS_ENDPOINTS, UNITS_ENDPOINTS, CURRENCIES_ENDPOINTS, SALES_INVOICES_ENDPOINTS, PURCHASE_INVOICES_ENDPOINTS, SUPPLIERS_ENDPOINTS, DEBTS_ENDPOINTS, EXPENSES_ENDPOINTS, USERS_ENDPOINTS, ROLES_ENDPOINTS, REPORTS_ENDPOINTS } from './endpoints';
 
 // Users
 export interface User {
@@ -59,59 +59,59 @@ export interface UpdateRoleData {
 export const userRoleService = {
   // Users
   getUsers: async () => {
-    const response = await apiClient.get(API_ENDPOINTS.USERS.LIST);
+    const response = await apiClient.get(USERS_ENDPOINTS.LIST);
     return response.data;
   },
 
   getUser: async (id: number) => {
-    const response = await apiClient.get(API_ENDPOINTS.USERS.SHOW(id));
+    const response = await apiClient.get(USERS_ENDPOINTS.SHOW(id));
     return response.data;
   },
 
   createUser: async (data: CreateUserData) => {
-    const response = await apiClient.post(API_ENDPOINTS.USERS.CREATE, data);
+    const response = await apiClient.post(USERS_ENDPOINTS.CREATE, data);
     return response.data;
   },
 
   updateUser: async (id: number, data: UpdateUserData) => {
-    const response = await apiClient.put(API_ENDPOINTS.USERS.UPDATE(id), data);
+    const response = await apiClient.put(USERS_ENDPOINTS.UPDATE(id), data);
     return response.data;
   },
 
   deleteUser: async (id: number) => {
-    const response = await apiClient.delete(API_ENDPOINTS.USERS.DELETE(id));
+    const response = await apiClient.delete(USERS_ENDPOINTS.DELETE(id));
     return response.data;
   },
 
   // Roles
   getRoles: async () => {
-    const response = await apiClient.get(API_ENDPOINTS.ROLES.LIST);
+    const response = await apiClient.get(ROLES_ENDPOINTS.LIST);
     return response.data;
   },
 
   getRole: async (id: number) => {
-    const response = await apiClient.get(API_ENDPOINTS.ROLES.SHOW(id));
+    const response = await apiClient.get(ROLES_ENDPOINTS.SHOW(id));
     return response.data;
   },
 
   createRole: async (data: CreateRoleData) => {
-    const response = await apiClient.post(API_ENDPOINTS.ROLES.CREATE, data);
+    const response = await apiClient.post(ROLES_ENDPOINTS.CREATE, data);
     return response.data;
   },
 
   updateRole: async (id: number, data: UpdateRoleData) => {
-    const response = await apiClient.put(API_ENDPOINTS.ROLES.UPDATE(id), data);
+    const response = await apiClient.put(ROLES_ENDPOINTS.UPDATE(id), data);
     return response.data;
   },
 
   deleteRole: async (id: number) => {
-    const response = await apiClient.delete(API_ENDPOINTS.ROLES.DELETE(id));
+    const response = await apiClient.delete(ROLES_ENDPOINTS.DELETE(id));
     return response.data;
   },
 
   // Permissions
   getPermissions: async () => {
-    const response = await apiClient.get(API_ENDPOINTS.PERMISSIONS.LIST);
+    const response = await apiClient.get(ROLES_ENDPOINTS.LIST);
     return response.data;
   },
 };

@@ -1,5 +1,5 @@
 import { apiClient } from './apiClient';
-import { API_ENDPOINTS } from './endpoints';
+import { CATEGORIES_ENDPOINTS, BRANDS_ENDPOINTS, UNITS_ENDPOINTS, CURRENCIES_ENDPOINTS, SALES_INVOICES_ENDPOINTS, PURCHASE_INVOICES_ENDPOINTS, SUPPLIERS_ENDPOINTS, DEBTS_ENDPOINTS, EXPENSES_ENDPOINTS, USERS_ENDPOINTS, ROLES_ENDPOINTS, REPORTS_ENDPOINTS } from './endpoints';
 
 // Debts
 export interface Debt {
@@ -62,48 +62,48 @@ export interface GetExpensesParams {
 export const debtExpenseService = {
   // Debts
   getDebts: async (params?: GetDebtsParams) => {
-    const response = await apiClient.get(API_ENDPOINTS.DEBTS.LIST, { params });
+    const response = await apiClient.get(DEBTS_ENDPOINTS.LIST, { params });
     return response.data;
   },
 
   getDebt: async (id: number) => {
-    const response = await apiClient.get(API_ENDPOINTS.DEBTS.SHOW(id));
+    const response = await apiClient.get(DEBTS_ENDPOINTS.SHOW(id));
     return response.data;
   },
 
   getCustomerDebts: async (customerId: number) => {
-    const response = await apiClient.get(API_ENDPOINTS.DEBTS.CUSTOMER(customerId));
+    const response = await apiClient.get(DEBTS_ENDPOINTS.CUSTOMER(customerId));
     return response.data;
   },
 
   payDebt: async (data: DebtPayment) => {
-    const response = await apiClient.post(API_ENDPOINTS.DEBTS.PAY, data);
+    const response = await apiClient.post(DEBTS_ENDPOINTS.PAY, data);
     return response.data;
   },
 
   // Expenses
   getExpenses: async (params?: GetExpensesParams) => {
-    const response = await apiClient.get(API_ENDPOINTS.EXPENSES.LIST, { params });
+    const response = await apiClient.get(EXPENSES_ENDPOINTS.LIST, { params });
     return response.data;
   },
 
   getExpense: async (id: number) => {
-    const response = await apiClient.get(API_ENDPOINTS.EXPENSES.SHOW(id));
+    const response = await apiClient.get(EXPENSES_ENDPOINTS.SHOW(id));
     return response.data;
   },
 
   createExpense: async (data: CreateExpenseData) => {
-    const response = await apiClient.post(API_ENDPOINTS.EXPENSES.CREATE, data);
+    const response = await apiClient.post(EXPENSES_ENDPOINTS.CREATE, data);
     return response.data;
   },
 
   updateExpense: async (id: number, data: Partial<CreateExpenseData>) => {
-    const response = await apiClient.put(API_ENDPOINTS.EXPENSES.UPDATE(id), data);
+    const response = await apiClient.put(EXPENSES_ENDPOINTS.UPDATE(id), data);
     return response.data;
   },
 
   deleteExpense: async (id: number) => {
-    const response = await apiClient.delete(API_ENDPOINTS.EXPENSES.DELETE(id));
+    const response = await apiClient.delete(EXPENSES_ENDPOINTS.DELETE(id));
     return response.data;
   },
 };

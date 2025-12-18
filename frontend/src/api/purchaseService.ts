@@ -1,5 +1,5 @@
 import { apiClient } from './apiClient';
-import { API_ENDPOINTS } from './endpoints';
+import { CATEGORIES_ENDPOINTS, BRANDS_ENDPOINTS, UNITS_ENDPOINTS, CURRENCIES_ENDPOINTS, SALES_INVOICES_ENDPOINTS, PURCHASE_INVOICES_ENDPOINTS, SUPPLIERS_ENDPOINTS, DEBTS_ENDPOINTS, EXPENSES_ENDPOINTS, USERS_ENDPOINTS, ROLES_ENDPOINTS, REPORTS_ENDPOINTS } from './endpoints';
 
 export interface PurchaseInvoiceItem {
   product_id: number;
@@ -44,31 +44,31 @@ export interface GetPurchasesParams {
 export const purchaseService = {
   // Get all purchase invoices
   getPurchases: async (params?: GetPurchasesParams) => {
-    const response = await apiClient.get(API_ENDPOINTS.PURCHASES.LIST, { params });
+    const response = await apiClient.get(PURCHASE_INVOICES_ENDPOINTS.LIST, { params });
     return response.data;
   },
 
   // Get purchase invoice by ID
   getPurchase: async (id: number) => {
-    const response = await apiClient.get(API_ENDPOINTS.PURCHASES.SHOW(id));
+    const response = await apiClient.get(PURCHASE_INVOICES_ENDPOINTS.SHOW(id));
     return response.data;
   },
 
   // Create new purchase invoice
   createPurchase: async (data: CreatePurchaseInvoiceData) => {
-    const response = await apiClient.post(API_ENDPOINTS.PURCHASES.CREATE, data);
+    const response = await apiClient.post(PURCHASE_INVOICES_ENDPOINTS.CREATE, data);
     return response.data;
   },
 
   // Update purchase invoice
   updatePurchase: async (id: number, data: Partial<CreatePurchaseInvoiceData>) => {
-    const response = await apiClient.put(API_ENDPOINTS.PURCHASES.UPDATE(id), data);
+    const response = await apiClient.put(PURCHASE_INVOICES_ENDPOINTS.UPDATE(id), data);
     return response.data;
   },
 
   // Delete purchase invoice
   deletePurchase: async (id: number) => {
-    const response = await apiClient.delete(API_ENDPOINTS.PURCHASES.DELETE(id));
+    const response = await apiClient.delete(PURCHASE_INVOICES_ENDPOINTS.DELETE(id));
     return response.data;
   },
 };

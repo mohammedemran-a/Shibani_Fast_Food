@@ -1,5 +1,5 @@
 import { apiClient } from './apiClient';
-import { API_ENDPOINTS } from './endpoints';
+import { CATEGORIES_ENDPOINTS, BRANDS_ENDPOINTS, UNITS_ENDPOINTS, CURRENCIES_ENDPOINTS, SALES_INVOICES_ENDPOINTS, PURCHASE_INVOICES_ENDPOINTS, SUPPLIERS_ENDPOINTS, DEBTS_ENDPOINTS, EXPENSES_ENDPOINTS, USERS_ENDPOINTS, ROLES_ENDPOINTS, REPORTS_ENDPOINTS } from './endpoints';
 
 export interface Supplier {
   id: number;
@@ -40,31 +40,31 @@ export interface GetSuppliersParams {
 export const supplierService = {
   // Get all suppliers
   getSuppliers: async (params?: GetSuppliersParams) => {
-    const response = await apiClient.get(API_ENDPOINTS.SUPPLIERS.LIST, { params });
+    const response = await apiClient.get(SUPPLIERS_ENDPOINTS.LIST, { params });
     return response.data;
   },
 
   // Get supplier by ID
   getSupplier: async (id: number) => {
-    const response = await apiClient.get(API_ENDPOINTS.SUPPLIERS.SHOW(id));
+    const response = await apiClient.get(SUPPLIERS_ENDPOINTS.SHOW(id));
     return response.data;
   },
 
   // Create new supplier
   createSupplier: async (data: CreateSupplierData) => {
-    const response = await apiClient.post(API_ENDPOINTS.SUPPLIERS.CREATE, data);
+    const response = await apiClient.post(SUPPLIERS_ENDPOINTS.CREATE, data);
     return response.data;
   },
 
   // Update supplier
   updateSupplier: async (id: number, data: UpdateSupplierData) => {
-    const response = await apiClient.put(API_ENDPOINTS.SUPPLIERS.UPDATE(id), data);
+    const response = await apiClient.put(SUPPLIERS_ENDPOINTS.UPDATE(id), data);
     return response.data;
   },
 
   // Delete supplier
   deleteSupplier: async (id: number) => {
-    const response = await apiClient.delete(API_ENDPOINTS.SUPPLIERS.DELETE(id));
+    const response = await apiClient.delete(SUPPLIERS_ENDPOINTS.DELETE(id));
     return response.data;
   },
 };

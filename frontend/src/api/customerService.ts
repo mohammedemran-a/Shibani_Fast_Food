@@ -1,5 +1,5 @@
 import { apiClient } from './apiClient';
-import { API_ENDPOINTS } from './endpoints';
+import { CUSTOMERS_ENDPOINTS } from './endpoints';
 
 export interface Customer {
   id: number;
@@ -38,34 +38,36 @@ export interface GetCustomersParams {
   per_page?: number;
 }
 
-export const customerService = {
+const customerService = {
   // Get all customers
   getCustomers: async (params?: GetCustomersParams) => {
-    const response = await apiClient.get(API_ENDPOINTS.CUSTOMERS.LIST, { params });
+    const response = await apiClient.get(CUSTOMERS_ENDPOINTS.LIST, { params });
     return response.data;
   },
 
   // Get customer by ID
   getCustomer: async (id: number) => {
-    const response = await apiClient.get(API_ENDPOINTS.CUSTOMERS.SHOW(id));
+    const response = await apiClient.get(CUSTOMERS_ENDPOINTS.GET(id));
     return response.data;
   },
 
   // Create new customer
   createCustomer: async (data: CreateCustomerData) => {
-    const response = await apiClient.post(API_ENDPOINTS.CUSTOMERS.CREATE, data);
+    const response = await apiClient.post(CUSTOMERS_ENDPOINTS.CREATE, data);
     return response.data;
   },
 
   // Update customer
   updateCustomer: async (id: number, data: UpdateCustomerData) => {
-    const response = await apiClient.put(API_ENDPOINTS.CUSTOMERS.UPDATE(id), data);
+    const response = await apiClient.put(CUSTOMERS_ENDPOINTS.UPDATE(id), data);
     return response.data;
   },
 
   // Delete customer
   deleteCustomer: async (id: number) => {
-    const response = await apiClient.delete(API_ENDPOINTS.CUSTOMERS.DELETE(id));
+    const response = await apiClient.delete(CUSTOMERS_ENDPOINTS.DELETE(id));
     return response.data;
   },
 };
+
+export default customerService;
