@@ -145,7 +145,21 @@ const ProductsList: React.FC = () => {
                   transition={{ delay: index * 0.05 }}
                   className="border-t border-border hover:bg-muted/30 transition-colors"
                 >
-                  <td className="py-4 px-4 font-medium text-foreground">{product.name}</td>
+                  <td className="py-4 px-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted flex-shrink-0">
+                        <img 
+                          src={product.image || '/no-image.svg'} 
+                          alt={product.name}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = '/no-image.svg';
+                          }}
+                        />
+                      </div>
+                      <span className="font-medium text-foreground">{product.name}</span>
+                    </div>
+                  </td>
                   <td className="py-4 px-4 text-muted-foreground">{product.sku}</td>
                   <td className="py-4 px-4 text-muted-foreground">{product.category?.name || '-'}</td>
                   <td className="py-4 px-4 text-muted-foreground">${Number(product.purchase_price || 0).toFixed(2)}</td>

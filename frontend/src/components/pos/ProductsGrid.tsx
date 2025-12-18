@@ -43,7 +43,7 @@ export const ProductsGrid: React.FC<ProductsGridProps> = ({ onAddToCart }) => {
     is_active: true,
   });
 
-  const products = productsData?.data || [];
+  const products = Array.isArray(productsData?.data) ? productsData.data : (productsData?.data?.data || []);
 
   // Auto-focus barcode input on mount and keep focus
   useEffect(() => {
@@ -166,7 +166,7 @@ export const ProductsGrid: React.FC<ProductsGridProps> = ({ onAddToCart }) => {
                 barcode: product.barcode,
                 price: Number(product.selling_price || 0),
                 stock: Number(product.quantity || 0),
-                image: product.image || '📦',
+                image: product.image || '/no-image.svg',
               };
 
               return (
@@ -186,7 +186,16 @@ export const ProductsGrid: React.FC<ProductsGridProps> = ({ onAddToCart }) => {
                   )}
                   disabled={product.quantity === 0}
                 >
-                  <div className="text-3xl mb-2 text-center">{product.image || '📦'}</div>
+                  <div className="aspect-square mb-2 rounded-lg overflow-hidden bg-muted">
+                    <img 
+                      src={product.image || '/no-image.svg'} 
+                      alt={product.name_ar || product.name}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = '/no-image.svg';
+                      }}
+                    />
+                  </div>
                   <h4 className="font-medium text-sm mb-1 line-clamp-2 min-h-[2.5rem]">
                     {i18n.language === 'ar' ? product.name_ar : product.name}
                   </h4>

@@ -13,22 +13,24 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { useUnits, useCreateUnit, useDeleteUnit } from '@/hooks/useUnits';
+import { useUnits, useCreateUnit, useUpdateUnit, useDeleteUnit } from '@/hooks/useUnits';
 
 const Units: React.FC = () => {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = React.useState(false);
-  const [newUnit, setNewUnit] = React.useState({ name: '', name_ar: '', abbreviation: '' });
+  const [editingId, setEditingId] = React.useState<number | null>(null);
+  const [newUnit, setNewUnit] = React.useState({ name: '', abbreviation: '' });
 
   // Fetch units from API
   const { data: unitsData, isLoading } = useUnits();
   const createUnit = useCreateUnit();
+  const updateUnit = useUpdateUnit();
   const deleteUnit = useDeleteUnit();
 
   const units = unitsData?.data || [];
 
-  const handleAdd = async () => {
-    if (!newUnit.name && !newUnit.name_ar) {
+  const handleSubmit = async () => {
+    if (!newUnit.name) {
       toast.error('يرجى إدخال اسم الوحدة');
       return;
     }
@@ -38,16 +40,29 @@ const Units: React.FC = () => {
     }
 
     try {
-      await createUnit.mutateAsync({
-        name: newUnit.name || newUnit.name_ar,
-        name_ar: newUnit.name_ar || newUnit.name,
-        abbreviation: newUnit.abbreviation,
-      });
-      setNewUnit({ name: '', name_ar: '', abbreviation: '' });
+      if (editingId) {
+        // Update existing unit
+        await updateUnit.mutateAsync({
+          id: editingId,
+          data: {
+            name: newUnit.name,
+            abbreviation: newUnit.abbreviation,
+          }
+        });
+        toast.success('تم تحديث الوحدة بنجاح');
+      } else {
+        // Create new unit
+        await createUnit.mutateAsync({
+          name: newUnit.name,
+          abbreviation: newUnit.abbreviation,
+        });
+        toast.success('تم إضافة الوحدة بنجاح');
+      }
+      setNewUnit({ name: '', abbreviation: '' });
+      setEditingId(null);
       setIsOpen(false);
-      toast.success('تم إضافة الوحدة بنجاح');
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'فشل في إضافة الوحدة');
+      toast.error(error.response?.data?.message || 'فشل في حفظ الوحدة');
     }
   };
 
@@ -88,25 +103,18 @@ const Units: React.FC = () => {
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>إضافة وحدة قياس جديدة</DialogTitle>
+              <DialogTitle>{editingId ? 'تعديل وحدة القياس' : 'إضافة وحدة قياس جديدة'}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 pt-4">
               <div className="space-y-2">
-                <Label>الاسم (English)</Label>
+                <Label>الاسم</Label>
                 <Input
                   value={newUnit.name}
                   onChange={(e) => setNewUnit({ ...newUnit, name: e.target.value })}
                   placeholder="Kilogram"
                 />
               </div>
-              <div className="space-y-2">
-                <Label>الاسم (عربي)</Label>
-                <Input
-                  value={newUnit.name_ar}
-                  onChange={(e) => setNewUnit({ ...newUnit, name_ar: e.target.value })}
-                  placeholder="كيلوجرام"
-                />
-              </div>
+
               <div className="space-y-2">
                 <Label>الاختصار</Label>
                 <Input
@@ -119,14 +127,14 @@ const Units: React.FC = () => {
                 <Button variant="outline" onClick={() => setIsOpen(false)}>
                   إلغاء
                 </Button>
-                <Button onClick={handleAdd} disabled={createUnit.isPending}>
-                  {createUnit.isPending ? (
+                <Button onClick={handleSubmit} disabled={createUnit.isPending || updateUnit.isPending}>
+                  {(createUnit.isPending || updateUnit.isPending) ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                      جاري الإضافة...
+                      {editingId ? 'جاري التحديث...' : 'جاري الإضافة...'}
                     </>
                   ) : (
-                    'إضافة'
+                    editingId ? 'تحديث' : 'إضافة'
                   )}
                 </Button>
               </div>
@@ -151,13 +159,10 @@ const Units: React.FC = () => {
                 </div>
                 <div className="flex-1">
                   <h3 className="font-semibold text-foreground text-lg">
-                    {unit.name_ar || unit.name}
+                    {unit.name}
                   </h3>
                   <p className="text-sm text-muted-foreground mt-1">
                     {unit.abbreviation}
-                  </p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {unit.name !== unit.name_ar && unit.name}
                   </p>
                 </div>
               </div>
@@ -167,9 +172,9 @@ const Units: React.FC = () => {
                   size="icon"
                   className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10"
                   onClick={() => {
+                    setEditingId(unit.id);
                     setNewUnit({
                       name: unit.name || '',
-                      name_ar: unit.name_ar || '',
                       abbreviation: unit.abbreviation || ''
                     });
                     setIsOpen(true);
