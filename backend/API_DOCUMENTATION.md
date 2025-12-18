@@ -436,6 +436,119 @@ GET /api/products?search=كركم&category_id=1&per_page=20
 
 ---
 
+## 📊 لوحة التحكم والتحليلات (Dashboard & Analytics)
+
+### لوحة التحكم الرئيسية
+**GET** `/api/dashboard`
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "sales": {...},
+        "purchases": {...},
+        "products": {...},
+        "people": {...},
+        "profit": {...},
+        "expenses": {...},
+        "top_products": [...],
+        "sales_chart": [...],
+        "purchases_chart": [...],
+        "last_updated": "2024-01-01 12:00:00"
+    }
+}
+```
+
+**ملاحظة:** البيانات يتم تخزينها مؤقتاً (Cache) لمدة 5 دقائق لتحسين الأداء.
+
+---
+
+### تحليلات المبيعات
+**GET** `/api/analytics/sales`
+
+**Query Parameters:**
+- `start_date` - تاريخ البداية (اختياري)
+- `end_date` - تاريخ النهاية (اختياري)
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "summary": {...},
+        "by_customer": [...],
+        "by_payment_method": [...],
+        "by_status": [...],
+        "daily_trend": [...],
+        "monthly_comparison": [...]
+    }
+}
+```
+
+---
+
+### تحليلات المشتريات
+**GET** `/api/analytics/purchases`
+
+**Query Parameters:**
+- `start_date` - تاريخ البداية (اختياري)
+- `end_date` - تاريخ النهاية (اختياري)
+
+---
+
+### تحليلات المنتجات
+**GET** `/api/analytics/products`
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "summary": {...},
+        "by_category": [...],
+        "by_brand": [...],
+        "low_stock": [...],
+        "out_of_stock": [...],
+        "top_selling": [...],
+        "inventory_value": {...}
+    }
+}
+```
+
+---
+
+### أفضل العملاء
+**GET** `/api/analytics/top-customers`
+
+**Query Parameters:**
+- `limit` - عدد العملاء (افتراضي: 10)
+
+---
+
+### أفضل الموردين
+**GET** `/api/analytics/top-suppliers`
+
+**Query Parameters:**
+- `limit` - عدد الموردين (افتراضي: 10)
+
+---
+
+### حركة منتج معين
+**GET** `/api/analytics/product-movement/{productId}`
+
+---
+
+### مسح الذاكرة المؤقتة
+**POST** `/api/analytics/clear-cache`
+
+---
+
+### تحديث الذاكرة المؤقتة
+**POST** `/api/analytics/refresh-cache`
+
+---
+
 ## 📊 التقارير (Reports)
 
 ### تقرير الأرباح
