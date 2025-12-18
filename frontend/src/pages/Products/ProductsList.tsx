@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { Plus, Search, Filter, Edit2, Trash2, Eye, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -17,46 +18,79 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
-
-const initialProducts = [
-  { id: 1, name: 'قهوة عربية', sku: 'PRD-001', category: 'مشروبات', brand: 'الشرق', purchasePrice: 2.00, salePrice: 3.00, quantity: 50, status: 'active' },
-  { id: 2, name: 'شاي أخضر', sku: 'PRD-002', category: 'مشروبات', brand: 'ليبتون', purchasePrice: 1.50, salePrice: 2.00, quantity: 80, status: 'active' },
-  { id: 3, name: 'عصير برتقال', sku: 'PRD-003', category: 'مشروبات', brand: 'ندى', purchasePrice: 2.50, salePrice: 3.50, quantity: 30, status: 'active' },
-  { id: 4, name: 'بسكويت شوكولاتة', sku: 'PRD-004', category: 'وجبات خفيفة', brand: 'أوريو', purchasePrice: 1.50, salePrice: 2.00, quantity: 5, status: 'low' },
-  { id: 5, name: 'حليب طازج', sku: 'PRD-005', category: 'منتجات ألبان', brand: 'المراعي', purchasePrice: 2.00, salePrice: 2.50, quantity: 0, status: 'out' },
-];
+import productService from '@/api/productService';
 
 const ProductsList: React.FC = () => {
   const { t } = useTranslation();
-  const [products, setProducts] = useState(initialProducts);
+  const [search, setSearch] = useState('');
+  const queryClient = useQueryClient();
 
-  const getStatusBadge = (status: string) => {
-    const styles = {
-      active: 'bg-success/10 text-success',
-      low: 'bg-warning/10 text-warning',
-      out: 'bg-destructive/10 text-destructive',
-    };
-    const labels = {
-      active: t('products.available'),
-      low: t('products.lowStock'),
-      out: t('products.outOfStock'),
-    };
+  // Fetch products from API
+  const { data: productsData, isLoading, error } = useQuery({
+    queryKey: ['products', search],
+    queryFn: () => productService.getProducts({ search }),
+  });
+
+  // Delete product mutation
+  const deleteMutation = useMutation({
+    mutationFn: productService.deleteProduct,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      toast.success(t('products.deleteProduct'));
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Failed to delete product');
+    },
+  });
+
+  const getStatusBadge = (quantity: number) => {
+    let status = 'active';
+    let label = t('products.available');
+    let styleClass = 'bg-success/10 text-success';
+
+    if (quantity === 0) {
+      status = 'out';
+      label = t('products.outOfStock');
+      styleClass = 'bg-destructive/10 text-destructive';
+    } else if (quantity < 10) {
+      status = 'low';
+      label = t('products.lowStock');
+      styleClass = 'bg-warning/10 text-warning';
+    }
+
     return (
-      <span className={`px-2 py-1 rounded-full text-xs font-medium ${styles[status as keyof typeof styles]}`}>
-        {labels[status as keyof typeof labels]}
+      <span className={`px-2 py-1 rounded-full text-xs font-medium ${styleClass}`}>
+        {label}
       </span>
     );
   };
 
-  const handleDeleteAll = () => {
-    setProducts([]);
-    toast.success(t('products.deleteAllSuccess'));
+  const handleDeleteSingle = (id: number) => {
+    deleteMutation.mutate(id);
   };
 
-  const handleDeleteSingle = (id: number) => {
-    setProducts(products.filter(p => p.id !== id));
-    toast.success(t('products.deleteProduct'));
-  };
+  const products = productsData?.data?.data || [];
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <p className="text-destructive mb-4">Error loading products</p>
+          <Button onClick={() => queryClient.invalidateQueries({ queryKey: ['products'] })}>
+            Retry
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -67,31 +101,12 @@ const ProductsList: React.FC = () => {
           <p className="text-muted-foreground mt-1">{t('products.subtitle')}</p>
         </div>
         <div className="flex gap-2">
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="destructive" className="gap-2" disabled={products.length === 0}>
-                <Trash2 className="w-4 h-4" />
-                {t('products.deleteAll')}
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle className="flex items-center gap-2">
-                  <AlertTriangle className="w-5 h-5 text-destructive" />
-                  {t('common.warning')}
-                </AlertDialogTitle>
-                <AlertDialogDescription>
-                  {t('products.deleteAllConfirm')}
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDeleteAll} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                  {t('common.confirm')}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+          <Link to="/products/import">
+            <Button variant="outline" className="gap-2">
+              <Plus className="w-4 h-4" />
+              {t('products.import')}
+            </Button>
+          </Link>
           <Link to="/products/add">
             <Button className="gradient-primary border-0 gap-2">
               <Plus className="w-4 h-4" />
@@ -106,7 +121,12 @@ const ProductsList: React.FC = () => {
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="relative flex-1">
             <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input placeholder={t('common.search')} className="ps-10" />
+            <Input 
+              placeholder={t('common.search')} 
+              className="ps-10"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
           </div>
           <Button variant="outline" className="gap-2">
             <Filter className="w-4 h-4" />
@@ -132,7 +152,7 @@ const ProductsList: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {products.map((product, index) => (
+              {products.map((product: any, index: number) => (
                 <motion.tr
                   key={product.id}
                   initial={{ opacity: 0, y: 10 }}
@@ -142,27 +162,52 @@ const ProductsList: React.FC = () => {
                 >
                   <td className="py-4 px-4 font-medium text-foreground">{product.name}</td>
                   <td className="py-4 px-4 text-muted-foreground">{product.sku}</td>
-                  <td className="py-4 px-4 text-muted-foreground">{product.category}</td>
-                  <td className="py-4 px-4 text-muted-foreground">${product.purchasePrice.toFixed(2)}</td>
-                  <td className="py-4 px-4 font-semibold text-primary">${product.salePrice.toFixed(2)}</td>
+                  <td className="py-4 px-4 text-muted-foreground">{product.category?.name || '-'}</td>
+                  <td className="py-4 px-4 text-muted-foreground">${product.purchase_price?.toFixed(2)}</td>
+                  <td className="py-4 px-4 font-semibold text-primary">${product.selling_price?.toFixed(2)}</td>
                   <td className="py-4 px-4 text-muted-foreground">{product.quantity}</td>
-                  <td className="py-4 px-4">{getStatusBadge(product.status)}</td>
+                  <td className="py-4 px-4">{getStatusBadge(product.quantity)}</td>
                   <td className="py-4 px-4">
                     <div className="flex items-center gap-1">
                       <Button variant="ghost" size="icon" className="h-8 w-8">
                         <Eye className="w-4 h-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <Edit2 className="w-4 h-4" />
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-8 w-8 text-destructive hover:text-destructive"
-                        onClick={() => handleDeleteSingle(product.id)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                      <Link to={`/products/edit/${product.id}`}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <Edit2 className="w-4 h-4" />
+                        </Button>
+                      </Link>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8 text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle className="flex items-center gap-2">
+                              <AlertTriangle className="w-5 h-5 text-destructive" />
+                              {t('common.warning')}
+                            </AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to delete this product?
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+                            <AlertDialogAction 
+                              onClick={() => handleDeleteSingle(product.id)} 
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              {t('common.confirm')}
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </div>
                   </td>
                 </motion.tr>
