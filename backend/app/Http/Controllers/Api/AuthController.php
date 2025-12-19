@@ -47,7 +47,7 @@ class AuthController extends Controller
                     'phone' => $user->phone,
                     'avatar' => $user->avatar,
                     'role' => $user->role->name,
-                    'role_ar' => $user->role->name_ar,
+                    
                     'permissions' => $user->role->permissions->pluck('name'),
                 ],
                 'token' => $token,
@@ -84,7 +84,7 @@ class AuthController extends Controller
                 'phone' => $user->phone,
                 'avatar' => $user->avatar,
                 'role' => $user->role->name,
-                'role_ar' => $user->role->name_ar,
+                
                 'permissions' => $user->role->permissions->pluck('name'),
             ],
         ]);

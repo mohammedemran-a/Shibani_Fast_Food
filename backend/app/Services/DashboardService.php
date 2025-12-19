@@ -240,11 +240,10 @@ class DashboardService
             return $query->select(
                     'products.id',
                     'products.name',
-                    'products.name_ar',
                     DB::raw('SUM(sales_invoice_items.quantity) as total_sold'),
                     DB::raw('SUM(sales_invoice_items.total) as total_revenue')
                 )
-                ->groupBy('products.id', 'products.name', 'products.name_ar')
+                ->groupBy('products.id', 'products.name')
                 ->orderByDesc('total_sold')
                 ->limit(5)
                 ->get()
@@ -252,7 +251,6 @@ class DashboardService
                     return [
                         'id' => $item->id,
                         'name' => $item->name,
-                        'name_ar' => $item->name_ar,
                         'total_sold' => (int) $item->total_sold,
                         'total_revenue' => (float) $item->total_revenue,
                     ];

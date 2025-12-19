@@ -15,7 +15,6 @@ return new class extends Migration
         Schema::create('roles', function (Blueprint $table) {
             $table->id();
             $table->string('name')->unique();
-            $table->string('name_ar')->unique();
             $table->text('description')->nullable();
             $table->timestamps();
         });
@@ -24,7 +23,6 @@ return new class extends Migration
         Schema::create('permissions', function (Blueprint $table) {
             $table->id();
             $table->string('name')->unique();
-            $table->string('name_ar')->unique();
             $table->string('module');
             $table->text('description')->nullable();
             $table->timestamps();

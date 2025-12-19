@@ -105,7 +105,7 @@ class ProductAnalyticsService
     {
         return Product::whereRaw('quantity <= min_quantity')
             ->where('quantity', '>', 0)
-            ->select('id', 'name', 'name_ar', 'sku', 'quantity', 'min_quantity', 'purchase_price', 'sale_price')
+            ->select('id', 'name', 'sku', 'quantity', 'min_quantity', 'purchase_price', 'sale_price')
             ->orderBy('quantity', 'asc')
             ->limit(20)
             ->get();
@@ -117,7 +117,7 @@ class ProductAnalyticsService
     private static function getOutOfStockProducts()
     {
         return Product::where('quantity', 0)
-            ->select('id', 'name', 'name_ar', 'sku', 'min_quantity', 'purchase_price', 'sale_price')
+            ->select('id', 'name', 'sku', 'min_quantity', 'purchase_price', 'sale_price')
             ->limit(20)
             ->get();
     }
@@ -146,7 +146,7 @@ class ProductAnalyticsService
                 return [
                     'id' => $item->id,
                     'name' => $item->name,
-                    'name_ar' => $item->name_ar,
+                    
                     'sku' => $item->sku,
                     'current_stock' => (int) $item->current_stock,
                     'total_sold' => (int) $item->total_sold,

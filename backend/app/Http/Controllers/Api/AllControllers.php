@@ -34,7 +34,7 @@ class ProductControllerImpl extends Controller
         if ($request->has('search')) {
             $search = $request->search;
             $query->where('name', 'like', "%$search%")
-                  ->orWhere('name_ar', 'like', "%$search%")
+                  
                   ->orWhere('sku', 'like', "%$search%")
                   ->orWhere('barcode', 'like', "%$search%");
         }
@@ -63,7 +63,7 @@ class ProductControllerImpl extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string',
-            'name_ar' => 'required|string',
+            
             'sku' => 'required|unique:products',
             'barcode' => 'required|unique:products',
             'category_id' => 'required|exists:categories,id',
@@ -98,7 +98,7 @@ class ProductControllerImpl extends Controller
     {
         $validated = $request->validate([
             'name' => 'string',
-            'name_ar' => 'string',
+            
             'sku' => 'unique:products,sku,' . $product->id,
             'barcode' => 'unique:products,barcode,' . $product->id,
             'category_id' => 'exists:categories,id',
@@ -148,7 +148,7 @@ class CategoryControllerImpl extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|unique:categories',
-            'name_ar' => 'required|string|unique:categories',
+            
             'description' => 'nullable|string',
         ]);
 
@@ -170,7 +170,7 @@ class CategoryControllerImpl extends Controller
     {
         $validated = $request->validate([
             'name' => 'string|unique:categories,name,' . $category->id,
-            'name_ar' => 'string|unique:categories,name_ar,' . $category->id,
+            
             'description' => 'nullable|string',
         ]);
 
@@ -209,7 +209,7 @@ class BrandControllerImpl extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|unique:brands',
-            'name_ar' => 'required|string|unique:brands',
+            
             'description' => 'nullable|string',
         ]);
 
@@ -231,7 +231,7 @@ class BrandControllerImpl extends Controller
     {
         $validated = $request->validate([
             'name' => 'string|unique:brands,name,' . $brand->id,
-            'name_ar' => 'string|unique:brands,name_ar,' . $brand->id,
+            
             'description' => 'nullable|string',
         ]);
 
@@ -270,7 +270,7 @@ class UnitControllerImpl extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|unique:units',
-            'name_ar' => 'required|string|unique:units',
+            
             'abbreviation' => 'required|string',
         ]);
 
@@ -292,7 +292,7 @@ class UnitControllerImpl extends Controller
     {
         $validated = $request->validate([
             'name' => 'string|unique:units,name,' . $unit->id,
-            'name_ar' => 'string|unique:units,name_ar,' . $unit->id,
+            
             'abbreviation' => 'string',
         ]);
 
