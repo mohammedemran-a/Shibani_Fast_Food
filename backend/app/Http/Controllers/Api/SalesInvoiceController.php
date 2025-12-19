@@ -10,9 +10,29 @@ class SalesInvoiceController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        //
+        $query = \App\Models\SalesInvoice::with(['customer', 'items.product']);
+
+        // Filter by date range
+        if ($request->has('from_date') && $request->from_date) {
+            $query->whereDate('created_at', '>=', $request->from_date);
+        }
+        if ($request->has('to_date') && $request->to_date) {
+            $query->whereDate('created_at', '<=', $request->to_date);
+        }
+
+        // Search by invoice number
+        if ($request->has('search') && $request->search) {
+            $query->where('invoice_number', 'like', '%' . $request->search . '%');
+        }
+
+        $invoices = $query->orderBy('created_at', 'desc')->paginate($request->get('per_page', 50));
+
+        return response()->json([
+            'success' => true,
+            'data' => $invoices,
+        ]);
     }
 
     /**
@@ -52,10 +72,12 @@ class SalesInvoiceController extends Controller
             $invoice = \App\Models\SalesInvoice::create([
                 'invoice_number' => $invoiceNumber,
                 'customer_id' => $validated['customer_id'] ?? null,
+                'cashier_id' => auth()->id(),
+                'invoice_date' => now(),
                 'subtotal' => $validated['subtotal'],
-                'tax' => $validated['tax'] ?? 0,
-                'discount' => $validated['discount'] ?? 0,
-                'total' => $validated['total'],
+                'tax_amount' => $validated['tax'] ?? 0,
+                'discount_amount' => $validated['discount'] ?? 0,
+                'total_amount' => $validated['total'],
                 'payment_method' => $validated['payment_method'],
                 'notes' => $validated['notes'] ?? null,
                 'status' => 'completed',
