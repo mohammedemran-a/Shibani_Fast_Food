@@ -66,7 +66,6 @@ class ImportController extends Controller
                     // Create product
                     Product::create([
                         'name' => $data['name'],
-                        'name_ar' => $data['name_ar'] ?? $data['name'],
                         'sku' => $data['sku'],
                         'barcode' => $data['barcode'],
                         'category_id' => $category->id,
@@ -117,7 +116,6 @@ class ImportController extends Controller
     {
         // Try to find by name (English or Arabic)
         $category = Category::where('name', $name)
-            ->orWhere('name_ar', $name)
             ->first();
         
         if ($category) {
@@ -127,7 +125,6 @@ class ImportController extends Controller
         // Create new category
         return Category::create([
             'name' => $name,
-            'name_ar' => $name,
         ]);
     }
     
@@ -138,7 +135,6 @@ class ImportController extends Controller
     {
         // Try to find by name (English or Arabic)
         $brand = Brand::where('name', $name)
-            ->orWhere('name_ar', $name)
             ->first();
         
         if ($brand) {
@@ -148,7 +144,6 @@ class ImportController extends Controller
         // Create new brand
         return Brand::create([
             'name' => $name,
-            'name_ar' => $name,
         ]);
     }
     
@@ -157,9 +152,8 @@ class ImportController extends Controller
      */
     private function getOrCreateUnit(string $name)
     {
-        // Try to find by name, name_ar, or abbreviation
+        // Try to find by name or abbreviation
         $unit = Unit::where('name', $name)
-            ->orWhere('name_ar', $name)
             ->orWhere('abbreviation', $name)
             ->first();
         
@@ -170,7 +164,6 @@ class ImportController extends Controller
         // Create new unit with auto-generated abbreviation
         return Unit::create([
             'name' => $name,
-            'name_ar' => $name,
             'abbreviation' => strtolower(substr($name, 0, 3)),
         ]);
     }
