@@ -72,7 +72,16 @@ export const CartSection: React.FC<CartSectionProps> = ({
                 exit={{ opacity: 0, x: 20 }}
                 className="cart-item"
               >
-                <div className="text-2xl">{item.image}</div>
+                <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted flex-shrink-0">
+                  <img 
+                    src={item.image || '/no-image.svg'} 
+                    alt={item.name}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = '/no-image.svg';
+                    }}
+                  />
+                </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-foreground text-sm truncate">{item.name}</p>
                   <p className="text-primary font-semibold">${item.price.toFixed(2)}</p>

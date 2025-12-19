@@ -136,10 +136,7 @@ const AddProduct: React.FC = () => {
       }
       
       await createProduct.mutateAsync(submitData as any);
-      // Wait a bit for cache to update
-      setTimeout(() => {
-        navigate('/products');
-      }, 500);
+      navigate('/products');
     } catch (error) {
       // Error is handled by the hook
       toast.error(t('common.error'));

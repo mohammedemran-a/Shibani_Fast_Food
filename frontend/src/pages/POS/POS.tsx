@@ -46,26 +46,55 @@ const POS: React.FC = () => {
     setIsCheckoutOpen(true);
   };
 
-  const handleConfirmPayment = (details: PaymentDetails) => {
+  const handleConfirmPayment = async (details: PaymentDetails) => {
     const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-    const total = subtotal * 1.15;
+    const tax = subtotal * 0.15;
+    const total = subtotal + tax;
 
-    let message = '';
-    switch (details.method) {
-      case 'cash':
-        message = `${t('payment.cashSuccess')} - $${total.toFixed(2)}`;
-        break;
-      case 'wallet':
-        message = `${t('payment.walletSuccess')} ${details.walletType} - $${total.toFixed(2)}`;
-        break;
-      case 'credit':
-        message = `${t('payment.creditSuccess')} ${details.customerName}`;
-        break;
+    try {
+      // Create sales invoice
+      const response = await fetch('http://localhost:8000/api/sales-invoices', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: cartItems.map(item => ({
+            product_id: item.id,
+            quantity: item.quantity,
+            price: item.price,
+          })),
+          subtotal,
+          tax,
+          discount: 0,
+          total,
+          payment_method: details.method === 'wallet' ? 'card' : details.method,
+          notes: details.method === 'credit' ? `Customer: ${details.customerName}` : null,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to complete sale');
+      }
+
+      let message = '';
+      switch (details.method) {
+        case 'cash':
+          message = `${t('payment.cashSuccess')} - $${total.toFixed(2)}`;
+          break;
+        case 'wallet':
+          message = `${t('payment.walletSuccess')} ${details.walletType} - $${total.toFixed(2)}`;
+          break;
+        case 'credit':
+          message = `${t('payment.creditSuccess')} ${details.customerName}`;
+          break;
+      }
+
+      toast.success(message);
+      setCartItems([]);
+      setIsCheckoutOpen(false);
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to complete sale');
     }
-
-    toast.success(message);
-    setCartItems([]);
-    setIsCheckoutOpen(false);
   };
 
   const total = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0) * 1.15;
