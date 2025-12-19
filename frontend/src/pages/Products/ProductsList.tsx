@@ -152,7 +152,7 @@ const ProductsList: React.FC = () => {
                     <div className="flex items-center gap-3">
                       <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted flex-shrink-0">
                         <img 
-                          src={product.image || '/no-image.svg'} 
+                          src={product.image_url || '/no-image.svg'} 
                           alt={product.name}
                           className="w-full h-full object-cover"
                           onError={(e) => {

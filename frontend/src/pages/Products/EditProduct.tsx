@@ -282,7 +282,7 @@ const EditProduct: React.FC = () => {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>{t('products.category')}</Label>
-                <Select onValueChange={(value) => setFormData({ ...formData, category: value })}>
+                <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
                   <SelectTrigger>
                     <SelectValue placeholder={t('products.selectCategory')} />
                   </SelectTrigger>
@@ -297,7 +297,7 @@ const EditProduct: React.FC = () => {
               </div>
               <div className="space-y-2">
                 <Label>{t('products.brand')}</Label>
-                <Select onValueChange={(value) => setFormData({ ...formData, brand: value })}>
+                <Select value={formData.brand} onValueChange={(value) => setFormData({ ...formData, brand: value })}>
                   <SelectTrigger>
                     <SelectValue placeholder={t('products.selectBrand')} />
                   </SelectTrigger>
@@ -325,7 +325,7 @@ const EditProduct: React.FC = () => {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>{t('products.unit')}</Label>
-                <Select onValueChange={(value) => setFormData({ ...formData, unit: value })}>
+                <Select value={formData.unit} onValueChange={(value) => setFormData({ ...formData, unit: value })}>
                   <SelectTrigger>
                     <SelectValue placeholder={t('products.selectUnit')} />
                   </SelectTrigger>

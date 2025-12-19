@@ -34,7 +34,16 @@ class ProductController extends Controller
             $query->where('is_active', $request->is_active);
         }
 
-        $products = $query->paginate($request->per_page ?? 100);
+        // Get all products if no pagination requested, otherwise paginate
+        if ($request->has('all') && $request->all == 'true') {
+            $products = $query->get();
+            return response()->json([
+                'success' => true,
+                'data' => ['data' => $products, 'total' => $products->count()],
+            ]);
+        }
+        
+        $products = $query->paginate($request->per_page ?? 1000);
 
         return response()->json([
             'success' => true,
@@ -72,6 +81,7 @@ class ProductController extends Controller
             'expiry_date' => 'nullable|date',
             'description' => 'nullable|string',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:10240',
+            'is_active' => 'boolean',
         ]);
 
         // Handle category - create if name provided
@@ -118,6 +128,11 @@ class ProductController extends Controller
             ], 422);
         }
 
+        // Set is_active to true by default
+        if (!isset($validated['is_active'])) {
+            $validated['is_active'] = true;
+        }
+        
         // Auto-generate SKU if not provided
         if (empty($validated['sku'])) {
             $validated['sku'] = 'PRD-' . time() . rand(100, 999);

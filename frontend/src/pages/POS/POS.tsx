@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useQueryClient } from '@tanstack/react-query';
 import { ProductsGrid } from '@/components/pos/ProductsGrid';
 import { CartSection, CartItem } from '@/components/pos/CartSection';
 import { CheckoutModal, PaymentDetails } from '@/components/pos/CheckoutModal';
@@ -7,6 +8,7 @@ import { toast } from 'sonner';
 
 const POS: React.FC = () => {
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
   const [cartItems, setCartItems] = React.useState<CartItem[]>([]);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
 
@@ -96,6 +98,8 @@ const POS: React.FC = () => {
       toast.success(message);
       setCartItems([]);
       setIsCheckoutOpen(false);
+      // Refresh products to update stock
+      queryClient.invalidateQueries({ queryKey: ['products'] });
     } catch (error: any) {
       toast.error(error.message || 'Failed to complete sale');
     }
