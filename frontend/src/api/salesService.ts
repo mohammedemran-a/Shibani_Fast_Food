@@ -76,6 +76,8 @@ class SalesService {
     search?: string;
     per_page?: number;
     page?: number;
+    from_date?: string;
+    to_date?: string;
   }): Promise<SalesInvoicesResponse> {
     try {
       const response = await apiClient.get<SalesInvoicesResponse>(

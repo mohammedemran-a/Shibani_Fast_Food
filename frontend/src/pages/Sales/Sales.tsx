@@ -170,7 +170,7 @@ const Sales: React.FC = () => {
                   <td className="py-4 px-4 text-muted-foreground">{sale.customer?.name || 'Walk-in Customer'}</td>
                   <td className="py-4 px-4 text-muted-foreground">{new Date(sale.created_at).toLocaleDateString()}</td>
                   <td className="py-4 px-4 text-muted-foreground">{sale.items?.length || 0}</td>
-                  <td className="py-4 px-4 font-semibold text-primary">${(sale.total_amount || 0).toFixed(2)}</td>
+                  <td className="py-4 px-4 font-semibold text-primary">${Number(sale.total_amount || 0).toFixed(2)}</td>
                   <td className="py-4 px-4">{getStatusBadge(sale.status)}</td>
                   <td className="py-4 px-4">
                     <div className="flex items-center gap-1">
