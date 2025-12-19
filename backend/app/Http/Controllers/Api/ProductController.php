@@ -57,8 +57,8 @@ class ProductController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string',
-            'sku' => 'required|unique:products',
-            'barcode' => 'required|unique:products',
+            'sku' => 'nullable|unique:products',
+            'barcode' => 'nullable|unique:products',
             'category_id' => 'nullable|exists:categories,id',
             'category_name' => 'nullable|string',
             'brand_id' => 'nullable|exists:brands,id',
@@ -118,6 +118,16 @@ class ProductController extends Controller
             ], 422);
         }
 
+        // Auto-generate SKU if not provided
+        if (empty($validated['sku'])) {
+            $validated['sku'] = 'PRD-' . time() . rand(100, 999);
+        }
+        
+        // Auto-generate barcode if not provided
+        if (empty($validated['barcode'])) {
+            $validated['barcode'] = time() . rand(1000, 9999);
+        }
+        
         // Handle image upload
         if ($request->hasFile('image')) {
             $validated['image'] = $request->file('image')->store('products', 'public');

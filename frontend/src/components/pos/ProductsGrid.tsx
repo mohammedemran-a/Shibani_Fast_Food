@@ -172,13 +172,18 @@ export const ProductsGrid: React.FC<ProductsGridProps> = ({ onAddToCart }) => {
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: index * 0.02 }}
                   onClick={() => {
+                    if (product.quantity <= 0) {
+                      toast.error(t('pos.outOfStock') || 'Out of stock');
+                      return;
+                    }
                     onAddToCart(cartProduct);
                     toast.success(`${t('pos.addedToCart')} ${product.name}`);
                   }}
+                  disabled={product.quantity <= 0}
                   className={cn(
                     'glass-card p-3 text-start hover:scale-105 transition-all',
                     'hover:border-primary/50 hover:shadow-lg hover:shadow-primary/20',
-                    product.quantity === 0 && 'opacity-70'
+                    product.quantity === 0 && 'opacity-50 cursor-not-allowed'
                   )}
                 >
                   <div className="aspect-square mb-2 rounded-lg overflow-hidden bg-muted">

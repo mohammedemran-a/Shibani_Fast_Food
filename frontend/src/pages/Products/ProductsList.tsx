@@ -17,10 +17,13 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { useProducts, useDeleteProduct } from '@/hooks/useProducts';
+import { useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 
 const ProductsList: React.FC = () => {
   const { t } = useTranslation();
   const [search, setSearch] = useState('');
+  const queryClient = useQueryClient();
 
   // Fetch products with caching (5 minutes)
   const { data: productsData, isLoading, error } = useProducts({ search });
@@ -168,8 +171,24 @@ const ProductsList: React.FC = () => {
                   <td className="py-4 px-4">{getStatusBadge(product.quantity)}</td>
                   <td className="py-4 px-4">
                     <div className="flex items-center gap-1">
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <Eye className="w-4 h-4" />
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-8 w-8"
+                        onClick={() => {
+                          // Toggle is_active
+                          const newStatus = !product.is_active;
+                          fetch(`http://localhost:8000/api/products/${product.id}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ is_active: newStatus })
+                          }).then(() => {
+                            toast.success(newStatus ? 'Product activated' : 'Product deactivated');
+                            queryClient.invalidateQueries({ queryKey: ['products'] });
+                          });
+                        }}
+                      >
+                        <Eye className={`w-4 h-4 ${product.is_active ? 'text-success' : 'text-muted-foreground'}`} />
                       </Button>
                       <Link to={`/products/edit/${product.id}`}>
                         <Button variant="ghost" size="icon" className="h-8 w-8">
