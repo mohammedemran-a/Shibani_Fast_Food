@@ -34,9 +34,7 @@ export const ProductsGrid: React.FC<ProductsGridProps> = ({ onAddToCart }) => {
   const barcodeInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch products and categories from API
-  const { data: productsData, isLoading } = useProducts({
-    is_active: true,
-  });
+  const { data: productsData, isLoading } = useProducts();
   
   const { data: categoriesData } = useCategories();
   const apiCategories = categoriesData?.data || [];

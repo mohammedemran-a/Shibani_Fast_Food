@@ -122,11 +122,6 @@ class ProductController extends Controller
         if ($request->hasFile('image')) {
             $validated['image'] = $request->file('image')->store('products', 'public');
         }
-        
-        // Set is_active to true by default if not provided
-        if (!isset($validated['is_active'])) {
-            $validated['is_active'] = true;
-        }
 
         $product = Product::create($validated);
 
