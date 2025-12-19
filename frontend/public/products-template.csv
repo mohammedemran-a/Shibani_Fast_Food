@@ -1,4 +1,4 @@
-name,barcode,category,brand,unit,purchase_price,selling_price,quantity,reorder_level,description
+name,sku,barcode,category,brand,unit,purchase_price,selling_price,quantity,reorder_level,description
 قهوة عربية فاخرة,PRD-001,1234567890001,مشروبات,العربية,قطعة,50.00,100.00,100,20,قهوة عربية فاخرة محمصة
 حليب طازج كامل الدسم,PRD-002,1234567890002,منتجات ألبان,المراعي,لتر,10.00,15.00,50,10,حليب طازج كامل الدسم 1 لتر
 شوكولاتة داكنة,PRD-003,1234567890003,وجبات خفيفة,جالاكسي,قطعة,5.00,10.00,200,30,شوكولاتة داكنة 100 جرام
