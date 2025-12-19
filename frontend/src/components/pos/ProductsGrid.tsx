@@ -46,7 +46,7 @@ export const ProductsGrid: React.FC<ProductsGridProps> = ({ onAddToCart }) => {
     ...apiCategories.map((cat: any) => ({ id: cat.id.toString(), name: cat.name }))
   ];
 
-  const products = Array.isArray(productsData?.data) ? productsData.data : (productsData?.data?.data || []);
+  const products = productsData?.data?.data || [];
 
   // Auto-focus barcode input on mount only
   useEffect(() => {
@@ -70,7 +70,7 @@ export const ProductsGrid: React.FC<ProductsGridProps> = ({ onAddToCart }) => {
           barcode: product.barcode,
           price: Number(product.selling_price || 0),
           stock: Number(product.quantity || 0),
-          image: product.image || '📦',
+          image: product.image_url || '/no-image.svg',
         };
         onAddToCart(cartProduct);
         toast.success(`${t('pos.addedToCart')} ${product.name}`);
@@ -163,7 +163,7 @@ export const ProductsGrid: React.FC<ProductsGridProps> = ({ onAddToCart }) => {
                 barcode: product.barcode,
                 price: Number(product.selling_price || 0),
                 stock: Number(product.quantity || 0),
-                image: product.image || '/no-image.svg',
+                image: product.image_url || '/no-image.svg',
               };
 
               return (
@@ -184,7 +184,7 @@ export const ProductsGrid: React.FC<ProductsGridProps> = ({ onAddToCart }) => {
                 >
                   <div className="aspect-square mb-2 rounded-lg overflow-hidden bg-muted">
                     <img 
-                      src={product.image || '/no-image.svg'} 
+                      src={product.image_url || '/no-image.svg'} 
                       alt={product.name}
                       className="w-full h-full object-cover"
                       onError={(e) => {
