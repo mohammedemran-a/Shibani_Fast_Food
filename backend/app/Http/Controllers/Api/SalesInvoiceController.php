@@ -44,8 +44,13 @@ class SalesInvoiceController extends Controller
 
         \DB::beginTransaction();
         try {
+            // Generate invoice number
+            $lastInvoice = \App\Models\SalesInvoice::orderBy('id', 'desc')->first();
+            $invoiceNumber = 'INV-' . date('Ymd') . '-' . str_pad(($lastInvoice ? $lastInvoice->id + 1 : 1), 4, '0', STR_PAD_LEFT);
+
             // Create sales invoice
             $invoice = \App\Models\SalesInvoice::create([
+                'invoice_number' => $invoiceNumber,
                 'customer_id' => $validated['customer_id'] ?? null,
                 'subtotal' => $validated['subtotal'],
                 'tax' => $validated['tax'] ?? 0,
