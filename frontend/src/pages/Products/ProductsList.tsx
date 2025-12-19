@@ -178,7 +178,7 @@ const ProductsList: React.FC = () => {
                         onClick={() => {
                           // Toggle is_active
                           const newStatus = !product.is_active;
-                          const token = localStorage.getItem('token');
+                          const token = localStorage.getItem('auth_token');
                           fetch(`http://localhost:8000/api/products/${product.id}`, {
                             method: 'PUT',
                             headers: { 

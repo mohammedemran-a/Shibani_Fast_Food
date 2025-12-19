@@ -55,7 +55,7 @@ const POS: React.FC = () => {
 
     try {
       // Create sales invoice
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('auth_token');
       const response = await fetch('http://localhost:8000/api/sales-invoices', {
         method: 'POST',
         headers: { 
