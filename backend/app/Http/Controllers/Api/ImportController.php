@@ -77,6 +77,7 @@ class ImportController extends Controller
                         'reorder_level' => $data['reorder_level'] ?? 10,
                         'description' => $data['description'] ?? null,
                         'expiry_date' => !empty($data['expiry_date']) ? $data['expiry_date'] : null,
+                        'is_active' => true,
                     ]);
                     
                     $imported++;

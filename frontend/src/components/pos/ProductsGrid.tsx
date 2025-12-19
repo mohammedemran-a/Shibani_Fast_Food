@@ -19,6 +19,7 @@ interface Product {
   category_id: number;
   quantity: number;
   image?: string;
+  image_url?: string;
 }
 
 interface ProductsGridProps {
