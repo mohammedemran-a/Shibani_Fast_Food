@@ -7,14 +7,9 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useProducts } from '@/hooks/useProducts';
+import { useCategories } from '@/hooks/useCategories';
 
-const categories = [
-  { id: 'all', nameKey: 'pos.all' },
-  { id: 'drinks', nameKey: 'categories.drinks' },
-  { id: 'snacks', nameKey: 'categories.snacks' },
-  { id: 'dairy', nameKey: 'categories.dairy' },
-  { id: 'bakery', nameKey: 'categories.bakery' },
-];
+
 
 interface Product {
   id: number;
@@ -37,10 +32,19 @@ export const ProductsGrid: React.FC<ProductsGridProps> = ({ onAddToCart }) => {
   const [barcodeInput, setBarcodeInput] = React.useState('');
   const barcodeInputRef = useRef<HTMLInputElement>(null);
 
-  // Fetch products from API
+  // Fetch products and categories from API
   const { data: productsData, isLoading } = useProducts({
     is_active: true,
   });
+  
+  const { data: categoriesData } = useCategories();
+  const apiCategories = categoriesData?.data || [];
+  
+  // Build categories list with 'all' option
+  const categories = [
+    { id: 'all', name: t('pos.all') },
+    ...apiCategories.map((cat: any) => ({ id: cat.id.toString(), name: cat.name }))
+  ];
 
   const products = Array.isArray(productsData?.data) ? productsData.data : (productsData?.data?.data || []);
 
@@ -82,8 +86,7 @@ export const ProductsGrid: React.FC<ProductsGridProps> = ({ onAddToCart }) => {
   // Removed auto-focus on click to allow search input focus
 
   const filteredProducts = products.filter((product: Product) => {
-    // For now, show all products (category filtering can be added later with category names)
-    const matchesCategory = selectedCategory === 'all';
+    const matchesCategory = selectedCategory === 'all' || product.category_id?.toString() === selectedCategory;
     const searchLower = searchQuery.toLowerCase();
     const matchesSearch = 
       product.name?.toLowerCase().includes(searchLower) ||
@@ -136,7 +139,7 @@ export const ProductsGrid: React.FC<ProductsGridProps> = ({ onAddToCart }) => {
               selectedCategory === category.id && 'gradient-primary border-0'
             )}
           >
-            {t(category.nameKey)}
+            {category.name}
           </Button>
         ))}
       </div>
@@ -156,8 +159,7 @@ export const ProductsGrid: React.FC<ProductsGridProps> = ({ onAddToCart }) => {
             {filteredProducts.map((product: Product, index: number) => {
               const cartProduct = {
                 id: product.id,
-                name: product.name_ar,
-                nameEn: product.name,
+                name: product.name,
                 barcode: product.barcode,
                 price: Number(product.selling_price || 0),
                 stock: Number(product.quantity || 0),
