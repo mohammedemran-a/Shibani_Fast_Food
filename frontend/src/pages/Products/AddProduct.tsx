@@ -47,6 +47,7 @@ const AddProduct: React.FC = () => {
     quantity: 0,
     expiryDate: '',
     hasMultipleBarcodes: false,
+    isActive: true,
   });
   const [imageFile, setImageFile] = React.useState<File | null>(null);
   const [imagePreview, setImagePreview] = React.useState<string>('');
@@ -125,6 +126,7 @@ const AddProduct: React.FC = () => {
       submitData.append('selling_price', formData.salePrice.toString());
       submitData.append('quantity', formData.quantity.toString());
       submitData.append('reorder_level', '10');
+      submitData.append('is_active', formData.isActive ? '1' : '0');
       
       if (formData.expiryDate) {
         submitData.append('expiry_date', formData.expiryDate);
@@ -351,6 +353,23 @@ const AddProduct: React.FC = () => {
                   onChange={(e) => setFormData({ ...formData, quantity: Number(e.target.value) })}
                 />
               </div>
+            </div>
+
+            {/* Product Status */}
+            <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
+              <div>
+                <Label className="text-base font-medium">{t('products.status')}</Label>
+                <p className="text-sm text-muted-foreground">{t('products.statusDescription')}</p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.isActive}
+                  onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+              </label>
             </div>
 
             {/* Profit Preview */}

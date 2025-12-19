@@ -34,7 +34,7 @@ class ProductController extends Controller
             $query->where('is_active', $request->is_active);
         }
 
-        $products = $query->paginate($request->per_page ?? 15);
+        $products = $query->paginate($request->per_page ?? 100);
 
         return response()->json([
             'success' => true,

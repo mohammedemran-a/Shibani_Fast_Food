@@ -178,9 +178,13 @@ const ProductsList: React.FC = () => {
                         onClick={() => {
                           // Toggle is_active
                           const newStatus = !product.is_active;
+                          const token = localStorage.getItem('token');
                           fetch(`http://localhost:8000/api/products/${product.id}`, {
                             method: 'PUT',
-                            headers: { 'Content-Type': 'application/json' },
+                            headers: { 
+                              'Content-Type': 'application/json',
+                              'Authorization': `Bearer ${token}`,
+                            },
                             body: JSON.stringify({ is_active: newStatus })
                           }).then(() => {
                             toast.success(newStatus ? 'Product activated' : 'Product deactivated');
