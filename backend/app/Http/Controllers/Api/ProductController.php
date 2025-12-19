@@ -203,9 +203,12 @@ class ProductController extends Controller
             'name' => 'string',
             'sku' => 'unique:products,sku,' . $product->id,
             'barcode' => 'unique:products,barcode,' . $product->id,
-            'category_id' => 'exists:categories,id',
+            'category_id' => 'nullable|exists:categories,id',
+            'category_name' => 'nullable|string',
             'brand_id' => 'nullable|exists:brands,id',
-            'unit_id' => 'exists:units,id',
+            'brand_name' => 'nullable|string',
+            'unit_id' => 'nullable|exists:units,id',
+            'unit_name' => 'nullable|string',
             'purchase_price' => 'numeric|min:0',
             'selling_price' => 'numeric|min:0',
             'quantity' => 'integer|min:0',
@@ -215,6 +218,36 @@ class ProductController extends Controller
             'is_active' => 'boolean',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:10240',
         ]);
+
+        // Handle category by name
+        if (!empty($validated['category_name']) && empty($validated['category_id'])) {
+            $category = \App\Models\Category::firstOrCreate(
+                ['name' => $validated['category_name']],
+                ['description' => '']
+            );
+            $validated['category_id'] = $category->id;
+        }
+        unset($validated['category_name']);
+
+        // Handle brand by name
+        if (!empty($validated['brand_name']) && empty($validated['brand_id'])) {
+            $brand = \App\Models\Brand::firstOrCreate(
+                ['name' => $validated['brand_name']],
+                ['description' => '']
+            );
+            $validated['brand_id'] = $brand->id;
+        }
+        unset($validated['brand_name']);
+
+        // Handle unit by name
+        if (!empty($validated['unit_name']) && empty($validated['unit_id'])) {
+            $unit = \App\Models\Unit::firstOrCreate(
+                ['name' => $validated['unit_name']],
+                ['abbreviation' => mb_substr($validated['unit_name'], 0, 3)]
+            );
+            $validated['unit_id'] = $unit->id;
+        }
+        unset($validated['unit_name']);
 
         // Handle image upload
         if ($request->hasFile('image')) {

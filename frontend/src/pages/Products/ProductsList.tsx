@@ -183,12 +183,22 @@ const ProductsList: React.FC = () => {
                             method: 'PUT',
                             headers: { 
                               'Content-Type': 'application/json',
+                              'Accept': 'application/json',
                               'Authorization': `Bearer ${token}`,
                             },
                             body: JSON.stringify({ is_active: newStatus })
-                          }).then(() => {
-                            toast.success(newStatus ? 'Product activated' : 'Product deactivated');
+                          })
+                          .then(res => {
+                            if (!res.ok) throw new Error('Failed to update');
+                            return res.json();
+                          })
+                          .then(() => {
+                            toast.success(newStatus ? 'تم تفعيل المنتج' : 'تم إلغاء تفعيل المنتج');
                             queryClient.invalidateQueries({ queryKey: ['products'] });
+                          })
+                          .catch(err => {
+                            toast.error('فشل في تحديث حالة المنتج');
+                            console.error(err);
                           });
                         }}
                       >
