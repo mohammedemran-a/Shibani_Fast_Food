@@ -11,7 +11,6 @@ class Unit extends Model
 
     protected $fillable = [
         'name',
-        
         'abbreviation',
         'parent_unit_id',
         'conversion_factor',

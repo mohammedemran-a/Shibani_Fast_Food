@@ -11,7 +11,6 @@ class Product extends Model
 
     protected $fillable = [
         'name',
-        
         'sku',
         'barcode',
         'category_id',
@@ -20,7 +19,6 @@ class Product extends Model
         'purchase_price',
         'selling_price',
         'quantity',
-
         'reorder_level',
         'expiry_date',
         'description',
