@@ -35,6 +35,8 @@ class Product extends Model
         'expiry_date' => 'date',
     ];
 
+    protected $appends = ['image_url'];
+
     // العلاقات
     public function category()
     {

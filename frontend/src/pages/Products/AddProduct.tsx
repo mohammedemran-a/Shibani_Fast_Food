@@ -115,9 +115,12 @@ const AddProduct: React.FC = () => {
         submitData.append('name', formData.name);
       submitData.append('sku', formData.sku || `PRD-${Date.now()}`);
       submitData.append('barcode', formData.barcode || formData.sku || `${Date.now()}`);
-      submitData.append('category_id', formData.category);
-      submitData.append('brand_id', formData.brand || '');
-      submitData.append('unit_id', formData.unit);
+      // Send names instead of IDs - backend will handle creation
+      submitData.append('category_name', formData.category);
+      if (formData.brand) {
+        submitData.append('brand_name', formData.brand);
+      }
+      submitData.append('unit_name', formData.unit);
       submitData.append('purchase_price', formData.totalPurchasePrice.toString());
       submitData.append('selling_price', formData.salePrice.toString());
       submitData.append('quantity', formData.quantity.toString());
@@ -239,34 +242,34 @@ const AddProduct: React.FC = () => {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>{t('products.category')}</Label>
-                <Select onValueChange={(value) => setFormData({ ...formData, category: value })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder={t('products.selectCategory')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map((category: any) => (
-                      <SelectItem key={category.id} value={category.id.toString()}>
-                        {category.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="category">{t('products.category')}</Label>
+                <Input
+                  id="category"
+                  value={formData.category}
+                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                  placeholder={t('products.enterCategory')}
+                  list="categories-list"
+                />
+                <datalist id="categories-list">
+                  {categories.map((category: any) => (
+                    <option key={category.id} value={category.name} />
+                  ))}
+                </datalist>
               </div>
               <div className="space-y-2">
-                <Label>{t('products.brand')}</Label>
-                <Select onValueChange={(value) => setFormData({ ...formData, brand: value })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder={t('products.selectBrand')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {brands.map((brand: any) => (
-                      <SelectItem key={brand.id} value={brand.id.toString()}>
-                        {brand.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="brand">{t('products.brand')}</Label>
+                <Input
+                  id="brand"
+                  value={formData.brand}
+                  onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
+                  placeholder={t('products.enterBrand')}
+                  list="brands-list"
+                />
+                <datalist id="brands-list">
+                  {brands.map((brand: any) => (
+                    <option key={brand.id} value={brand.name} />
+                  ))}
+                </datalist>
               </div>
             </div>
           </motion.div>
@@ -282,19 +285,19 @@ const AddProduct: React.FC = () => {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>{t('products.unit')}</Label>
-                <Select onValueChange={(value) => setFormData({ ...formData, unit: value })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder={t('products.selectUnit')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {units.map((unit: any) => (
-                      <SelectItem key={unit.id} value={unit.id.toString()}>
-                        {unit.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="unit">{t('products.unit')}</Label>
+                <Input
+                  id="unit"
+                  value={formData.unit}
+                  onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
+                  placeholder={t('products.enterUnit')}
+                  list="units-list"
+                />
+                <datalist id="units-list">
+                  {units.map((unit: any) => (
+                    <option key={unit.id} value={unit.name} />
+                  ))}
+                </datalist>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="innerUnits">{t('products.innerUnits')}</Label>
