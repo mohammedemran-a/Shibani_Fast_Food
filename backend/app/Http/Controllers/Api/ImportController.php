@@ -162,9 +162,14 @@ class ImportController extends Controller
         }
         
         // Create new unit with auto-generated abbreviation
+        // Use first 3 letters or generate from hash to avoid encoding issues
+        $abbr = preg_match('/^[a-zA-Z]/', $name) 
+            ? strtolower(substr($name, 0, 3)) 
+            : 'u' . substr(md5($name), 0, 2);
+        
         return Unit::create([
             'name' => $name,
-            'abbreviation' => strtolower(substr($name, 0, 3)),
+            'abbreviation' => $abbr,
         ]);
     }
 }

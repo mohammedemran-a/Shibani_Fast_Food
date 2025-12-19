@@ -136,9 +136,9 @@ class ProductAnalyticsService
                 'products.sku',
                 'products.quantity as current_stock',
                 DB::raw('SUM(sales_invoice_items.quantity) as total_sold'),
-                DB::raw('SUM(sales_invoice_items.total) as total_revenue')
+                DB::raw('SUM(sales_invoice_items.total_price) as total_revenue')
             )
-            ->groupBy('products.id', 'products.name', 'products.name_ar', 'products.sku', 'products.quantity')
+            ->groupBy('products.id', 'products.name', 'products.sku', 'products.quantity')
             ->orderByDesc('total_sold')
             ->limit(20)
             ->get()

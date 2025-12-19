@@ -241,7 +241,7 @@ class DashboardService
                     'products.id',
                     'products.name',
                     DB::raw('SUM(sales_invoice_items.quantity) as total_sold'),
-                    DB::raw('SUM(sales_invoice_items.total) as total_revenue')
+                    DB::raw('SUM(sales_invoice_items.total_price) as total_revenue')
                 )
                 ->groupBy('products.id', 'products.name')
                 ->orderByDesc('total_sold')
