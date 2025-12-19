@@ -59,9 +59,12 @@ class ProductController extends Controller
             'name' => 'required|string',
             'sku' => 'required|unique:products',
             'barcode' => 'required|unique:products',
-            'category_id' => 'required|exists:categories,id',
+            'category_id' => 'nullable|exists:categories,id',
+            'category_name' => 'nullable|string',
             'brand_id' => 'nullable|exists:brands,id',
-            'unit_id' => 'required|exists:units,id',
+            'brand_name' => 'nullable|string',
+            'unit_id' => 'nullable|exists:units,id',
+            'unit_name' => 'nullable|string',
             'purchase_price' => 'required|numeric|min:0',
             'selling_price' => 'required|numeric|min:0',
             'quantity' => 'required|integer|min:0',
@@ -70,6 +73,50 @@ class ProductController extends Controller
             'description' => 'nullable|string',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:10240',
         ]);
+
+        // Handle category - create if name provided
+        if (!empty($validated['category_name'])) {
+            $category = \App\Models\Category::firstOrCreate(
+                ['name' => $validated['category_name']]
+            );
+            $validated['category_id'] = $category->id;
+        }
+        
+        // Handle brand - create if name provided
+        if (!empty($validated['brand_name'])) {
+            $brand = \App\Models\Brand::firstOrCreate(
+                ['name' => $validated['brand_name']]
+            );
+            $validated['brand_id'] = $brand->id;
+        }
+        
+        // Handle unit - create if name provided
+        if (!empty($validated['unit_name'])) {
+            $abbr = preg_match('/^[a-zA-Z]/', $validated['unit_name']) 
+                ? strtolower(substr($validated['unit_name'], 0, 3)) 
+                : 'u' . substr(md5($validated['unit_name']), 0, 2);
+            
+            $unit = \App\Models\Unit::firstOrCreate(
+                ['name' => $validated['unit_name']],
+                ['abbreviation' => $abbr]
+            );
+            $validated['unit_id'] = $unit->id;
+        }
+        
+        // Validate required IDs
+        if (empty($validated['category_id'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Category is required',
+            ], 422);
+        }
+        
+        if (empty($validated['unit_id'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unit is required',
+            ], 422);
+        }
 
         // Handle image upload
         if ($request->hasFile('image')) {
