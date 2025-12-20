@@ -26,7 +26,7 @@ class ReturnController extends Controller
      */
     public function index(Request $request)
     {
-        $query = PurchaseReturn::with(['supplier', 'purchaseInvoice', 'items.product', 'creator']);
+        $query = PurchaseReturn::with(['supplier', 'purchaseInvoice', 'items.product']);
 
         // البحث
         if ($request->has('search') && !empty($request->search)) {
@@ -70,7 +70,7 @@ class ReturnController extends Controller
      */
     public function show($id)
     {
-        $return = PurchaseReturn::with(['supplier', 'purchaseInvoice', 'items.product', 'creator'])
+        $return = PurchaseReturn::with(['supplier', 'purchaseInvoice', 'items.product'])
             ->findOrFail($id);
 
         return response()->json($return);
