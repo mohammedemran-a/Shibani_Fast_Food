@@ -5,6 +5,7 @@ import { ProductsGrid } from '@/components/pos/ProductsGrid';
 import { CartSection, CartItem } from '@/components/pos/CartSection';
 import { CheckoutModal, PaymentDetails } from '@/components/pos/CheckoutModal';
 import { toast } from 'sonner';
+import { printInvoice } from '@/utils/printService';
 
 const POS: React.FC = () => {
   const { t } = useTranslation();
@@ -83,6 +84,10 @@ const POS: React.FC = () => {
         throw new Error(error.message || 'Failed to complete sale');
       }
 
+      // الحصول على بيانات الفاتورة من الاستجابة
+      const result = await response.json();
+      const invoiceData = result.data;
+
       let message = '';
       switch (details.method) {
         case 'cash':
@@ -97,6 +102,28 @@ const POS: React.FC = () => {
       }
 
       toast.success(message);
+      
+      // طباعة الفاتورة تلقائياً
+      if (invoiceData) {
+        printInvoice({
+          invoice_number: invoiceData.invoice_number,
+          invoice_date: invoiceData.invoice_date || new Date().toISOString(),
+          customer_name: invoiceData.customer?.name,
+          items: invoiceData.items.map((item: any) => ({
+            product_name: item.product?.name || 'منتج',
+            quantity: item.quantity,
+            unit_price: parseFloat(item.unit_price),
+            total_price: parseFloat(item.total_price),
+          })),
+          subtotal: parseFloat(invoiceData.subtotal),
+          tax_amount: parseFloat(invoiceData.tax_amount),
+          discount_amount: parseFloat(invoiceData.discount_amount),
+          total_amount: parseFloat(invoiceData.total_amount),
+          payment_method: invoiceData.payment_method,
+          notes: invoiceData.notes,
+        });
+      }
+      
       setCartItems([]);
       setIsCheckoutOpen(false);
       // Refresh products to update stock

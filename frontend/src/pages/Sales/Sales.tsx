@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { Plus, Search, Filter, Eye, FileDown, Trash2, AlertTriangle } from 'lucide-react';
+import { Plus, Search, Filter, Eye, FileDown, Trash2, AlertTriangle, Printer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Link } from 'react-router-dom';
@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import salesService from '@/api/salesService';
+import { printInvoice } from '@/utils/printService';
 
 const Sales: React.FC = () => {
   const { t } = useTranslation();
@@ -174,6 +175,34 @@ const Sales: React.FC = () => {
                   <td className="py-4 px-4">{getStatusBadge(sale.status)}</td>
                   <td className="py-4 px-4">
                     <div className="flex items-center gap-1">
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-8 w-8"
+                        onClick={() => {
+                          // طباعة الفاتورة
+                          printInvoice({
+                            invoice_number: sale.invoice_number,
+                            invoice_date: sale.created_at,
+                            customer_name: sale.customer?.name,
+                            items: sale.items?.map((item: any) => ({
+                              product_name: item.product?.name || 'منتج',
+                              quantity: item.quantity,
+                              unit_price: parseFloat(item.unit_price),
+                              total_price: parseFloat(item.total_price),
+                            })) || [],
+                            subtotal: parseFloat(sale.subtotal || 0),
+                            tax_amount: parseFloat(sale.tax_amount || 0),
+                            discount_amount: parseFloat(sale.discount_amount || 0),
+                            total_amount: parseFloat(sale.total_amount || 0),
+                            payment_method: sale.payment_method,
+                            notes: sale.notes,
+                          });
+                        }}
+                        title="طباعة الفاتورة"
+                      >
+                        <Printer className="w-4 h-4" />
+                      </Button>
                       <Button variant="ghost" size="icon" className="h-8 w-8">
                         <Eye className="w-4 h-4" />
                       </Button>

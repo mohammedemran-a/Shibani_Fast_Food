@@ -6,37 +6,58 @@ use App\Http\Controllers\Controller;
 use App\Models\Product;
 use Illuminate\Http\Request;
 
+/**
+ * متحكم المنتجات
+ * 
+ * يدير جميع العمليات المتعلقة بالمنتجات (CRUD)
+ * مع دعم البحث، الفلترة، والترقيم
+ */
 class ProductController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * عرض قائمة المنتجات مع الفلترة والبحث
+     * 
+     * يدعم:
+     * - البحث بالاسم، SKU، أو الباركود
+     * - الفلترة حسب الفئة، العلامة التجارية، وحالة التفعيل
+     * - الترقيم الديناميكي أو عرض الكل
+     * 
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
      */
     public function index(Request $request)
     {
+        // استعلام أساسي مع تحميل العلاقات
         $query = Product::with(['category', 'brand', 'unit']);
 
+        // البحث في الاسم، SKU، أو الباركود
         if ($request->has('search')) {
             $search = $request->search;
-            $query->where('name', 'like', "%$search%")
+            $query->where(function($q) use ($search) {
+                $q->where('name', 'like', "%$search%")
                   ->orWhere('sku', 'like', "%$search%")
                   ->orWhere('barcode', 'like', "%$search%");
+            });
         }
 
+        // الفلترة حسب الفئة
         if ($request->has('category_id')) {
             $query->where('category_id', $request->category_id);
         }
 
+        // الفلترة حسب العلامة التجارية
         if ($request->has('brand_id')) {
             $query->where('brand_id', $request->brand_id);
         }
 
+        // الفلترة حسب حالة التفعيل
+        // تحويل string 'true'/'false' إلى boolean 1/0
         if ($request->has('is_active')) {
-            // Convert string 'true'/'false' to boolean 1/0
             $isActive = filter_var($request->is_active, FILTER_VALIDATE_BOOLEAN);
             $query->where('is_active', $isActive);
         }
 
-        // Get all products if no pagination requested, otherwise paginate
+        // عرض جميع المنتجات بدون ترقيم إذا طُلب ذلك
         if ($request->has('all') && $request->all == 'true') {
             $products = $query->get();
             return response()->json([
@@ -45,6 +66,7 @@ class ProductController extends Controller
             ]);
         }
         
+        // الترقيم الديناميكي (افتراضي: 1000 منتج لكل صفحة)
         $products = $query->paginate($request->per_page ?? 1000);
 
         return response()->json([
@@ -54,18 +76,20 @@ class ProductController extends Controller
     }
 
     /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
-    }
-
-    /**
-     * Store a newly created resource in storage.
+     * إنشاء منتج جديد
+     * 
+     * يدعم:
+     * - إنشاء الفئة، العلامة التجارية، أو الوحدة تلقائياً إذا لم تكن موجودة
+     * - توليد SKU وBarcode تلقائياً
+     * - رفع الصورة
+     * - تفعيل المنتج افتراضياً
+     * 
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
      */
     public function store(Request $request)
     {
+        // التحقق من صحة البيانات
         $validated = $request->validate([
             'name' => 'required|string',
             'sku' => 'nullable|unique:products',
@@ -86,7 +110,7 @@ class ProductController extends Controller
             'is_active' => 'boolean',
         ]);
 
-        // Handle category - create if name provided
+        // معالجة الفئة - إنشاؤها إذا تم توفير الاسم
         if (!empty($validated['category_name'])) {
             $category = \App\Models\Category::firstOrCreate(
                 ['name' => $validated['category_name']]
@@ -94,7 +118,7 @@ class ProductController extends Controller
             $validated['category_id'] = $category->id;
         }
         
-        // Handle brand - create if name provided
+        // معالجة العلامة التجارية - إنشاؤها إذا تم توفير الاسم
         if (!empty($validated['brand_name'])) {
             $brand = \App\Models\Brand::firstOrCreate(
                 ['name' => $validated['brand_name']]
@@ -102,8 +126,9 @@ class ProductController extends Controller
             $validated['brand_id'] = $brand->id;
         }
         
-        // Handle unit - create if name provided
+        // معالجة الوحدة - إنشاؤها إذا تم توفير الاسم
         if (!empty($validated['unit_name'])) {
+            // توليد اختصار للوحدة
             $abbr = preg_match('/^[a-zA-Z]/', $validated['unit_name']) 
                 ? strtolower(substr($validated['unit_name'], 0, 3)) 
                 : 'u' . substr(md5($validated['unit_name']), 0, 2);
@@ -115,7 +140,7 @@ class ProductController extends Controller
             $validated['unit_id'] = $unit->id;
         }
         
-        // Validate required IDs
+        // التحقق من وجود الفئة (إلزامي)
         if (empty($validated['category_id'])) {
             return response()->json([
                 'success' => false,
@@ -123,6 +148,7 @@ class ProductController extends Controller
             ], 422);
         }
         
+        // التحقق من وجود الوحدة (إلزامي)
         if (empty($validated['unit_id'])) {
             return response()->json([
                 'success' => false,
@@ -130,26 +156,27 @@ class ProductController extends Controller
             ], 422);
         }
 
-        // Set is_active to true by default
+        // تفعيل المنتج افتراضياً
         if (!isset($validated['is_active'])) {
             $validated['is_active'] = true;
         }
         
-        // Auto-generate SKU if not provided
+        // توليد SKU تلقائياً إذا لم يتم توفيره
         if (empty($validated['sku'])) {
             $validated['sku'] = 'PRD-' . time() . rand(100, 999);
         }
         
-        // Auto-generate barcode if not provided
+        // توليد Barcode تلقائياً إذا لم يتم توفيره
         if (empty($validated['barcode'])) {
             $validated['barcode'] = time() . rand(1000, 9999);
         }
         
-        // Handle image upload
+        // معالجة رفع الصورة
         if ($request->hasFile('image')) {
             $validated['image'] = $request->file('image')->store('products', 'public');
         }
 
+        // إنشاء المنتج
         $product = Product::create($validated);
 
         return response()->json([
@@ -160,7 +187,10 @@ class ProductController extends Controller
     }
 
     /**
-     * Display the specified resource.
+     * عرض تفاصيل منتج محدد
+     * 
+     * @param string $id
+     * @return \Illuminate\Http\JsonResponse
      */
     public function show(string $id)
     {
@@ -180,15 +210,16 @@ class ProductController extends Controller
     }
 
     /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(string $id)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
+     * تحديث منتج موجود
+     * 
+     * يدعم:
+     * - تحديث جميع الحقول
+     * - إنشاء الفئة/العلامة/الوحدة إذا تم توفير الاسم
+     * - تحديث الصورة مع حذف الصورة القديمة
+     * 
+     * @param Request $request
+     * @param string $id
+     * @return \Illuminate\Http\JsonResponse
      */
     public function update(Request $request, string $id)
     {
@@ -201,6 +232,7 @@ class ProductController extends Controller
             ], 404);
         }
 
+        // التحقق من صحة البيانات
         $validated = $request->validate([
             'name' => 'string',
             'sku' => 'unique:products,sku,' . $product->id,
@@ -221,7 +253,7 @@ class ProductController extends Controller
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:10240',
         ]);
 
-        // Handle category by name
+        // معالجة الفئة بالاسم
         if (!empty($validated['category_name']) && empty($validated['category_id'])) {
             $category = \App\Models\Category::firstOrCreate(
                 ['name' => $validated['category_name']],
@@ -231,7 +263,7 @@ class ProductController extends Controller
         }
         unset($validated['category_name']);
 
-        // Handle brand by name
+        // معالجة العلامة التجارية بالاسم
         if (!empty($validated['brand_name']) && empty($validated['brand_id'])) {
             $brand = \App\Models\Brand::firstOrCreate(
                 ['name' => $validated['brand_name']],
@@ -241,7 +273,7 @@ class ProductController extends Controller
         }
         unset($validated['brand_name']);
 
-        // Handle unit by name
+        // معالجة الوحدة بالاسم
         if (!empty($validated['unit_name']) && empty($validated['unit_id'])) {
             $unit = \App\Models\Unit::firstOrCreate(
                 ['name' => $validated['unit_name']],
@@ -251,15 +283,16 @@ class ProductController extends Controller
         }
         unset($validated['unit_name']);
 
-        // Handle image upload
+        // معالجة رفع الصورة الجديدة
         if ($request->hasFile('image')) {
-            // Delete old image if exists
+            // حذف الصورة القديمة إذا كانت موجودة
             if ($product->image && \Storage::disk('public')->exists($product->image)) {
                 \Storage::disk('public')->delete($product->image);
             }
             $validated['image'] = $request->file('image')->store('products', 'public');
         }
 
+        // تحديث المنتج
         $product->update($validated);
 
         return response()->json([
@@ -270,7 +303,12 @@ class ProductController extends Controller
     }
 
     /**
-     * Remove the specified resource from storage.
+     * حذف منتج
+     * 
+     * يقوم بحذف المنتج والصورة المرتبطة به
+     * 
+     * @param string $id
+     * @return \Illuminate\Http\JsonResponse
      */
     public function destroy(string $id)
     {
@@ -283,7 +321,7 @@ class ProductController extends Controller
             ], 404);
         }
 
-        // Delete image if exists
+        // حذف الصورة إذا كانت موجودة
         if ($product->image && \Storage::disk('public')->exists($product->image)) {
             \Storage::disk('public')->delete($product->image);
         }
