@@ -28,18 +28,17 @@ const Brands: React.FC = () => {
   const brands = brandsData?.data || [];
 
   const handleAdd = async () => {
-    if (!newBrand.name && !newBrand.name_ar) {
+    if (!newBrand.name) {
       toast.error('يرجى إدخال اسم العلامة التجارية');
       return;
     }
 
     try {
       await createBrand.mutateAsync({
-        name: newBrand.name || newBrand.name_ar,
-        name_ar: newBrand.name_ar || newBrand.name,
+        name: newBrand.name,
         description: newBrand.description,
       });
-      setNewBrand({ name: '', name_ar: '', description: '' });
+      setNewBrand({ name: '', description: '' });
       setIsOpen(false);
       toast.success('تم إضافة العلامة التجارية بنجاح');
     } catch (error: any) {
@@ -95,14 +94,7 @@ const Brands: React.FC = () => {
                   placeholder="Samsung"
                 />
               </div>
-              <div className="space-y-2">
-                <Label>الاسم (عربي)</Label>
-                <Input
-                  value={newBrand.name_ar}
-                  onChange={(e) => setNewBrand({ ...newBrand, name_ar: e.target.value })}
-                  placeholder="سامسونج"
-                />
-              </div>
+
               <div className="space-y-2">
                 <Label>الوصف (اختياري)</Label>
                 <Input
@@ -154,9 +146,7 @@ const Brands: React.FC = () => {
                       {brand.description}
                     </p>
                   )}
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {brand.name !== brand.name_ar && brand.name}
-                  </p>
+
                 </div>
               </div>
               <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -167,7 +157,6 @@ const Brands: React.FC = () => {
                   onClick={() => {
                     setNewBrand({
                       name: brand.name || '',
-                      name_ar: brand.name_ar || '',
                       description: brand.description || ''
                     });
                     setIsOpen(true);

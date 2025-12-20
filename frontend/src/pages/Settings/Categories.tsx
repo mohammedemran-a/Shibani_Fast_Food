@@ -28,18 +28,17 @@ const Categories: React.FC = () => {
   const categories = categoriesData?.data || [];
 
   const handleAdd = async () => {
-    if (!newCategory.name && !newCategory.name_ar) {
+    if (!newCategory.name) {
       toast.error('يرجى إدخال اسم الفئة');
       return;
     }
 
     try {
       await createCategory.mutateAsync({
-        name: newCategory.name || newCategory.name_ar,
-        name_ar: newCategory.name_ar || newCategory.name,
+        name: newCategory.name,
         description: newCategory.description,
       });
-      setNewCategory({ name: '', name_ar: '', description: '' });
+      setNewCategory({ name: '', description: '' });
       setIsOpen(false);
       toast.success('تم إضافة الفئة بنجاح');
     } catch (error: any) {
@@ -95,14 +94,7 @@ const Categories: React.FC = () => {
                   placeholder="Electronics"
                 />
               </div>
-              <div className="space-y-2">
-                <Label>الاسم (عربي)</Label>
-                <Input
-                  value={newCategory.name_ar}
-                  onChange={(e) => setNewCategory({ ...newCategory, name_ar: e.target.value })}
-                  placeholder="إلكترونيات"
-                />
-              </div>
+
               <div className="space-y-2">
                 <Label>الوصف (اختياري)</Label>
                 <Input
@@ -154,9 +146,7 @@ const Categories: React.FC = () => {
                       {category.description}
                     </p>
                   )}
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {category.name !== category.name_ar && category.name}
-                  </p>
+
                 </div>
               </div>
               <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -167,7 +157,6 @@ const Categories: React.FC = () => {
                   onClick={() => {
                     setNewCategory({
                       name: category.name || '',
-                      name_ar: category.name_ar || '',
                       description: category.description || ''
                     });
                     setIsOpen(true);

@@ -112,7 +112,7 @@ const Customers: React.FC = () => {
                 </div>
                 <div>
                   <h4 className="font-semibold text-foreground">
-                    {i18n.language === 'ar' ? customer.name_ar || customer.name : customer.name}
+                    {customer.name}
                   </h4>
                   <p className="text-sm text-muted-foreground">
                     {customer.total_purchases || 0} {t('people.visits')}

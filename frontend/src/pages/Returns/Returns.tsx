@@ -42,7 +42,7 @@ const Returns: React.FC = () => {
 
   // جلب قائمة المرتجعات
   const { data: returnsData, isLoading: returnsLoading } = useQuery({
-    queryKey: ['purchase-returns', { search: searchQuery }],
+    queryKey: ['returns', { search: searchQuery }],
     queryFn: () => purchaseReturnService.getPurchaseReturns({ search: searchQuery }),
   });
 
@@ -63,7 +63,7 @@ const Returns: React.FC = () => {
   const createMutation = useMutation({
     mutationFn: (data: any) => purchaseReturnService.createPurchaseReturn(data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['purchase-returns'] });
+      queryClient.invalidateQueries({ queryKey: ['returns'] });
       toast.success('تم إنشاء المرتجع بنجاح');
       setIsOpen(false);
       resetForm();
@@ -77,7 +77,7 @@ const Returns: React.FC = () => {
   const deleteMutation = useMutation({
     mutationFn: (id: number) => purchaseReturnService.deletePurchaseReturn(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['purchase-returns'] });
+      queryClient.invalidateQueries({ queryKey: ['returns'] });
       toast.success('تم حذف المرتجع بنجاح');
     },
     onError: (error: any) => {
