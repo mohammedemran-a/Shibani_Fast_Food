@@ -130,4 +130,3 @@ export const purchaseReturnService = {
   },
 };
 
-export default purchaseReturnService;
