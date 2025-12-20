@@ -38,7 +38,7 @@ export interface GetCustomersParams {
   per_page?: number;
 }
 
-const customerService = {
+export const customerService = {
   // Get all customers
   getCustomers: async (params?: GetCustomersParams) => {
     const response = await apiClient.get(CUSTOMERS_ENDPOINTS.LIST, { params });
