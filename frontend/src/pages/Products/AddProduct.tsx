@@ -316,9 +316,10 @@ const AddProduct: React.FC = () => {
                 <Input
                   id="totalPurchasePrice"
                   type="number"
-                  step="0.01"
+                  step="1"
+                  min="0"
                   value={formData.totalPurchasePrice}
-                  onChange={(e) => setFormData({ ...formData, totalPurchasePrice: Number(e.target.value) })}
+                  onChange={(e) => setFormData({ ...formData, totalPurchasePrice: Math.floor(Number(e.target.value) || 0) })}
                 />
               </div>
               <div className="space-y-2">
@@ -337,9 +338,10 @@ const AddProduct: React.FC = () => {
                 <Input
                   id="salePrice"
                   type="number"
-                  step="0.01"
+                  step="1"
+                  min="0"
                   value={formData.salePrice}
-                  onChange={(e) => setFormData({ ...formData, salePrice: Number(e.target.value) })}
+                  onChange={(e) => setFormData({ ...formData, salePrice: Math.floor(Number(e.target.value) || 0) })}
                 />
               </div>
               <div className="space-y-2">

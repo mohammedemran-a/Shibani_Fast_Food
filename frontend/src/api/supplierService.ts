@@ -4,7 +4,6 @@ import { CATEGORIES_ENDPOINTS, BRANDS_ENDPOINTS, UNITS_ENDPOINTS, CURRENCIES_END
 export interface Supplier {
   id: number;
   name: string;
-  name_ar: string;
   email?: string;
   phone: string;
   address?: string;
@@ -18,7 +17,6 @@ export interface Supplier {
 
 export interface CreateSupplierData {
   name: string;
-  name_ar: string;
   email?: string;
   phone: string;
   address?: string;

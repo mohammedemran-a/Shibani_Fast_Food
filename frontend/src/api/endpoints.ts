@@ -92,6 +92,7 @@ export const CUSTOMERS_ENDPOINTS = {
 export const SUPPLIERS_ENDPOINTS = {
   LIST: '/suppliers',
   CREATE: '/suppliers',
+  SHOW: (id: number) => `/suppliers/${id}`,
   GET: (id: number) => `/suppliers/${id}`,
   UPDATE: (id: number) => `/suppliers/${id}`,
   DELETE: (id: number) => `/suppliers/${id}`,
