@@ -196,4 +196,3 @@ class SalesService {
 const salesService = new SalesService();
 
 export { salesService };
-export default salesService;

@@ -88,4 +88,3 @@ export const purchaseService = {
 };
 
 export { purchaseService };
-export default purchaseService;

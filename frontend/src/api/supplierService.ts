@@ -70,4 +70,3 @@ export const supplierService = {
 };
 
 export { supplierService };
-export default supplierService;
