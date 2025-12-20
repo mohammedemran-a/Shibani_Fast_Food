@@ -124,7 +124,7 @@ const AddProduct: React.FC = () => {
       submitData.append('unit_name', formData.unit);
       submitData.append('purchase_price', formData.totalPurchasePrice.toString());
       submitData.append('selling_price', formData.salePrice.toString());
-      submitData.append('quantity', formData.quantity.toString());
+      submitData.append('quantity', Math.floor(formData.quantity).toString());
       submitData.append('reorder_level', '10');
       submitData.append('is_active', formData.isActive ? '1' : '0');
       
@@ -348,9 +348,9 @@ const AddProduct: React.FC = () => {
                   id="quantity"
                   type="number"
                   min="0"
-                  step="0.01"
+                  step="1"
                   value={formData.quantity}
-                  onChange={(e) => setFormData({ ...formData, quantity: Number(e.target.value) })}
+                  onChange={(e) => setFormData({ ...formData, quantity: Math.floor(Number(e.target.value)) })}
                 />
               </div>
             </div>
