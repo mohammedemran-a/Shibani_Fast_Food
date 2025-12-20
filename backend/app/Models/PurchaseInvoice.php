@@ -102,7 +102,7 @@ class PurchaseInvoice extends Model
      */
     public function returns()
     {
-        return $this->hasMany(PurchaseReturn::class);
+        return $this->hasMany(Return::class, 'purchase_invoice_id');
     }
 
     /**

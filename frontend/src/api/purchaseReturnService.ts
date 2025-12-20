@@ -13,19 +13,18 @@ export interface PurchaseReturn {
   id: number;
   return_number: string;
   purchase_invoice_id: number;
-  product_id: number;
-  quantity: number;
-  unit_price: number;
-  total_price: number;
-  reason?: string;
+  supplier_id: number;
   return_date: string;
+  total_amount: number;
+  reason?: string;
   status: 'pending' | 'approved' | 'rejected';
   notes?: string;
   created_by: number;
   created_at: string;
   updated_at: string;
   purchase_invoice?: any;
-  product?: any;
+  supplier?: any;
+  items?: any[];
   creator?: any;
 }
 
@@ -34,10 +33,12 @@ export interface PurchaseReturn {
  */
 export interface CreatePurchaseReturnData {
   purchase_invoice_id: number;
-  product_id: number;
-  quantity: number;
-  reason?: string;
   return_date: string;
+  items: {
+    product_id: number;
+    quantity: number;
+  }[];
+  reason?: string;
   notes?: string;
 }
 
@@ -45,7 +46,7 @@ export interface CreatePurchaseReturnData {
  * واجهة معاملات الفلترة
  */
 export interface GetPurchaseReturnsParams {
-  purchase_invoice_id?: number;
+  supplier_id?: number;
   status?: string;
   from_date?: string;
   to_date?: string;
@@ -65,7 +66,7 @@ export const purchaseReturnService = {
    * @returns قائمة المرتجعات
    */
   getPurchaseReturns: async (params?: GetPurchaseReturnsParams) => {
-    const response = await apiClient.get('/purchase-returns', { params });
+    const response = await apiClient.get('/returns', { params });
     return response.data;
   },
 
@@ -76,7 +77,18 @@ export const purchaseReturnService = {
    * @returns تفاصيل المرتجع
    */
   getPurchaseReturn: async (id: number) => {
-    const response = await apiClient.get(`/purchase-returns/${id}`);
+    const response = await apiClient.get(`/returns/${id}`);
+    return response.data;
+  },
+
+  /**
+   * جلب المنتجات المتاحة للإرجاع من فاتورة معينة
+   * 
+   * @param invoiceId - معرف فاتورة الشراء
+   * @returns المنتجات المتاحة للإرجاع
+   */
+  getAvailableItemsForReturn: async (invoiceId: number) => {
+    const response = await apiClient.get(`/returns/invoice/${invoiceId}/available-items`);
     return response.data;
   },
 
@@ -87,7 +99,7 @@ export const purchaseReturnService = {
    * @returns المرتجع المنشأ
    */
   createPurchaseReturn: async (data: CreatePurchaseReturnData) => {
-    const response = await apiClient.post('/purchase-returns', data);
+    const response = await apiClient.post('/returns', data);
     return response.data;
   },
 
@@ -95,17 +107,14 @@ export const purchaseReturnService = {
    * تحديث حالة مرتجع
    * 
    * @param id - معرف المرتجع
-   * @param data - البيانات المحدثة
+   * @param status - الحالة الجديدة
    * @returns المرتجع المحدث
    */
-  updatePurchaseReturn: async (
+  updateReturnStatus: async (
     id: number,
-    data: {
-      status: 'pending' | 'approved' | 'rejected';
-      notes?: string;
-    }
+    status: 'approved' | 'rejected'
   ) => {
-    const response = await apiClient.put(`/purchase-returns/${id}`, data);
+    const response = await apiClient.post(`/returns/${id}/update-status`, { status });
     return response.data;
   },
 
@@ -116,7 +125,7 @@ export const purchaseReturnService = {
    * @returns رسالة النجاح
    */
   deletePurchaseReturn: async (id: number) => {
-    const response = await apiClient.delete(`/purchase-returns/${id}`);
+    const response = await apiClient.delete(`/returns/${id}`);
     return response.data;
   },
 };

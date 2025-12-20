@@ -15,7 +15,7 @@ use App\Http\Controllers\Api\SupplierController;
 use App\Http\Controllers\Api\DebtController;
 use App\Http\Controllers\Api\ExpenseController;
 use App\Http\Controllers\Api\ProductReturnController;
-use App\Http\Controllers\Api\PurchaseReturnController;
+use App\Http\Controllers\Api\ReturnController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\ReportController;
@@ -75,7 +75,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('purchase-invoices/{id}/items-for-return', [PurchaseInvoiceController::class, 'getItemsForReturn']);
     
     // Purchase Returns routes
-    Route::apiResource('purchase-returns', PurchaseReturnController::class);
+    Route::apiResource('returns', ReturnController::class);
+    Route::get('returns/invoice/{invoiceId}/available-items', [ReturnController::class, 'getAvailableItems']);
+    Route::post('returns/{id}/update-status', [ReturnController::class, 'updateStatus']);
 
     // Customers routes
     Route::apiResource('customers', CustomerController::class);
@@ -94,10 +96,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('expenses/summary/weekly', [ExpenseController::class, 'weeklySummary']);
     Route::get('expenses/summary/monthly', [ExpenseController::class, 'monthlySummary']);
 
-    // Product Returns routes
-    Route::apiResource('returns', ProductReturnController::class);
-    Route::post('returns/{return}/approve', [ProductReturnController::class, 'approve']);
-    Route::post('returns/{return}/reject', [ProductReturnController::class, 'reject']);
+    // Product Returns routes (Sales Returns)
+    Route::apiResource('product-returns', ProductReturnController::class);
+    Route::post('product-returns/{return}/approve', [ProductReturnController::class, 'approve']);
+    Route::post('product-returns/{return}/reject', [ProductReturnController::class, 'reject']);
 
     // Users routes
     Route::apiResource('users', UserController::class);
