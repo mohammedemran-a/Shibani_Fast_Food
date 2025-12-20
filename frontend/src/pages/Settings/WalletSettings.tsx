@@ -25,7 +25,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
-import paymentMethodService from '@/api/paymentMethodService';
+import { paymentMethodService } from '@/api/paymentMethodService';
 import PageErrorBoundary from '@/components/PageErrorBoundary';
 
 const WalletSettingsContent: React.FC = () => {

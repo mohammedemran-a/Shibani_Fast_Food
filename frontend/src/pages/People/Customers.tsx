@@ -18,7 +18,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
-import customerService from '@/api/customerService';
+import { customerService } from '@/api/customerService';
 
 const Customers: React.FC = () => {
   const { t, i18n } = useTranslation();

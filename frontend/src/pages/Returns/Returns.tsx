@@ -27,7 +27,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { purchaseService } from '@/api/purchaseService';
-import purchaseReturnService from '@/api/purchaseReturnService';
+import { purchaseReturnService } from '@/api/purchaseReturnService';
 import PageErrorBoundary from '@/components/PageErrorBoundary';
 
 const ReturnsContent: React.FC = () => {

@@ -18,7 +18,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
-import salesService from '@/api/salesService';
+import { salesService } from '@/api/salesService';
 import { printInvoice } from '@/utils/printService';
 import PageErrorBoundary from '@/components/PageErrorBoundary';
 
