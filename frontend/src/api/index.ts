@@ -1,9 +1,14 @@
+// API Client
 export { default as apiClient } from './apiClient';
+
+// Endpoints
 export * from './endpoints';
-export { default as authService } from './authService';
+
+// Auth Service
 export { authService } from './authService';
 export type { LoginCredentials, User, LoginResponse, AuthResponse } from './authService';
-export { default as productService } from './productService';
+
+// Product Service
 export { productService } from './productService';
 export type {
   Product,
@@ -12,7 +17,8 @@ export type {
   ProductsResponse,
   ProductResponse,
 } from './productService';
-export { default as salesService } from './salesService';
+
+// Sales Service
 export { salesService } from './salesService';
 export type {
   SalesInvoice,
@@ -23,6 +29,7 @@ export type {
   SalesSummary,
 } from './salesService';
 
+// Other Services
 export * from './customerService';
 export * from './supplierService';
 export * from './categoryService';
