@@ -31,7 +31,9 @@ class ProductController extends Controller
         }
 
         if ($request->has('is_active')) {
-            $query->where('is_active', $request->is_active);
+            // Convert string 'true'/'false' to boolean 1/0
+            $isActive = filter_var($request->is_active, FILTER_VALIDATE_BOOLEAN);
+            $query->where('is_active', $isActive);
         }
 
         // Get all products if no pagination requested, otherwise paginate
