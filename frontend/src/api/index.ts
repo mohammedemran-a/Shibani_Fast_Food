@@ -1,8 +1,9 @@
 export { default as apiClient } from './apiClient';
 export * from './endpoints';
 export { default as authService } from './authService';
+export { authService } from './authService';
 export type { LoginCredentials, User, LoginResponse, AuthResponse } from './authService';
-export { default as productService } from './productService';
+export { default as productService, productService } from './productService';
 export type {
   Product,
   CreateProductRequest,
@@ -11,6 +12,7 @@ export type {
   ProductResponse,
 } from './productService';
 export { default as salesService } from './salesService';
+export { salesService } from './salesService';
 export type {
   SalesInvoice,
   SalesInvoiceItem,

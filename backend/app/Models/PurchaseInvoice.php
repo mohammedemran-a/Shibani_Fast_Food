@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Return as PurchaseReturn;
 
 /**
  * نموذج فاتورة المشتريات
@@ -102,7 +103,7 @@ class PurchaseInvoice extends Model
      */
     public function returns()
     {
-        return $this->hasMany(Return::class, 'purchase_invoice_id');
+        return $this->hasMany(PurchaseReturn::class, 'purchase_invoice_id');
     }
 
     /**

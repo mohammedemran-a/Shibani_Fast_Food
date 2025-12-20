@@ -86,3 +86,6 @@ export const purchaseService = {
     return response.data;
   },
 };
+
+export { purchaseService };
+export default purchaseService;

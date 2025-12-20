@@ -68,3 +68,6 @@ export const supplierService = {
     return response.data;
   },
 };
+
+export { supplierService };
+export default supplierService;

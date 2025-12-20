@@ -193,4 +193,7 @@ class SalesService {
   }
 }
 
-export default new SalesService();
+const salesService = new SalesService();
+
+export { salesService };
+export default salesService;
