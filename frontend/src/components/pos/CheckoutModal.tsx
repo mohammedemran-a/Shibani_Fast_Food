@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -150,6 +151,9 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
           <DialogTitle className="text-xl font-bold text-center">
             {showReceiptOptions ? t('receipt.title') : t('payment.title')}
           </DialogTitle>
+          <DialogDescription className="text-center">
+            {showReceiptOptions ? t('receipt.description') || 'اختر طريقة استلام الفاتورة' : t('payment.description') || 'اختر طريقة الدفع وأكمل العملية'}
+          </DialogDescription>
         </DialogHeader>
 
         {!showReceiptOptions ? (
