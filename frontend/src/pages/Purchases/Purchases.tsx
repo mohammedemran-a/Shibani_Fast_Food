@@ -19,8 +19,9 @@ import {
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { purchaseService } from '@/api/purchaseService';
+import PageErrorBoundary from '@/components/PageErrorBoundary';
 
-const Purchases: React.FC = () => {
+const PurchasesContent: React.FC = () => {
   const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
   const [fromDate, setFromDate] = useState('');
@@ -223,6 +224,14 @@ const Purchases: React.FC = () => {
         </div>
       </div>
     </div>
+  );
+};
+
+const Purchases: React.FC = () => {
+  return (
+    <PageErrorBoundary pageName="المشتريات">
+      <PurchasesContent />
+    </PageErrorBoundary>
   );
 };
 

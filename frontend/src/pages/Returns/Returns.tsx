@@ -28,8 +28,9 @@ import {
 import { toast } from 'sonner';
 import { purchaseService } from '@/api/purchaseService';
 import purchaseReturnService from '@/api/purchaseReturnService';
+import PageErrorBoundary from '@/components/PageErrorBoundary';
 
-const Returns: React.FC = () => {
+const ReturnsContent: React.FC = () => {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -423,6 +424,14 @@ const Returns: React.FC = () => {
         </div>
       </div>
     </div>
+  );
+};
+
+const Returns: React.FC = () => {
+  return (
+    <PageErrorBoundary pageName="المرتجعات">
+      <ReturnsContent />
+    </PageErrorBoundary>
   );
 };
 

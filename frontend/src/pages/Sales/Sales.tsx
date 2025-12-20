@@ -20,8 +20,9 @@ import {
 import { toast } from 'sonner';
 import salesService from '@/api/salesService';
 import { printInvoice } from '@/utils/printService';
+import PageErrorBoundary from '@/components/PageErrorBoundary';
 
-const Sales: React.FC = () => {
+const SalesContent: React.FC = () => {
   const { t } = useTranslation();
   const [search, setSearch] = useState('');
   const [fromDate, setFromDate] = useState('');
@@ -253,6 +254,14 @@ const Sales: React.FC = () => {
         </div>
       </div>
     </div>
+  );
+};
+
+const Sales: React.FC = () => {
+  return (
+    <PageErrorBoundary pageName="المبيعات">
+      <SalesContent />
+    </PageErrorBoundary>
   );
 };
 
