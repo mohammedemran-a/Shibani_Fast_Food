@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\SupplierController;
 use App\Http\Controllers\Api\DebtController;
 use App\Http\Controllers\Api\ExpenseController;
 use App\Http\Controllers\Api\ProductReturnController;
+use App\Http\Controllers\Api\PurchaseReturnController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\ReportController;
@@ -71,10 +72,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Purchase Invoices routes
     Route::apiResource('purchase-invoices', PurchaseInvoiceController::class);
-    Route::post('purchase-invoices/{invoice}/cancel', [PurchaseInvoiceController::class, 'cancel']);
-    Route::get('purchase-invoices/summary/daily', [PurchaseInvoiceController::class, 'dailySummary']);
-    Route::get('purchase-invoices/summary/weekly', [PurchaseInvoiceController::class, 'weeklySummary']);
-    Route::get('purchase-invoices/summary/monthly', [PurchaseInvoiceController::class, 'monthlySummary']);
+    Route::get('purchase-invoices/{id}/items-for-return', [PurchaseInvoiceController::class, 'getItemsForReturn']);
+    
+    // Purchase Returns routes
+    Route::apiResource('purchase-returns', PurchaseReturnController::class);
 
     // Customers routes
     Route::apiResource('customers', CustomerController::class);

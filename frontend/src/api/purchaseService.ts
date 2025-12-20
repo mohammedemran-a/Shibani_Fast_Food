@@ -13,14 +13,20 @@ export interface PurchaseInvoice {
   supplier_id: number;
   invoice_date: string;
   due_date?: string;
+  subtotal: number;
+  tax_amount: number;
+  discount_amount: number;
   total_amount: number;
   paid_amount: number;
-  status: 'pending' | 'partial' | 'paid' | 'cancelled';
+  status: 'pending' | 'completed' | 'cancelled';
   notes?: string;
   created_by: number;
   created_at: string;
   updated_at: string;
   items?: PurchaseInvoiceItem[];
+  supplier?: any;
+  remaining_amount?: number;
+  payment_status?: string;
 }
 
 export interface CreatePurchaseInvoiceData {
@@ -28,6 +34,8 @@ export interface CreatePurchaseInvoiceData {
   invoice_date: string;
   due_date?: string;
   items: PurchaseInvoiceItem[];
+  tax_amount?: number;
+  discount_amount?: number;
   paid_amount?: number;
   notes?: string;
 }
@@ -69,6 +77,12 @@ export const purchaseService = {
   // Delete purchase invoice
   deletePurchase: async (id: number) => {
     const response = await apiClient.delete(PURCHASE_INVOICES_ENDPOINTS.DELETE(id));
+    return response.data;
+  },
+
+  // Get invoice items for return
+  getItemsForReturn: async (id: number) => {
+    const response = await apiClient.get(`/purchase-invoices/${id}/items-for-return`);
     return response.data;
   },
 };
