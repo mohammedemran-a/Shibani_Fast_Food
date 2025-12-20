@@ -6,12 +6,12 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * نموذج المرتجعات (Returns)
+ * نموذج مرتجعات المشتريات (Purchase Returns)
  * 
  * يمثل مرتجعات المشتريات للموردين
  * يرتبط بفاتورة الشراء الأصلية ويحتوي على عناصر مرتجعة
  */
-class Return extends Model
+class PurchaseReturn extends Model
 {
     use HasFactory;
 
@@ -76,7 +76,7 @@ class Return extends Model
      */
     public function items()
     {
-        return $this->hasMany(ReturnItem::class, 'return_id');
+        return $this->hasMany(PurchaseReturnItem::class, 'return_id');
     }
 
     /**
@@ -102,6 +102,6 @@ class Return extends Model
 
     public function scopeRejected($query)
     {
-        return $this->where('status', 'rejected');
+        return $query->where('status', 'rejected');
     }
 }

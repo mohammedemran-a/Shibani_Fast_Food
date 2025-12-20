@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Return;
-use App\Models\ReturnItem;
+use App\Models\PurchaseReturn;
+use App\Models\PurchaseReturnItem;
 use App\Models\PurchaseInvoice;
 use App\Models\Product;
 use Illuminate\Http\Request;
@@ -26,23 +26,34 @@ class ReturnController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Return::with(['supplier', 'purchaseInvoice', 'items.product', 'creator']);
+        $query = PurchaseReturn::with(['supplier', 'purchaseInvoice', 'items.product', 'creator']);
+
+        // البحث
+        if ($request->has('search') && !empty($request->search)) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('return_number', 'like', "%$search%")
+                  ->orWhereHas('supplier', function($sq) use ($search) {
+                      $sq->where('name', 'like', "%$search%");
+                  });
+            });
+        }
 
         // فلترة حسب الحالة
-        if ($request->has('status')) {
+        if ($request->has('status') && !empty($request->status)) {
             $query->where('status', $request->status);
         }
 
         // فلترة حسب المورد
-        if ($request->has('supplier_id')) {
+        if ($request->has('supplier_id') && !empty($request->supplier_id)) {
             $query->where('supplier_id', $request->supplier_id);
         }
 
         // فلترة حسب التاريخ
-        if ($request->has('from_date')) {
+        if ($request->has('from_date') && !empty($request->from_date)) {
             $query->whereDate('return_date', '>=', $request->from_date);
         }
-        if ($request->has('to_date')) {
+        if ($request->has('to_date') && !empty($request->to_date)) {
             $query->whereDate('return_date', '<=', $request->to_date);
         }
 
@@ -59,7 +70,7 @@ class ReturnController extends Controller
      */
     public function show($id)
     {
-        $return = Return::with(['supplier', 'purchaseInvoice', 'items.product', 'creator'])
+        $return = PurchaseReturn::with(['supplier', 'purchaseInvoice', 'items.product', 'creator'])
             ->findOrFail($id);
 
         return response()->json($return);
@@ -79,7 +90,7 @@ class ReturnController extends Controller
 
         foreach ($invoice->items as $item) {
             // حساب الكمية المرتجعة من هذا المنتج
-            $returnedQuantity = ReturnItem::whereHas('return', function($query) use ($invoiceId) {
+            $returnedQuantity = PurchaseReturnItem::whereHas('purchaseReturn', function($query) use ($invoiceId) {
                 $query->where('purchase_invoice_id', $invoiceId)
                       ->where('status', '!=', 'rejected');
             })->where('product_id', $item->product_id)->sum('quantity');
@@ -148,7 +159,7 @@ class ReturnController extends Controller
                 }
 
                 // التحقق من الكمية المتاحة للإرجاع
-                $returnedQuantity = ReturnItem::whereHas('return', function($query) use ($request) {
+                $returnedQuantity = PurchaseReturnItem::whereHas('purchaseReturn', function($query) use ($request) {
                     $query->where('purchase_invoice_id', $request->purchase_invoice_id)
                           ->where('status', '!=', 'rejected');
                 })->where('product_id', $item['product_id'])->sum('quantity');
@@ -172,7 +183,7 @@ class ReturnController extends Controller
             }
 
             // إنشاء المرتجع
-            $return = Return::create([
+            $return = PurchaseReturn::create([
                 'purchase_invoice_id' => $request->purchase_invoice_id,
                 'supplier_id' => $invoice->supplier_id,
                 'return_date' => $request->return_date,
@@ -187,7 +198,7 @@ class ReturnController extends Controller
             foreach ($request->items as $item) {
                 $invoiceItem = $invoice->items()->where('product_id', $item['product_id'])->first();
                 
-                ReturnItem::create([
+                PurchaseReturnItem::create([
                     'return_id' => $return->id,
                     'product_id' => $item['product_id'],
                     'quantity' => $item['quantity'],
@@ -227,7 +238,7 @@ class ReturnController extends Controller
 
         DB::beginTransaction();
         try {
-            $return = Return::with('items')->findOrFail($id);
+            $return = PurchaseReturn::with('items')->findOrFail($id);
             $return->status = $request->status;
             $return->save();
 
@@ -265,7 +276,7 @@ class ReturnController extends Controller
      */
     public function destroy($id)
     {
-        $return = Return::findOrFail($id);
+        $return = PurchaseReturn::findOrFail($id);
 
         if ($return->status === 'approved') {
             return response()->json([

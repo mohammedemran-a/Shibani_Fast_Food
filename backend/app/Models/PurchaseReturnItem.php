@@ -6,11 +6,11 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * نموذج عناصر المرتجعات (Return Items)
+ * نموذج عناصر مرتجعات المشتريات (Purchase Return Items)
  * 
  * يمثل المنتجات المرتجعة في كل مرتجع
  */
-class ReturnItem extends Model
+class PurchaseReturnItem extends Model
 {
     use HasFactory;
 
@@ -33,9 +33,9 @@ class ReturnItem extends Model
     /**
      * العلاقة مع المرتجع
      */
-    public function return()
+    public function purchaseReturn()
     {
-        return $this->belongsTo(Return::class, 'return_id');
+        return $this->belongsTo(PurchaseReturn::class, 'return_id');
     }
 
     /**
