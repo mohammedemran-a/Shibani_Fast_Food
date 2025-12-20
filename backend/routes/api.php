@@ -22,6 +22,7 @@ use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\AnalyticsController;
 use App\Http\Controllers\Api\ImportController;
+use App\Http\Controllers\Api\PaymentMethodController;
 
 /*
 |--------------------------------------------------------------------------
@@ -124,6 +125,11 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('clear-cache', [AnalyticsController::class, 'clearCache']);
         Route::post('refresh-cache', [AnalyticsController::class, 'refreshCache']);
     });
+
+    // Payment Methods routes
+    Route::apiResource('payment-methods', PaymentMethodController::class);
+    Route::post('payment-methods/{id}/toggle-active', [PaymentMethodController::class, 'toggleActive']);
+    Route::get('payment-methods-active', [PaymentMethodController::class, 'active']);
 
     // Reports routes
     Route::get('reports/profit', [ReportController::class, 'profitReport']);
