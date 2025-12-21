@@ -20,7 +20,7 @@ import Returns from "@/pages/Returns";
 import { ProfitReport, PurchasesReport, SalesSummary, PurchasesSummary } from "@/pages/Reports";
 import { Purchases, AddPurchase } from "@/pages/Purchases";
 import { Customers, CustomerDetails, Suppliers, Users } from "@/pages/People";
-import { GeneralSettings, Units, Categories, Brands, Currencies, RolesPermissions, WalletSettings, LoyaltySettings } from "@/pages/Settings";
+import { GeneralSettings, Units, Categories, Brands, Currencies, RolesPermissions, WalletSettings, LoyaltySettings, ProfileSettings } from "@/pages/Settings";
 import { DebtManagement, CustomerDebtDetails } from "@/pages/Debts";
 import { BasketAnalysis, ProductPerformance } from "@/pages/Analytics";
 import { AttendanceTracking, SalesPerformanceReport } from "@/pages/Employees";
@@ -78,6 +78,7 @@ const AppContent = () => {
             <Route path="/settings/roles" element={<RolesPermissions />} />
             <Route path="/settings/wallets" element={<WalletSettings />} />
             <Route path="/settings/loyalty" element={<LoyaltySettings />} />
+            <Route path="/settings/profile" element={<ProfileSettings />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

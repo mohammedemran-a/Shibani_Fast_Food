@@ -6,3 +6,4 @@ export { default as Currencies } from './Currencies';
 export { default as RolesPermissions } from './RolesPermissions';
 export { default as WalletSettings } from './WalletSettings';
 export { default as LoyaltySettings } from './LoyaltySettings';
+export { default as ProfileSettings } from './ProfileSettings';
