@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\PurchaseReturnItem;
 
 /**
  * نموذج عنصر فاتورة المشتريات
@@ -71,16 +72,15 @@ class PurchaseInvoiceItem extends Model
     }
 
     /**
-     * العلاقة مع المرتجعات
+     * العلاقة مع عناصر المرتجعات
      * 
-     * كل عنصر يمكن أن يكون له عدة مرتجعات
+     * كل عنصر يمكن أن يكون له عدة عناصر مرتجعة
      * 
      * @return \Illuminate\Database\Eloquent\Relations\HasMany
      */
-    public function returns()
+    public function returnItems()
     {
-        return $this->hasMany(PurchaseReturn::class, 'product_id', 'product_id')
-                    ->where('purchase_invoice_id', $this->purchase_invoice_id);
+        return $this->hasMany(PurchaseReturnItem::class, 'product_id', 'product_id');
     }
 
     /**
@@ -90,9 +90,11 @@ class PurchaseInvoiceItem extends Model
      */
     public function getReturnedQuantityAttribute()
     {
-        return PurchaseReturn::where('purchase_invoice_id', $this->purchase_invoice_id)
-                            ->where('product_id', $this->product_id)
-                            ->sum('quantity');
+        // البحث في عناصر المرتجعات (وليس المرتجعات نفسها)
+        return PurchaseReturnItem::whereHas('purchaseReturn', function($query) {
+            $query->where('purchase_invoice_id', $this->purchase_invoice_id)
+                  ->where('status', '!=', 'rejected');
+        })->where('product_id', $this->product_id)->sum('quantity');
     }
 
     /**
