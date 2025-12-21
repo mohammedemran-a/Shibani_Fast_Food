@@ -62,7 +62,7 @@ class SettingsController extends Controller
             
             // تحويل مسار الشعار إلى URL كامل
             if (isset($settings['company_logo']) && $settings['company_logo']) {
-                $settings['company_logo'] = Storage::url($settings['company_logo']);
+                $settings['company_logo'] = url(Storage::url($settings['company_logo']));
             }
             
             return response()->json([
