@@ -86,7 +86,8 @@ const ReturnsContent: React.FC = () => {
     },
   });
 
-  const returns = returnsData?.data?.data || [];
+  // البيانات تأتي من paginate() في Laravel بشكل { data: [...], ... }
+  const returns = returnsData?.data || returnsData || [];
   const invoices = invoicesData?.data?.data || [];
   const invoiceItems = invoiceItemsData?.data?.items || [];
   const selectedItem = invoiceItems.find((item: any) => item.product_id === selectedProductId);
@@ -151,10 +152,11 @@ const ReturnsContent: React.FC = () => {
     );
   };
 
-  const filteredReturns = returns.filter((r: any) =>
+  const filteredReturns = Array.isArray(returns) ? returns.filter((r: any) =>
     r.return_number?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    r.product?.name?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+    r.supplier?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    r.items?.some((item: any) => item.product?.name?.toLowerCase().includes(searchQuery.toLowerCase()))
+  ) : [];
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -366,10 +368,14 @@ const ReturnsContent: React.FC = () => {
                     <td className="py-4 px-4 font-mono text-muted-foreground">
                       {ret.purchase_invoice?.invoice_number}
                     </td>
-                    <td className="py-4 px-4 font-medium text-foreground">{ret.product?.name}</td>
-                    <td className="py-4 px-4 text-muted-foreground">{ret.quantity}</td>
+                    <td className="py-4 px-4 font-medium text-foreground">
+                      {ret.items?.map((item: any) => item.product?.name).join(', ') || 'N/A'}
+                    </td>
+                    <td className="py-4 px-4 text-muted-foreground">
+                      {ret.items?.reduce((sum: number, item: any) => sum + item.quantity, 0) || 0}
+                    </td>
                     <td className="py-4 px-4 font-semibold text-destructive">
-                      -${Number(ret.total_price || 0).toFixed(2)}
+                      -${Number(ret.total_amount || 0).toFixed(2)}
                     </td>
                     <td className="py-4 px-4 text-muted-foreground">{ret.reason || 'N/A'}</td>
                     <td className="py-4 px-4 text-muted-foreground">
