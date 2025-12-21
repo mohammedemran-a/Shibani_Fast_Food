@@ -48,7 +48,8 @@ const Customers: React.FC = () => {
     deleteMutation.mutate(id);
   };
 
-  const customers = customersData?.data?.data || [];
+  // البيانات تأتي من API بشكل { success: true, data: { data: [...] } }
+  const customers = customersData?.data?.data || customersData?.data || [];
 
   if (isLoading) {
     return (
@@ -115,7 +116,7 @@ const Customers: React.FC = () => {
                     {customer.name}
                   </h4>
                   <p className="text-sm text-muted-foreground">
-                    {customer.total_purchases || 0} {t('people.visits')}
+                    {customer.sales_invoices_count || 0} {t('people.visits')}
                   </p>
                 </div>
               </div>
@@ -175,7 +176,7 @@ const Customers: React.FC = () => {
             <div className="mt-4 pt-4 border-t border-border">
               <p className="text-sm text-muted-foreground">{t('people.totalPurchases')}</p>
               <p className="text-xl font-bold text-success">
-                ${customer.total_amount?.toFixed(2) || '0.00'}
+                ${Number(customer.sales_invoices_sum_total_amount || 0).toFixed(2)}
               </p>
             </div>
           </motion.div>
