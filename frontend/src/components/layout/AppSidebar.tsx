@@ -246,11 +246,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ isOpen, onToggle }) => {
               <div className="w-10 h-10 rounded-xl overflow-hidden">
                 <img src={settings.company_logo} alt="Logo" className="w-full h-full object-cover" />
               </div>
-            ) : (
-              <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center">
-                <Store className="w-5 h-5 text-primary-foreground" />
-              </div>
-            )}
+            ) : null}
             {isOpen && (
               isLoadingSettings ? (
                 <div className="h-6 w-32 rounded bg-sidebar-accent animate-pulse" />

@@ -1,5 +1,5 @@
 {
-  "app": { "name": "نظام نقاط البيع" },
+  "app": { "name": "" },
   "nav": {
     "dashboard": "لوحة التحكم", "pos": "نقطة البيع", "products": "المنتجات", "productsList": "قائمة المنتجات",
     "addProduct": "إضافة منتج", "importProducts": "استيراد المنتجات", "sales": "المبيعات", "purchases": "المشتريات",
