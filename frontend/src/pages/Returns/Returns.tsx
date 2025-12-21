@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { Plus, Search, Filter, Eye, RotateCcw, Trash2, AlertTriangle, AlertCircle } from 'lucide-react';
+import { Plus, Search, Filter, Eye, RotateCcw, Trash2, AlertTriangle, AlertCircle, Check, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -83,6 +83,23 @@ const ReturnsContent: React.FC = () => {
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.message || 'فشل حذف المرتجع');
+    },
+  });
+
+  // تحديث حالة المرتجع (موافقة/رفض)
+  const updateStatusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: number; status: 'approved' | 'rejected' }) => 
+      purchaseReturnService.updateReturnStatus(id, status),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['returns'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] }); // تحديث المخزون
+      const message = variables.status === 'approved' 
+        ? 'تمت الموافقة على المرتجع وتم تحديث المخزون' 
+        : 'تم رفض المرتجع';
+      toast.success(message);
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'فشل تحديث حالة المرتجع');
     },
   });
 
@@ -384,6 +401,31 @@ const ReturnsContent: React.FC = () => {
                     <td className="py-4 px-4">{getStatusBadge(ret.status)}</td>
                     <td className="py-4 px-4">
                       <div className="flex items-center gap-1">
+                        {/* أزرار الموافقة والرفض - تظهر فقط للمرتجعات المعلقة */}
+                        {ret.status === 'pending' && (
+                          <>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-8 w-8 text-success hover:text-success hover:bg-success/10"
+                              onClick={() => updateStatusMutation.mutate({ id: ret.id, status: 'approved' })}
+                              disabled={updateStatusMutation.isPending}
+                              title="موافقة"
+                            >
+                              <Check className="w-4 h-4" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                              onClick={() => updateStatusMutation.mutate({ id: ret.id, status: 'rejected' })}
+                              disabled={updateStatusMutation.isPending}
+                              title="رفض"
+                            >
+                              <X className="w-4 h-4" />
+                            </Button>
+                          </>
+                        )}
                         <Button variant="ghost" size="icon" className="h-8 w-8">
                           <Eye className="w-4 h-4" />
                         </Button>
