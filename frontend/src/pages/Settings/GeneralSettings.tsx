@@ -67,14 +67,21 @@ const GeneralSettingsContent: React.FC = () => {
 
   // رفع الشعار
   const uploadLogoMutation = useMutation({
-    mutationFn: (file: File) => settingsService.uploadLogo(file),
+    mutationFn: (file: File) => {
+      console.log('mutationFn called with file:', file.name, file.size, file.type);
+      return settingsService.uploadLogo(file);
+    },
     onSuccess: (data) => {
+      console.log('Upload success:', data);
       queryClient.invalidateQueries({ queryKey: ['settings'] });
-      setLogoPreview(data.data.logo_url);
+      if (data.data?.logo_url) {
+        setLogoPreview(data.data.logo_url);
+      }
       setLogoFile(null);
       toast.success('تم رفع الشعار بنجاح');
     },
     onError: (error: any) => {
+      console.error('Upload error:', error);
       toast.error(error.response?.data?.message || 'فشل في رفع الشعار');
     },
   });
@@ -96,8 +103,13 @@ const GeneralSettingsContent: React.FC = () => {
   };
 
   const handleUploadLogo = () => {
+    console.log('handleUploadLogo called', { logoFile });
     if (logoFile) {
+      console.log('Uploading logo...', logoFile.name, logoFile.size);
       uploadLogoMutation.mutate(logoFile);
+    } else {
+      console.error('No logo file selected');
+      toast.error('يرجى اختيار صورة أولاً');
     }
   };
 
