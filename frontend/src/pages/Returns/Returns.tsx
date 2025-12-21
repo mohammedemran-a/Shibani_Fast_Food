@@ -117,10 +117,14 @@ const ReturnsContent: React.FC = () => {
 
     createMutation.mutate({
       purchase_invoice_id: selectedInvoiceId,
-      product_id: selectedProductId,
-      quantity,
-      reason,
       return_date: new Date().toISOString().split('T')[0],
+      items: [
+        {
+          product_id: selectedProductId,
+          quantity,
+        }
+      ],
+      reason,
       notes,
     });
   };

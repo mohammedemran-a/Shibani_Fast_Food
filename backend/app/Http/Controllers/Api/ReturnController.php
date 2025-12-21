@@ -141,6 +141,19 @@ class ReturnController extends Controller
             'items.*.quantity' => 'required|integer|min:1',
             'reason' => 'nullable|string',
             'notes' => 'nullable|string',
+        ], [
+            'purchase_invoice_id.required' => 'رقم فاتورة الشراء مطلوب',
+            'purchase_invoice_id.exists' => 'فاتورة الشراء غير موجودة',
+            'return_date.required' => 'تاريخ الإرجاع مطلوب',
+            'return_date.date' => 'تاريخ الإرجاع غير صحيح',
+            'items.required' => 'يجب إضافة عنصر واحد على الأقل',
+            'items.array' => 'العناصر يجب أن تكون قائمة',
+            'items.min' => 'يجب إضافة عنصر واحد على الأقل',
+            'items.*.product_id.required' => 'معرف المنتج مطلوب لكل عنصر',
+            'items.*.product_id.exists' => 'المنتج غير موجود',
+            'items.*.quantity.required' => 'الكمية مطلوبة لكل عنصر',
+            'items.*.quantity.integer' => 'الكمية يجب أن تكون رقم صحيح',
+            'items.*.quantity.min' => 'الكمية يجب أن تكون 1 على الأقل',
         ]);
 
         DB::beginTransaction();
