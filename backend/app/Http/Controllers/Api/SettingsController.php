@@ -18,7 +18,7 @@ class SettingsController extends Controller
         
         // تحويل مسار الشعار إلى URL كامل
         if (isset($settings['company_logo']) && $settings['company_logo']) {
-            $settings['company_logo'] = Storage::url($settings['company_logo']);
+            $settings['company_logo'] = url(Storage::url($settings['company_logo']));
         }
         
         return response()->json([
@@ -105,11 +105,13 @@ class SettingsController extends Controller
             $path = $request->file('logo')->store('logos', 'public');
             SystemSetting::set('company_logo', $path);
 
+            $logoUrl = url(Storage::url($path));
+            
             return response()->json([
                 'success' => true,
                 'message' => 'تم رفع الشعار بنجاح',
                 'data' => [
-                    'logo_url' => Storage::url($path),
+                    'logo_url' => $logoUrl,
                     'logo_path' => $path,
                 ],
             ]);
