@@ -31,7 +31,7 @@ class PurchaseInvoiceController extends Controller
     public function index(Request $request)
     {
         // استعلام أساسي مع تحميل العلاقات
-        $query = PurchaseInvoice::with(['supplier', 'items.product']);
+        $query = PurchaseInvoice::with(['supplier', 'items.product', 'creator']);
 
         // الفلترة حسب تاريخ البداية
         if ($request->has('from_date') && $request->from_date) {
@@ -167,7 +167,7 @@ class PurchaseInvoiceController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'تمت إضافة فاتورة الشراء بنجاح',
-                'data' => $invoice->load(['supplier', 'items.product']),
+                'data' => $invoice->load(['supplier', 'items.product', 'creator']),
             ], 201);
             
         } catch (\Exception $e) {
@@ -197,7 +197,8 @@ class PurchaseInvoiceController extends Controller
     {
         $invoice = PurchaseInvoice::with([
             'supplier', 
-            'items.product',
+            'items.product', 
+            'creator',
             'returns'
         ])->find($id);
 
@@ -250,7 +251,7 @@ class PurchaseInvoiceController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'تم تحديث الفاتورة بنجاح',
-            'data' => $invoice->load(['supplier', 'items.product']),
+            'data' => $invoice->load(['supplier', 'items.product', 'creator']),
         ]);
     }
 

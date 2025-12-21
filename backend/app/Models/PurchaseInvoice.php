@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\PurchaseReturn;
+use App\Models\PurchaseReturnItem;
 
 /**
  * نموذج فاتورة المشتريات
@@ -185,9 +186,11 @@ class PurchaseInvoice extends Model
      */
     public function getReturnedQuantity($productId)
     {
-        return $this->returns()
-            ->where('product_id', $productId)
-            ->sum('quantity');
+        // البحث في عناصر المرتجعات (وليس المرتجعات نفسها)
+        return PurchaseReturnItem::whereHas('purchaseReturn', function($query) {
+            $query->where('purchase_invoice_id', $this->id)
+                  ->where('status', '!=', 'rejected');
+        })->where('product_id', $productId)->sum('quantity');
     }
 
     /**
