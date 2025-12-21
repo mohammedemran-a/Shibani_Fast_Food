@@ -14,8 +14,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { useTheme } from '@/contexts/ThemeContext';
 import { customerService } from '@/api/customerService';
+import PageErrorBoundary from '@/components/PageErrorBoundary';
 
-const CustomerDetails: React.FC = () => {
+const CustomerDetailsContent: React.FC = () => {
   const { t, i18n } = useTranslation();
   const { isRTL } = useTheme();
   const navigate = useNavigate();
@@ -311,6 +312,15 @@ const CustomerDetails: React.FC = () => {
         </TabsContent>
       </Tabs>
     </div>
+  );
+};
+
+// تصدير الصفحة مع حماية ضد الأخطاء
+const CustomerDetails: React.FC = () => {
+  return (
+    <PageErrorBoundary pageName="تفاصيل العميل">
+      <CustomerDetailsContent />
+    </PageErrorBoundary>
   );
 };
 
