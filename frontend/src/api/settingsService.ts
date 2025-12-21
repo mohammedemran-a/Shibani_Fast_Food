@@ -1,5 +1,5 @@
 import { apiClient } from './apiClient';
-import { CATEGORIES_ENDPOINTS, BRANDS_ENDPOINTS, UNITS_ENDPOINTS, CURRENCIES_ENDPOINTS, SALES_INVOICES_ENDPOINTS, PURCHASE_INVOICES_ENDPOINTS, SUPPLIERS_ENDPOINTS, DEBTS_ENDPOINTS, EXPENSES_ENDPOINTS, USERS_ENDPOINTS, ROLES_ENDPOINTS, REPORTS_ENDPOINTS } from './endpoints';
+import { CATEGORIES_ENDPOINTS, BRANDS_ENDPOINTS, UNITS_ENDPOINTS, CURRENCIES_ENDPOINTS, SETTINGS_ENDPOINTS, SALES_INVOICES_ENDPOINTS, PURCHASE_INVOICES_ENDPOINTS, SUPPLIERS_ENDPOINTS, DEBTS_ENDPOINTS, EXPENSES_ENDPOINTS, USERS_ENDPOINTS, ROLES_ENDPOINTS, REPORTS_ENDPOINTS } from './endpoints';
 
 // Brands
 export interface Brand {
@@ -59,12 +59,12 @@ export const settingsService = {
   // Brands
   getBrands: async () => {
     const response = await apiClient.get(BRANDS_ENDPOINTS.LIST);
-    return response.data;
+    return response.data.data || response.data;
   },
 
   getBrand: async (id: number) => {
     const response = await apiClient.get(BRANDS_ENDPOINTS.SHOW(id));
-    return response.data;
+    return response.data.data || response.data;
   },
 
   createBrand: async (data: CreateBrandData) => {
@@ -85,12 +85,12 @@ export const settingsService = {
   // Units
   getUnits: async () => {
     const response = await apiClient.get(UNITS_ENDPOINTS.LIST);
-    return response.data;
+    return response.data.data || response.data;
   },
 
   getUnit: async (id: number) => {
     const response = await apiClient.get(UNITS_ENDPOINTS.SHOW(id));
-    return response.data;
+    return response.data.data || response.data;
   },
 
   createUnit: async (data: CreateUnitData) => {
@@ -111,12 +111,12 @@ export const settingsService = {
   // Currencies
   getCurrencies: async () => {
     const response = await apiClient.get(CURRENCIES_ENDPOINTS.LIST);
-    return response.data;
+    return response.data.data || response.data;
   },
 
   getCurrency: async (id: number) => {
     const response = await apiClient.get(CURRENCIES_ENDPOINTS.SHOW(id));
-    return response.data;
+    return response.data.data || response.data;
   },
 
   createCurrency: async (data: CreateCurrencyData) => {
@@ -132,5 +132,32 @@ export const settingsService = {
   deleteCurrency: async (id: number) => {
     const response = await apiClient.delete(CURRENCIES_ENDPOINTS.DELETE(id));
     return response.data;
+  },
+
+  // System Settings
+  getSettings: async () => {
+    const response = await apiClient.get(SETTINGS_ENDPOINTS.LIST);
+    return response.data.data || response.data;
+  },
+
+  updateSettings: async (data: Record<string, any>) => {
+    const response = await apiClient.post(SETTINGS_ENDPOINTS.UPDATE, data);
+    return response.data;
+  },
+
+  uploadLogo: async (file: File) => {
+    const formData = new FormData();
+    formData.append('logo', file);
+    const response = await apiClient.post(SETTINGS_ENDPOINTS.UPLOAD_LOGO, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
+
+  getSetting: async (key: string) => {
+    const response = await apiClient.get(SETTINGS_ENDPOINTS.GET(key));
+    return response.data.data || response.data;
   },
 };

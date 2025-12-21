@@ -53,6 +53,14 @@ export const CURRENCIES_ENDPOINTS = {
   DELETE: (id: number) => `/currencies/${id}`,
 };
 
+// Settings Endpoints
+export const SETTINGS_ENDPOINTS = {
+  LIST: '/settings',
+  UPDATE: '/settings',
+  UPLOAD_LOGO: '/settings/logo',
+  GET: (key: string) => `/settings/${key}`,
+};
+
 // Sales Invoices Endpoints
 export const SALES_INVOICES_ENDPOINTS = {
   LIST: '/sales-invoices',

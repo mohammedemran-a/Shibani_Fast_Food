@@ -1,27 +1,111 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
-import { Save, Upload, Building2 } from 'lucide-react';
+import { Save, Upload, Building2, Mail, Phone, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import { useTheme } from '@/contexts/ThemeContext';
 import { toast } from 'sonner';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { settingsService } from '@/api/settingsService';
+import PageErrorBoundary from '@/components/PageErrorBoundary';
 
-const GeneralSettings: React.FC = () => {
+const GeneralSettingsContent: React.FC = () => {
   const { t } = useTranslation();
-  const { theme, toggleTheme, language, toggleLanguage } = useTheme();
+  const queryClient = useQueryClient();
+  const [logoFile, setLogoFile] = React.useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = React.useState<string>('');
+
+  // جلب الإعدادات
+  const { data: settings = {}, isLoading } = useQuery({
+    queryKey: ['settings'],
+    queryFn: () => settingsService.getSettings(),
+  });
+
   const [formData, setFormData] = React.useState({
-    companyName: 'متجري',
-    taxRate: 15,
-    defaultDiscount: 0,
-    currency: 'USD',
+    company_name: '',
+    company_email: '',
+    company_phone: '',
+    company_address: '',
+    tax_rate: 0,
+    default_discount: 0,
+  });
+
+  // تحديث formData عند تحميل الإعدادات
+  React.useEffect(() => {
+    if (settings) {
+      setFormData({
+        company_name: settings.company_name || '',
+        company_email: settings.company_email || '',
+        company_phone: settings.company_phone || '',
+        company_address: settings.company_address || '',
+        tax_rate: Number(settings.tax_rate) || 0,
+        default_discount: Number(settings.default_discount) || 0,
+      });
+      
+      if (settings.company_logo) {
+        setLogoPreview(settings.company_logo);
+      }
+    }
+  }, [settings]);
+
+  // تحديث الإعدادات
+  const updateMutation = useMutation({
+    mutationFn: (data: any) => settingsService.updateSettings(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['settings'] });
+      toast.success('تم حفظ الإعدادات بنجاح');
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'فشل في حفظ الإعدادات');
+    },
+  });
+
+  // رفع الشعار
+  const uploadLogoMutation = useMutation({
+    mutationFn: (file: File) => settingsService.uploadLogo(file),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['settings'] });
+      setLogoPreview(data.data.logo_url);
+      setLogoFile(null);
+      toast.success('تم رفع الشعار بنجاح');
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'فشل في رفع الشعار');
+    },
   });
 
   const handleSave = () => {
-    toast.success('تم حفظ الإعدادات بنجاح');
+    updateMutation.mutate(formData);
   };
+
+  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setLogoFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setLogoPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleUploadLogo = () => {
+    if (logoFile) {
+      uploadLogoMutation.mutate(logoFile);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-muted-foreground">جاري التحميل...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -43,24 +127,92 @@ const GeneralSettings: React.FC = () => {
           </h3>
 
           <div className="space-y-2">
-            <Label htmlFor="companyName">{t('settings.companyName')}</Label>
+            <Label htmlFor="companyName">اسم الشركة</Label>
             <Input
               id="companyName"
-              value={formData.companyName}
-              onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
+              value={formData.company_name}
+              onChange={(e) => setFormData({ ...formData, company_name: e.target.value })}
+              placeholder="أدخل اسم الشركة"
             />
           </div>
 
           <div className="space-y-2">
-            <Label>{t('settings.logo')}</Label>
+            <Label htmlFor="companyEmail" className="flex items-center gap-2">
+              <Mail className="w-4 h-4" />
+              البريد الإلكتروني
+            </Label>
+            <Input
+              id="companyEmail"
+              type="email"
+              value={formData.company_email}
+              onChange={(e) => setFormData({ ...formData, company_email: e.target.value })}
+              placeholder="info@company.com"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="companyPhone" className="flex items-center gap-2">
+              <Phone className="w-4 h-4" />
+              رقم الهاتف
+            </Label>
+            <Input
+              id="companyPhone"
+              value={formData.company_phone}
+              onChange={(e) => setFormData({ ...formData, company_phone: e.target.value })}
+              placeholder="+966 XX XXX XXXX"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="companyAddress" className="flex items-center gap-2">
+              <MapPin className="w-4 h-4" />
+              العنوان
+            </Label>
+            <Textarea
+              id="companyAddress"
+              value={formData.company_address}
+              onChange={(e) => setFormData({ ...formData, company_address: e.target.value })}
+              placeholder="أدخل عنوان الشركة"
+              rows={3}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>الشعار</Label>
             <div className="flex items-center gap-4">
-              <div className="w-20 h-20 rounded-xl bg-muted flex items-center justify-center">
-                <Building2 className="w-8 h-8 text-muted-foreground" />
+              <div className="w-20 h-20 rounded-xl bg-muted flex items-center justify-center overflow-hidden">
+                {logoPreview ? (
+                  <img src={logoPreview} alt="Logo" className="w-full h-full object-cover" />
+                ) : (
+                  <Building2 className="w-8 h-8 text-muted-foreground" />
+                )}
               </div>
-              <Button variant="outline" className="gap-2">
-                <Upload className="w-4 h-4" />
-                رفع شعار
-              </Button>
+              <div className="flex flex-col gap-2">
+                <input
+                  type="file"
+                  id="logoInput"
+                  accept="image/*"
+                  onChange={handleLogoChange}
+                  className="hidden"
+                />
+                <Button
+                  variant="outline"
+                  className="gap-2"
+                  onClick={() => document.getElementById('logoInput')?.click()}
+                >
+                  <Upload className="w-4 h-4" />
+                  اختر شعار
+                </Button>
+                {logoFile && (
+                  <Button
+                    onClick={handleUploadLogo}
+                    disabled={uploadLogoMutation.isPending}
+                    size="sm"
+                  >
+                    {uploadLogoMutation.isPending ? 'جاري الرفع...' : 'رفع الشعار'}
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         </motion.div>
@@ -75,103 +227,60 @@ const GeneralSettings: React.FC = () => {
           <h3 className="font-semibold text-foreground text-lg">الضرائب والأسعار</h3>
 
           <div className="space-y-2">
-            <Label htmlFor="taxRate">{t('settings.taxRate')} (%)</Label>
+            <Label htmlFor="taxRate">نسبة الضريبة (%)</Label>
             <Input
               id="taxRate"
               type="number"
               min="0"
               max="100"
-              value={formData.taxRate}
-              onChange={(e) => setFormData({ ...formData, taxRate: Number(e.target.value) })}
+              step="0.01"
+              value={formData.tax_rate}
+              onChange={(e) => setFormData({ ...formData, tax_rate: Number(e.target.value) })}
             />
+            <p className="text-xs text-muted-foreground">
+              نسبة الضريبة المضافة على الفواتير (مثال: 15 للضريبة 15%)
+            </p>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="discount">{t('settings.defaultDiscount')} (%)</Label>
+            <Label htmlFor="discount">الخصم الافتراضي (%)</Label>
             <Input
               id="discount"
               type="number"
               min="0"
               max="100"
-              value={formData.defaultDiscount}
-              onChange={(e) => setFormData({ ...formData, defaultDiscount: Number(e.target.value) })}
+              step="0.01"
+              value={formData.default_discount}
+              onChange={(e) => setFormData({ ...formData, default_discount: Number(e.target.value) })}
             />
-          </div>
-
-          <div className="space-y-2">
-            <Label>{t('settings.currency')}</Label>
-            <Select value={formData.currency} onValueChange={(value) => setFormData({ ...formData, currency: value })}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="USD">دولار أمريكي (USD)</SelectItem>
-                <SelectItem value="SAR">ريال سعودي (SAR)</SelectItem>
-                <SelectItem value="AED">درهم إماراتي (AED)</SelectItem>
-                <SelectItem value="EGP">جنيه مصري (EGP)</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </motion.div>
-
-        {/* Appearance */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="glass-card p-6 space-y-4"
-        >
-          <h3 className="font-semibold text-foreground text-lg">المظهر واللغة</h3>
-
-          <div className="space-y-2">
-            <Label>{t('settings.theme')}</Label>
-            <div className="flex gap-4">
-              <Button
-                variant={theme === 'light' ? 'default' : 'outline'}
-                onClick={() => theme !== 'light' && toggleTheme()}
-                className={theme === 'light' ? 'gradient-primary border-0' : ''}
-              >
-                {t('settings.light')}
-              </Button>
-              <Button
-                variant={theme === 'dark' ? 'default' : 'outline'}
-                onClick={() => theme !== 'dark' && toggleTheme()}
-                className={theme === 'dark' ? 'gradient-primary border-0' : ''}
-              >
-                {t('settings.dark')}
-              </Button>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label>{t('settings.language')}</Label>
-            <div className="flex gap-4">
-              <Button
-                variant={language === 'ar' ? 'default' : 'outline'}
-                onClick={() => language !== 'ar' && toggleLanguage()}
-                className={language === 'ar' ? 'gradient-primary border-0' : ''}
-              >
-                العربية
-              </Button>
-              <Button
-                variant={language === 'en' ? 'default' : 'outline'}
-                onClick={() => language !== 'en' && toggleLanguage()}
-                className={language === 'en' ? 'gradient-primary border-0' : ''}
-              >
-                English
-              </Button>
-            </div>
+            <p className="text-xs text-muted-foreground">
+              نسبة الخصم الافتراضية عند إنشاء فاتورة جديدة
+            </p>
           </div>
         </motion.div>
       </div>
 
+      {/* Save Button */}
       <div className="flex justify-end">
-        <Button onClick={handleSave} className="gradient-primary border-0 gap-2">
+        <Button
+          onClick={handleSave}
+          disabled={updateMutation.isPending}
+          className="gap-2"
+        >
           <Save className="w-4 h-4" />
-          {t('common.save')}
+          {updateMutation.isPending ? 'جاري الحفظ...' : 'حفظ الإعدادات'}
         </Button>
       </div>
     </div>
+  );
+};
+
+// تصدير الصفحة مع حماية ضد الأخطاء
+const GeneralSettings: React.FC = () => {
+  return (
+    <PageErrorBoundary pageName="الإعدادات العامة">
+      <GeneralSettingsContent />
+    </PageErrorBoundary>
   );
 };
 

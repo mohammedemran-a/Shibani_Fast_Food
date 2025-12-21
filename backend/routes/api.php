@@ -23,6 +23,7 @@ use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\AnalyticsController;
 use App\Http\Controllers\Api\ImportController;
 use App\Http\Controllers\Api\PaymentMethodController;
+use App\Http\Controllers\Api\SettingsController;
 
 /*
 |--------------------------------------------------------------------------
@@ -63,6 +64,12 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Currencies routes
     Route::apiResource('currencies', CurrencyController::class);
+
+    // Settings routes
+    Route::get('settings', [SettingsController::class, 'index']);
+    Route::post('settings', [SettingsController::class, 'update']);
+    Route::post('settings/logo', [SettingsController::class, 'uploadLogo']);
+    Route::get('settings/{key}', [SettingsController::class, 'getSetting']);
 
     // Sales Invoices routes
     Route::apiResource('sales-invoices', SalesInvoiceController::class);
