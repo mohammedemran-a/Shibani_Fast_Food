@@ -74,12 +74,12 @@ class SettingsController extends Controller
     public function uploadLogo(Request $request)
     {
         $request->validate([
-            'logo' => 'required|image|mimes:jpeg,png,jpg,svg|max:2048',
+            'logo' => 'required|image|mimes:jpeg,png,jpg,svg,webp,gif|max:10240',
         ], [
             'logo.required' => 'يرجى اختيار صورة الشعار',
             'logo.image' => 'الملف يجب أن يكون صورة',
-            'logo.mimes' => 'الصورة يجب أن تكون بصيغة jpeg, png, jpg, أو svg',
-            'logo.max' => 'حجم الصورة يجب ألا يتجاوز 2MB',
+            'logo.mimes' => 'الصورة يجب أن تكون بصيغة jpeg, png, jpg, svg, webp, أو gif',
+            'logo.max' => 'حجم الصورة يجب ألا يتجاوز 10MB',
         ]);
 
         try {
