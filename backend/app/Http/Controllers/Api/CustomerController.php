@@ -46,9 +46,14 @@ class CustomerController extends Controller
         $query->orderBy($sortBy, $sortOrder);
 
         // إضافة إحصائيات لكل عميل
+        // ملاحظة: المبلغ المتبقي = amount - paid_amount
         $query->withCount('salesInvoices')
               ->withSum('salesInvoices', 'total_amount')
-              ->withSum('debts', 'remaining_amount');
+              ->addSelect([
+                  'debts_remaining' => DB::table('debts')
+                      ->selectRaw('COALESCE(SUM(amount - paid_amount), 0)')
+                      ->whereColumn('customer_id', 'customers.id')
+              ]);
 
         $customers = $query->paginate($request->per_page ?? 15);
 
@@ -122,11 +127,16 @@ class CustomerController extends Controller
         $customer = Customer::with(['salesInvoices' => function($query) {
             $query->latest()->take(10);
         }, 'debts' => function($query) {
-            $query->where('remaining_amount', '>', 0);
+            // الديون غير المسددة بالكامل
+            $query->whereRaw('amount > paid_amount');
         }])
         ->withCount('salesInvoices')
         ->withSum('salesInvoices', 'total_amount')
-        ->withSum('debts', 'remaining_amount')
+        ->addSelect([
+            'debts_remaining' => DB::table('debts')
+                ->selectRaw('COALESCE(SUM(amount - paid_amount), 0)')
+                ->whereColumn('customer_id', 'customers.id')
+        ])
         ->find($id);
 
         if (!$customer) {
@@ -221,8 +231,8 @@ class CustomerController extends Controller
             ], 422);
         }
 
-        // التحقق من وجود ديون مرتبطة
-        if ($customer->debts()->where('remaining_amount', '>', 0)->count() > 0) {
+        // التحقق من وجود ديون مرتبطة (المبلغ المتبقي = amount - paid_amount)
+        if ($customer->debts()->whereRaw('amount > paid_amount')->count() > 0) {
             return response()->json([
                 'success' => false,
                 'message' => 'لا يمكن حذف العميل لوجود ديون غير مسددة',
@@ -262,7 +272,8 @@ class CustomerController extends Controller
                 ->sum('total_amount'),
             'total_debts' => DB::table('debts')
                 ->whereNotNull('customer_id')
-                ->sum('remaining_amount'),
+                ->selectRaw('COALESCE(SUM(amount - paid_amount), 0) as total')
+                ->value('total'),
             'top_customers' => Customer::withSum('salesInvoices', 'total_amount')
                 ->orderByDesc('sales_invoices_sum_total_amount')
                 ->take(5)

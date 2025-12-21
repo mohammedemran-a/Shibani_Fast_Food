@@ -58,7 +58,7 @@ const CustomerDetailsContent: React.FC = () => {
   const totalPurchases = Number(customer.sales_invoices_sum_total_amount || 0);
   const visits = customer.sales_invoices_count || 0;
   const avgPurchase = visits > 0 ? totalPurchases / visits : 0;
-  const totalDebts = Number(customer.debts_sum_remaining_amount || 0);
+  const totalDebts = Number(customer.debts_remaining || customer.debts_sum_remaining_amount || 0);
 
   return (
     <div className="space-y-6 animate-fade-in">
