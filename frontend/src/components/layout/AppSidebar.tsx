@@ -69,7 +69,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ isOpen, onToggle }) => {
   const [expandedItems, setExpandedItems] = React.useState<string[]>(['products', 'reports', 'people', 'settings', 'analytics', 'employees']);
 
   // جلب إعدادات النظام
-  const { data: settings } = useQuery({
+  const { data: settings, isLoading: isLoadingSettings } = useQuery({
     queryKey: ['settings'],
     queryFn: () => settingsService.getSettings(),
   });
@@ -240,7 +240,9 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ isOpen, onToggle }) => {
         {/* Logo */}
         <div className="h-16 flex items-center justify-between px-4 border-b border-sidebar-border">
           <div className="flex items-center gap-3">
-            {settings?.company_logo ? (
+            {isLoadingSettings ? (
+              <div className="w-10 h-10 rounded-xl bg-sidebar-accent animate-pulse" />
+            ) : settings?.company_logo ? (
               <div className="w-10 h-10 rounded-xl overflow-hidden">
                 <img src={settings.company_logo} alt="Logo" className="w-full h-full object-cover" />
               </div>
@@ -250,13 +252,17 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ isOpen, onToggle }) => {
               </div>
             )}
             {isOpen && (
-              <motion.span
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="font-bold text-sidebar-foreground text-lg"
-              >
-                {settings?.company_name || t('app.name')}
-              </motion.span>
+              isLoadingSettings ? (
+                <div className="h-6 w-32 rounded bg-sidebar-accent animate-pulse" />
+              ) : (
+                <motion.span
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="font-bold text-sidebar-foreground text-lg"
+                >
+                  {settings?.company_name}
+                </motion.span>
+              )
             )}
           </div>
           <button
