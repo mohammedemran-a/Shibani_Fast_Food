@@ -16,6 +16,11 @@ class SettingsController extends Controller
     {
         $settings = SystemSetting::getAll();
         
+        // تحويل مسار الشعار إلى URL كامل
+        if (isset($settings['company_logo']) && $settings['company_logo']) {
+            $settings['company_logo'] = Storage::url($settings['company_logo']);
+        }
+        
         return response()->json([
             'success' => true,
             'data' => $settings,
@@ -53,10 +58,17 @@ class SettingsController extends Controller
                 SystemSetting::set($key, $value);
             }
 
+            $settings = SystemSetting::getAll();
+            
+            // تحويل مسار الشعار إلى URL كامل
+            if (isset($settings['company_logo']) && $settings['company_logo']) {
+                $settings['company_logo'] = Storage::url($settings['company_logo']);
+            }
+            
             return response()->json([
                 'success' => true,
                 'message' => 'تم تحديث الإعدادات بنجاح',
-                'data' => SystemSetting::getAll(),
+                'data' => $settings,
             ]);
 
         } catch (\Exception $e) {

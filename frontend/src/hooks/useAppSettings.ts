@@ -20,16 +20,16 @@ export const useAppSettings = () => {
 
       // تحديث الأيقونة (favicon)
       if (settings.company_logo) {
-        const favicon = document.querySelector<HTMLLinkElement>("link[rel='icon']");
-        if (favicon) {
-          favicon.href = settings.company_logo;
-        } else {
-          // إنشاء عنصر favicon جديد إذا لم يكن موجوداً
-          const newFavicon = document.createElement('link');
-          newFavicon.rel = 'icon';
-          newFavicon.href = settings.company_logo;
-          document.head.appendChild(newFavicon);
-        }
+        // حذف جميع الأيقونات القديمة
+        const existingFavicons = document.querySelectorAll<HTMLLinkElement>("link[rel*='icon']");
+        existingFavicons.forEach(favicon => favicon.remove());
+        
+        // إضافة أيقونة جديدة مع timestamp لإجبار التحديث
+        const newFavicon = document.createElement('link');
+        newFavicon.rel = 'icon';
+        newFavicon.type = 'image/x-icon';
+        newFavicon.href = `${settings.company_logo}?t=${Date.now()}`;
+        document.head.appendChild(newFavicon);
       }
     }
   }, [settings]);
