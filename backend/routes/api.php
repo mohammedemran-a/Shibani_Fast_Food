@@ -24,6 +24,8 @@ use App\Http\Controllers\Api\AnalyticsController;
 use App\Http\Controllers\Api\ImportController;
 use App\Http\Controllers\Api\PaymentMethodController;
 use App\Http\Controllers\Api\SettingsController;
+use App\Http\Controllers\Api\AttendanceController;
+use App\Http\Controllers\Api\SalesPerformanceController;
 
 /*
 |--------------------------------------------------------------------------
@@ -111,8 +113,19 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Users routes
     Route::apiResource('users', UserController::class);
-    Route::post('users/{user}/deactivate', [UserController::class, 'deactivate']);
-    Route::post('users/{user}/activate', [UserController::class, 'activate']);
+    Route::post('users/{id}/toggle-active', [UserController::class, 'toggleActive']);
+
+    // Attendance routes
+    Route::apiResource('attendances', AttendanceController::class);
+    Route::post('attendances/check-in', [AttendanceController::class, 'checkIn']);
+    Route::post('attendances/check-out', [AttendanceController::class, 'checkOut']);
+    Route::get('attendances/statistics/{userId}', [AttendanceController::class, 'statistics']);
+
+    // Sales Performance routes
+    Route::get('sales-performance', [SalesPerformanceController::class, 'index']);
+    Route::get('sales-performance/{userId}', [SalesPerformanceController::class, 'show']);
+    Route::get('sales-performance/top-performers/list', [SalesPerformanceController::class, 'topPerformers']);
+    Route::post('sales-performance/compare', [SalesPerformanceController::class, 'compare']);
 
     // Roles routes
     Route::apiResource('roles', RoleController::class);

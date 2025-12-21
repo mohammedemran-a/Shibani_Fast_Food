@@ -112,4 +112,12 @@ class User extends Authenticatable
     {
         return $this->hasMany(CashierSession::class, 'cashier_id');
     }
+
+    /**
+     * Get attendance records for this user.
+     */
+    public function attendances()
+    {
+        return $this->hasMany(Attendance::class);
+    }
 }
