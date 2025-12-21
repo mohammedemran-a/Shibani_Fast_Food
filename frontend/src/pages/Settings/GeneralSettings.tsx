@@ -32,10 +32,11 @@ const GeneralSettingsContent: React.FC = () => {
     tax_rate: 0,
     default_discount: 0,
   });
+  const [isInitialized, setIsInitialized] = React.useState(false);
 
   // تحديث formData عند تحميل الإعدادات
   React.useEffect(() => {
-    if (settings) {
+    if (settings && !isInitialized) {
       setFormData({
         company_name: settings.company_name || '',
         company_email: settings.company_email || '',
@@ -48,8 +49,9 @@ const GeneralSettingsContent: React.FC = () => {
       if (settings.company_logo) {
         setLogoPreview(settings.company_logo);
       }
+      setIsInitialized(true);
     }
-  }, [settings]);
+  }, [settings, isInitialized]);
 
   // تحديث الإعدادات
   const updateMutation = useMutation({

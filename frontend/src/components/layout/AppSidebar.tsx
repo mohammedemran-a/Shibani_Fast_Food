@@ -2,6 +2,8 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/contexts/ThemeContext';
 import { NavLink, useLocation } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { settingsService } from '@/api/settingsService';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard,
@@ -65,6 +67,12 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ isOpen, onToggle }) => {
   const { isRTL } = useTheme();
   const location = useLocation();
   const [expandedItems, setExpandedItems] = React.useState<string[]>(['products', 'reports', 'people', 'settings', 'analytics', 'employees']);
+
+  // جلب إعدادات النظام
+  const { data: settings } = useQuery({
+    queryKey: ['settings'],
+    queryFn: () => settingsService.getSettings(),
+  });
 
   const navItems: NavItem[] = [
     { label: t('nav.dashboard'), icon: LayoutDashboard, path: '/' },
@@ -232,16 +240,22 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ isOpen, onToggle }) => {
         {/* Logo */}
         <div className="h-16 flex items-center justify-between px-4 border-b border-sidebar-border">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center">
-              <Store className="w-5 h-5 text-primary-foreground" />
-            </div>
+            {settings?.company_logo ? (
+              <div className="w-10 h-10 rounded-xl overflow-hidden">
+                <img src={settings.company_logo} alt="Logo" className="w-full h-full object-cover" />
+              </div>
+            ) : (
+              <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center">
+                <Store className="w-5 h-5 text-primary-foreground" />
+              </div>
+            )}
             {isOpen && (
               <motion.span
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 className="font-bold text-sidebar-foreground text-lg"
               >
-                {t('app.name')}
+                {settings?.company_name || t('app.name')}
               </motion.span>
             )}
           </div>
