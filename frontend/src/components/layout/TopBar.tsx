@@ -99,8 +99,9 @@ export const TopBar: React.FC<TopBarProps> = ({ onToggleSidebar }) => {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => navigate('            <DropdownMenuItem onClick={() => navigate('/settings/profile')}>{t('nav.settings')}</DropdownMenuItem>
-            <DropdownMenuItem onClick={handleLogout} className="text-destructive">تسجيل الخروج</DropdownMenuItem>  </DropdownMenuContent>
+            <DropdownMenuItem onClick={() => navigate('/settings/profile')}>{t('nav.settings')}</DropdownMenuItem>
+            <DropdownMenuItem onClick={handleLogout} className="text-destructive">تسجيل الخروج</DropdownMenuItem>
+          </DropdownMenuContent>
         </DropdownMenu>
       </div>
     </header>
