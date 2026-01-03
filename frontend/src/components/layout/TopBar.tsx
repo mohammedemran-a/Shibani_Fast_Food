@@ -10,6 +10,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
+import { apiClient } from '@/api/apiClient';
 
 interface TopBarProps {
   onToggleSidebar: () => void;
@@ -18,6 +21,20 @@ interface TopBarProps {
 export const TopBar: React.FC<TopBarProps> = ({ onToggleSidebar }) => {
   const { t } = useTranslation();
   const { theme, toggleTheme, language, toggleLanguage } = useTheme();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    try {
+      await apiClient.post('/auth/logout');
+      localStorage.removeItem('token');
+      toast.success('تم تسجيل الخروج بنجاح');
+      navigate('/login');
+    } catch (error) {
+      toast.error('حدث خطأ أثناء تسجيل الخروج');
+      localStorage.removeItem('token'); // Force logout even if API fails
+      navigate('/login');
+    }
+  };
 
   return (
     <header className="h-16 bg-card border-b border-border px-4 flex items-center justify-between gap-4">
@@ -82,9 +99,8 @@ export const TopBar: React.FC<TopBarProps> = ({ onToggleSidebar }) => {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem>{t('nav.settings')}</DropdownMenuItem>
-            <DropdownMenuItem className="text-destructive">تسجيل الخروج</DropdownMenuItem>
-          </DropdownMenuContent>
+            <DropdownMenuItem onClick={() => navigate('            <DropdownMenuItem onClick={() => navigate('/settings/profile')}>{t('nav.settings')}</DropdownMenuItem>
+            <DropdownMenuItem onClick={handleLogout} className="text-destructive">تسجيل الخروج</DropdownMenuItem>  </DropdownMenuContent>
         </DropdownMenu>
       </div>
     </header>
