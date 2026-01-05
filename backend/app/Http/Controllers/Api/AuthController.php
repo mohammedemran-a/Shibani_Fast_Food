@@ -46,9 +46,8 @@ class AuthController extends Controller
                     'email' => $user->email,
                     'phone' => $user->phone,
                     'avatar' => $user->avatar,
-                    'role' => $user->role->name,
-                    
-                    'permissions' => $user->role->permissions->pluck('name'),
+                    'role' => $user->role ? $user->role->name : null,
+                    'permissions' => $user->role ? $user->role->permissions->pluck('name') : [],
                 ],
                 'token' => $token,
             ],
@@ -83,9 +82,8 @@ class AuthController extends Controller
                 'email' => $user->email,
                 'phone' => $user->phone,
                 'avatar' => $user->avatar,
-                'role' => $user->role->name,
-                
-                'permissions' => $user->role->permissions->pluck('name'),
+                'role' => $user->role ? $user->role->name : null,
+                'permissions' => $user->role ? $user->role->permissions->pluck('name') : [],
             ],
         ]);
     }

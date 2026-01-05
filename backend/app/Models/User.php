@@ -59,10 +59,8 @@ class User extends Authenticatable
     /**
      * Get all permissions for the user through their role.
      */
-    public function permissions()
-    {
-        return $this->role->permissions();
-    }
+    // Removed the redundant and potentially dangerous permissions() method
+    // Permissions are accessed directly via $this->role->permissions
 
     /**
      * Check if user has a specific permission.
