@@ -72,7 +72,7 @@ class AuthController extends Controller
      */
     public function me(Request $request)
     {
-        $user = $request->user();
+        $user = $request->user()->load('role');
 
         return response()->json([
             'success' => true,
