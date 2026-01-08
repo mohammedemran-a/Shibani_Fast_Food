@@ -8,6 +8,7 @@ import { MainLayout } from "@/components/layout";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { useAppSettings } from "@/hooks/useAppSettings";
+import { AuthProvider } from "@/contexts/AuthContext";
 import "@/i18n";
 
 // Pages
@@ -91,7 +92,9 @@ const AppContent = () => {
 const App = () => (
   <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
-      <AppContent />
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
     </QueryClientProvider>
   </ErrorBoundary>
 );

@@ -45,12 +45,6 @@ class AuthService {
         AUTH_ENDPOINTS.LOGIN,
         credentials
       );
-
-      if (response.data.data.token) {
-        localStorage.setItem('auth_token', response.data.data.token);
-        localStorage.setItem('user', JSON.stringify(response.data.data.user));
-      }
-
       return response.data;
     } catch (error) {
       throw error;
@@ -66,13 +60,11 @@ class AuthService {
         AUTH_ENDPOINTS.LOGOUT
       );
 
-      localStorage.removeItem('auth_token');
-      localStorage.removeItem('user');
+      this.removeAuthData();
 
       return response.data;
     } catch (error) {
-      localStorage.removeItem('auth_token');
-      localStorage.removeItem('user');
+      this.removeAuthData();
       throw error;
     }
   }
@@ -93,7 +85,7 @@ class AuthService {
    * Check if user is authenticated
    */
   isAuthenticated(): boolean {
-    return !!localStorage.getItem('auth_token');
+    return !!this.getToken();
   }
 
   /**
@@ -108,7 +100,21 @@ class AuthService {
    * Get auth token
    */
   getToken(): string | null {
-    return localStorage.getItem('auth_token');
+    return localStorage.getItem("auth_token");
+  }
+
+  setAuthData(token: string, user: User) {
+    localStorage.setItem("auth_token", token);
+    localStorage.setItem("user", JSON.stringify(user));
+  }
+
+  removeAuthData() {
+    localStorage.removeItem("auth_token");
+    localStorage.removeItem("user");
+  }
+
+  updateUserInLocalStorage(user: User) {
+    localStorage.setItem("user", JSON.stringify(user));
   }
 
   /**

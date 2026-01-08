@@ -11,6 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { authService } from '@/api';
 import { Loader2, ShoppingCart } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useAuth } from '@/contexts/AuthContext';
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -24,6 +25,7 @@ export default function LoginPage() {
   const { toast } = useToast();
   const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(false);
+  const { login: authContextLogin } = useAuth();
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -41,13 +43,20 @@ export default function LoginPage() {
         password: values.password,
       });
 
-      if (response.success) {
+      if (response.success && response.data?.token && response.data?.user) {
+        authContextLogin(response.data.token, response.data.user);
         toast({
-          title: 'Success',
-          description: 'Logged in successfully',
+          title: t('auth.login.successTitle'),
+          description: t('auth.login.successDescription'),
           variant: 'default',
         });
         navigate('/dashboard');
+      } else {
+        toast({
+          title: t('auth.login.errorTitle'),
+          description: response.message || t('auth.login.genericError'),
+          variant: 'destructive',
+        });
       }
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Login failed. Please try again.';
@@ -78,9 +87,9 @@ export default function LoginPage() {
         {/* Login Card */}
         <Card className="bg-white/95 backdrop-blur border-0 shadow-2xl">
           <CardHeader className="space-y-2">
-            <CardTitle className="text-2xl text-center">Welcome Back</CardTitle>
+            <CardTitle className="text-2xl text-center">{t('auth.login.welcomeBack')}</CardTitle>
             <CardDescription className="text-center">
-              Sign in to your account to continue
+              {t('auth.login.signInToContinue')}
             </CardDescription>
           </CardHeader>
 
@@ -93,7 +102,7 @@ export default function LoginPage() {
                   name="email"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Email Address</FormLabel>
+                      <FormLabel>{t('auth.login.emailAddress')}</FormLabel>
                       <FormControl>
                         <Input
                           type="email"
@@ -114,7 +123,7 @@ export default function LoginPage() {
                   name="password"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Password</FormLabel>
+                      <FormLabel>{t('auth.login.password')}</FormLabel>
                       <FormControl>
                         <Input
                           type="password"
@@ -141,7 +150,7 @@ export default function LoginPage() {
                       Signing in...
                     </>
                   ) : (
-                    'Sign In'
+                    t('auth.login.signIn')
                   )}
                 </Button>
               </form>
@@ -149,16 +158,16 @@ export default function LoginPage() {
 
             {/* Demo Credentials */}
             <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-              <p className="text-sm font-semibold text-blue-900 mb-2">Demo Credentials:</p>
+              <p className="text-sm font-semibold text-blue-900 mb-2">{t('auth.login.demoCredentials')}:</p>
               <div className="space-y-1 text-sm text-blue-800">
                 <p>
-                  <strong>Admin:</strong> admin@smartpos.com / admin123
+                  <strong>{t('auth.login.admin')}:</strong> admin@smartpos.com / admin123
                 </p>
                 <p>
-                  <strong>Cashier:</strong> cashier1@smartpos.com / cashier123
+                  <strong>{t('auth.login.cashier')}:</strong> cashier1@smartpos.com / cashier123
                 </p>
                 <p>
-                  <strong>Manager:</strong> manager@smartpos.com / manager123
+                  <strong>{t('auth.login.manager')}:</strong> manager@smartpos.com / manager123
                 </p>
               </div>
             </div>
@@ -167,7 +176,7 @@ export default function LoginPage() {
 
         {/* Footer */}
         <div className="text-center mt-6 text-blue-100 text-sm">
-          <p>© 2025 Smart POS. All rights reserved.</p>
+          <p>{t('auth.login.copyright')}</p>
         </div>
       </div>
     </div>
