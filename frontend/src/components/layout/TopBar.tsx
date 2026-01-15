@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Menu, Sun, Moon, Globe, Bell, Search, User } from 'lucide-react';
@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { profileService } from '@/api/profileService';
 
 interface TopBarProps {
   onToggleSidebar: () => void;
@@ -21,11 +22,35 @@ export const TopBar: React.FC<TopBarProps> = ({ onToggleSidebar }) => {
   const { t } = useTranslation();
   const { theme, toggleTheme, language, toggleLanguage } = useTheme();
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
+  const [profileData, setProfileData] = useState<any>(null);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const response = await profileService.getProfile();
+        if (response.success && response.data) {
+          setProfileData(response.data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch profile:', error);
+      } finally {
+        setIsLoadingProfile(false);
+      }
+    };
+
+    fetchProfile();
+  }, []);
 
   const handleLogout = async () => {
     await logout();
   };
+
+  const userName = profileData?.name || user?.name || 'المستخدم';
+  const avatarUrl = profileData?.avatar 
+    ? `${import.meta.env.VITE_API_BASE_URL?.replace('/api', '')}/storage/${profileData.avatar}`
+    : null;
 
   return (
     <header className="h-16 bg-card border-b border-border px-4 flex items-center justify-between gap-4">
@@ -82,16 +107,29 @@ export const TopBar: React.FC<TopBarProps> = ({ onToggleSidebar }) => {
         {/* User Menu */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="gap-2">
-              <div className="w-8 h-8 rounded-full gradient-primary flex items-center justify-center">
-                <User className="w-4 h-4 text-primary-foreground" />
+            <Button variant="ghost" className="gap-2 px-2">
+              <div className="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center bg-primary/10 border border-primary/20">
+                {isLoadingProfile ? (
+                  <div className="w-full h-full bg-muted animate-pulse" />
+                ) : avatarUrl ? (
+                  <img src={avatarUrl} alt={userName} className="w-full h-full object-cover" />
+                ) : (
+                  <User className="w-4 h-4 text-primary" />
+                )}
               </div>
-              <span className="hidden md:inline font-medium">Admin</span>
+              <span className="hidden md:inline font-medium text-sm">{userName}</span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => navigate('/settings/profile')}>{t('nav.settings')}</DropdownMenuItem>
-            <DropdownMenuItem onClick={handleLogout} className="text-destructive">تسجيل الخروج</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate('/settings/profile')}>
+              {t('nav.profileSettings')}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate('/settings/general')}>
+              {t('nav.generalSettings')}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleLogout} className="text-destructive">
+              {t('auth.logout')}
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
