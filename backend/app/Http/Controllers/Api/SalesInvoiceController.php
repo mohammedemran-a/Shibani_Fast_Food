@@ -194,7 +194,8 @@ class SalesInvoiceController extends Controller
      */
     public function cancel(string $id)
     {
-        $invoice = \App\Models\SalesInvoice::with('items')->find($id);
+        // استخدام with('items.product') لمنع مشكلة N+1 عند إرجاع الكميات للمخزون
+        $invoice = \App\Models\SalesInvoice::with('items.product')->find($id);
 
         if (!$invoice) {
             return response()->json([

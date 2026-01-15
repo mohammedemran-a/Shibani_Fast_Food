@@ -66,8 +66,8 @@ class ProductController extends Controller
             ]);
         }
         
-        // الترقيم الديناميكي (افتراضي: 1000 منتج لكل صفحة)
-        $products = $query->paginate($request->per_page ?? 1000);
+        // الترقيم الديناميكي (افتراضي: 50 منتج لكل صفحة لضمان الأداء)
+        $products = $query->paginate($request->per_page ?? 50);
 
         return response()->json([
             'success' => true,

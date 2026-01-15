@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
+import apiClient from '@/api/apiClient';
 import { ProductsGrid } from '@/components/pos/ProductsGrid';
 import { CartSection, CartItem } from '@/components/pos/CartSection';
 import { CheckoutModal, PaymentDetails } from '@/components/pos/CheckoutModal';
@@ -55,38 +56,27 @@ const POS: React.FC = () => {
     const total = subtotal + tax;
 
     try {
-      // Create sales invoice
-      const token = localStorage.getItem('auth_token');
-      const response = await fetch('http://localhost:8000/api/sales-invoices', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          items: cartItems.map(item => ({
-            product_id: item.id,
-            quantity: item.quantity,
-            price: item.price,
-          })),
-          subtotal,
-          tax,
-          discount: 0,
-          total,
-          payment_method: details.method === 'wallet' ? 'card' : details.method,
-          notes: details.method === 'credit' ? `Customer: ${details.customerName}` : null,
-        }),
+      // Create sales invoice using apiClient for better error handling and environment compatibility
+      const response = await apiClient.post('/sales-invoices', {
+        items: cartItems.map(item => ({
+          product_id: item.id,
+          quantity: item.quantity,
+          price: item.price,
+        })),
+        subtotal,
+        tax,
+        discount: 0,
+        total,
+        payment_method: details.method === 'wallet' ? 'card' : details.method,
+        notes: details.method === 'credit' ? `العميل: ${details.customerName}` : null,
       });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to complete sale');
+      if (!response.data.success) {
+        throw new Error(response.data.message || 'فشل في إتمام عملية البيع');
       }
 
       // الحصول على بيانات الفاتورة من الاستجابة
-      const result = await response.json();
-      const invoiceData = result.data;
+      const invoiceData = response.data.data;
 
       let message = '';
       switch (details.method) {

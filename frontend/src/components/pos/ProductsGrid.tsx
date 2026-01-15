@@ -34,7 +34,9 @@ export const ProductsGrid: React.FC<ProductsGridProps> = ({ onAddToCart }) => {
   const barcodeInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch products and categories from API (only active products)
-  const { data: productsData, isLoading } = useProducts({ is_active: true });
+  // We fetch a larger number for POS to allow fast local filtering, 
+  // but for very large datasets, we should implement server-side search.
+  const { data: productsData, isLoading } = useProducts({ is_active: true, per_page: 200 });
   
   const { data: categoriesData } = useCategories();
   const apiCategories = categoriesData?.data || [];
