@@ -31,21 +31,25 @@ import { useNavigate } from 'react-router-dom';
 import { profileService, type UpdateProfileData, type ChangePasswordData } from '@/api/profileService';
 import { apiClient } from '@/api/apiClient';
 
+interface EditFieldState {
+  field: string | null;
+  value: string;
+  isLoading: boolean;
+}
+
 const ProfileSettings: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [editingField, setEditingField] = useState<string | null>(null);
+  const [editField, setEditField] = useState<EditFieldState>({
+    field: null,
+    value: '',
+    isLoading: false,
+  });
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
-
-  const [profileData, setProfileData] = useState<UpdateProfileData>({
-    name: '',
-    email: '',
-    phone: '',
-  });
 
   const [passwordData, setPasswordData] = useState<ChangePasswordData>({
     current_password: '',
@@ -54,20 +58,10 @@ const ProfileSettings: React.FC = () => {
   });
 
   // Fetch profile
-  const { data: profileResponse, isLoading, error } = useQuery({
+  const { data: profileResponse, isLoading, error, refetch } = useQuery({
     queryKey: ['profile'],
     queryFn: () => profileService.getProfile(),
   });
-
-  useEffect(() => {
-    if (profileResponse?.success && profileResponse.data) {
-      setProfileData({
-        name: profileResponse.data.name,
-        email: profileResponse.data.email,
-        phone: profileResponse.data.phone || '',
-      });
-    }
-  }, [profileResponse]);
 
   // Update profile mutation
   const updateProfileMutation = useMutation({
@@ -76,7 +70,7 @@ const ProfileSettings: React.FC = () => {
       if (response.success) {
         toast.success(t('common.success'));
         queryClient.invalidateQueries({ queryKey: ['profile'] });
-        setEditingField(null);
+        setEditField({ field: null, value: '', isLoading: false });
       } else {
         toast.error(response.message || t('common.error'));
       }
@@ -143,17 +137,36 @@ const ProfileSettings: React.FC = () => {
     },
   });
 
-  const handleUpdateField = (field: string) => {
-    if (field === 'name' && !profileData.name) {
+  const handleStartEdit = (fieldName: string, currentValue: string) => {
+    setEditField({
+      field: fieldName,
+      value: currentValue,
+      isLoading: false,
+    });
+  };
+
+  const handleSaveField = async () => {
+    if (!editField.field) return;
+
+    if (editField.field === 'name' && !editField.value.trim()) {
       toast.error(t('common.requiredFields'));
       return;
     }
-    if (field === 'email' && !profileData.email) {
+    if (editField.field === 'email' && !editField.value.trim()) {
       toast.error(t('common.requiredFields'));
       return;
     }
 
-    updateProfileMutation.mutate(profileData);
+    const updateData: UpdateProfileData = {};
+    if (editField.field === 'name') updateData.name = editField.value;
+    if (editField.field === 'email') updateData.email = editField.value;
+    if (editField.field === 'phone') updateData.phone = editField.value;
+
+    updateProfileMutation.mutate(updateData);
+  };
+
+  const handleCancelEdit = () => {
+    setEditField({ field: null, value: '', isLoading: false });
   };
 
   const handleChangePassword = () => {
@@ -205,6 +218,70 @@ const ProfileSettings: React.FC = () => {
   const profile = profileResponse?.data;
   const avatarUrl = profile?.avatar ? `${import.meta.env.VITE_API_BASE_URL?.replace('/api', '')}/storage/${profile.avatar}` : null;
 
+  const EditableField: React.FC<{
+    label: string;
+    fieldName: string;
+    icon: React.ElementType;
+    type?: string;
+    placeholder?: string;
+  }> = ({ label, fieldName, icon: Icon, type = 'text', placeholder }) => {
+    const isEditing = editField.field === fieldName;
+    const currentValue = profile?.[fieldName as keyof typeof profile] || '';
+
+    return (
+      <div className="space-y-2">
+        <Label className="text-muted-foreground">{label}</Label>
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Icon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              type={type}
+              value={isEditing ? editField.value : currentValue}
+              onChange={(e) => {
+                if (isEditing) {
+                  setEditField({ ...editField, value: e.target.value });
+                }
+              }}
+              disabled={!isEditing}
+              className="pl-10"
+              placeholder={placeholder}
+            />
+          </div>
+          {isEditing ? (
+            <div className="flex gap-1">
+              <Button 
+                size="icon" 
+                onClick={handleSaveField} 
+                disabled={updateProfileMutation.isPending}
+              >
+                {updateProfileMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4" />
+                )}
+              </Button>
+              <Button 
+                size="icon" 
+                variant="ghost" 
+                onClick={handleCancelEdit}
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+          ) : (
+            <Button 
+              size="icon" 
+              variant="ghost" 
+              onClick={() => handleStartEdit(fieldName, String(currentValue))}
+            >
+              <Edit2 className="w-4 h-4" />
+            </Button>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -238,7 +315,7 @@ const ProfileSettings: React.FC = () => {
             <p className="text-destructive">{t('common.errorLoading')}</p>
             <Button
               variant="outline"
-              onClick={() => queryClient.invalidateQueries({ queryKey: ['profile'] })}
+              onClick={() => refetch()}
               className="mt-4"
             >
               {t('common.retry')}
@@ -277,7 +354,7 @@ const ProfileSettings: React.FC = () => {
               </div>
               <div>
                 <h3 className="font-bold text-xl">{profile.name}</h3>
-                <p className="text-sm text-muted-foreground">{profile.role_name || t('roles.admin')}</p>
+                <p className="text-sm text-muted-foreground">{profile.role?.name || t('roles.admin')}</p>
               </div>
               <div className="flex gap-2 w-full">
                 <input
@@ -317,105 +394,24 @@ const ProfileSettings: React.FC = () => {
               </Button>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Name Field */}
-              <div className="space-y-2">
-                <Label className="text-muted-foreground">{t('common.name')}</Label>
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      value={profileData.name}
-                      onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
-                      disabled={editingField !== 'name'}
-                      className="pl-10"
-                    />
-                  </div>
-                  {editingField === 'name' ? (
-                    <div className="flex gap-1">
-                      <Button size="icon" onClick={() => handleUpdateField('name')} disabled={updateProfileMutation.isPending}>
-                        {updateProfileMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                      </Button>
-                      <Button size="icon" variant="ghost" onClick={() => {
-                        setEditingField(null);
-                        setProfileData({ ...profileData, name: profile.name });
-                      }}>
-                        <X className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  ) : (
-                    <Button size="icon" variant="ghost" onClick={() => setEditingField('name')}>
-                      <Edit2 className="w-4 h-4" />
-                    </Button>
-                  )}
-                </div>
-              </div>
-
-              {/* Email Field */}
-              <div className="space-y-2">
-                <Label className="text-muted-foreground">{t('common.email')}</Label>
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      value={profileData.email}
-                      onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
-                      disabled={editingField !== 'email'}
-                      className="pl-10"
-                    />
-                  </div>
-                  {editingField === 'email' ? (
-                    <div className="flex gap-1">
-                      <Button size="icon" onClick={() => handleUpdateField('email')} disabled={updateProfileMutation.isPending}>
-                        {updateProfileMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                      </Button>
-                      <Button size="icon" variant="ghost" onClick={() => {
-                        setEditingField(null);
-                        setProfileData({ ...profileData, email: profile.email });
-                      }}>
-                        <X className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  ) : (
-                    <Button size="icon" variant="ghost" onClick={() => setEditingField('email')}>
-                      <Edit2 className="w-4 h-4" />
-                    </Button>
-                  )}
-                </div>
-              </div>
-
-              {/* Phone Field */}
-              <div className="space-y-2">
-                <Label className="text-muted-foreground">{t('common.phone')}</Label>
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      value={profileData.phone}
-                      onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
-                      disabled={editingField !== 'phone'}
-                      className="pl-10"
-                      placeholder={t('common.notSpecified')}
-                    />
-                  </div>
-                  {editingField === 'phone' ? (
-                    <div className="flex gap-1">
-                      <Button size="icon" onClick={() => handleUpdateField('phone')} disabled={updateProfileMutation.isPending}>
-                        {updateProfileMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                      </Button>
-                      <Button size="icon" variant="ghost" onClick={() => {
-                        setEditingField(null);
-                        setProfileData({ ...profileData, phone: profile.phone || '' });
-                      }}>
-                        <X className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  ) : (
-                    <Button size="icon" variant="ghost" onClick={() => setEditingField('phone')}>
-                      <Edit2 className="w-4 h-4" />
-                    </Button>
-                  )}
-                </div>
-              </div>
+              <EditableField
+                label={t('common.name')}
+                fieldName="name"
+                icon={User}
+              />
+              <EditableField
+                label={t('common.email')}
+                fieldName="email"
+                icon={Mail}
+                type="email"
+              />
+              <EditableField
+                label={t('common.phone')}
+                fieldName="phone"
+                icon={Phone}
+                type="tel"
+                placeholder={t('common.notSpecified')}
+              />
             </CardContent>
           </Card>
         </div>
