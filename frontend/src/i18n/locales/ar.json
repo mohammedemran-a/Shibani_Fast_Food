@@ -54,6 +54,17 @@
     "margin": "الهامش"
   },
   "common": {
+    "enterCategory": "أدخل اسم التصنيف",
+    "selectCategory": "اختر التصنيف",
+    "addNewCategory": "إضافة تصنيف جديد",
+    "alreadyExists": "موجود بالفعل",
+    "enterDescription": "أدخل الوصف",
+    "optionalNotes": "ملاحظات اختيارية",
+    "page": "صفحة",
+    "of": "من",
+    "previous": "السابق",
+    "next": "التالي",
+    "update": "تحديث",
     "add": "إضافة", "edit": "تعديل", "delete": "حذف", "save": "حفظ", "cancel": "إلغاء", "search": "بحث",
     "actions": "الإجراءات", "status": "الحالة", "active": "مفعل", "inactive": "غير مفعل", "all": "الكل",
     "date": "التاريخ", "name": "الاسم", "phone": "الهاتف", "email": "البريد الإلكتروني", "address": "العنوان",
@@ -116,16 +127,20 @@
   "customers": { "customerProfile": "ملف العميل", "view360": "عرض شامل 360 درجة", "memberSince": "عضو منذ", "loyaltyPoints": "نقاط الولاء", "totalPurchases": "إجمالي المشتريات", "visits": "الزيارات", "avgPurchase": "متوسط الشراء", "points": "نقاط", "basicInfo": "المعلومات الأساسية", "invoices": "الفواتير", "favorites": "المفضلة", "debts": "الديون", "loyalty": "الولاء", "phone": "الهاتف", "email": "البريد", "address": "العنوان", "invoiceHistory": "سجل الفواتير", "items": "عناصر", "favoriteProducts": "المنتجات المفضلة", "purchased": "اشترى", "times": "مرات", "debtHistory": "سجل الديون", "totalAmount": "المبلغ الكلي", "paid": "المدفوع", "remaining": "المتبقي", "loyaltyHistory": "سجل نقاط الولاء" },
   "expenses": { 
     "title": "إدارة المصروفات", "subtitle": "تتبع مصروفات المتجر", "addExpense": "إضافة مصروف", "editExpense": "تعديل المصروف", 
-    "totalExpenses": "إجمالي المصروفات", "cashExpenses": "مصروفات نقدية", "walletExpenses": "مصروفات إلكترونية", 
+    "totalExpenses": "إجمالي المصروفات", "monthlyExpenses": "مصروفات الشهر", "totalCount": "إجمالي المصروفات",
+    "cashExpenses": "مصروفات نقدية", "walletExpenses": "مصروفات إلكترونية", 
     "searchExpenses": "بحث في المصروفات...", "filterByCategory": "فلترة حسب الفئة", "allCategories": "جميع الفئات", 
-    "expensesList": "قائمة المصروفات", "date": "التاريخ", "category": "الفئة", "description": "الوصف", 
-    "descriptionPlaceholder": "وصف المصروف...", "amount": "المبلغ", "paymentMethod": "طريقة الدفع", 
+    "list": "قائمة المصروفات", "noExpenses": "لا توجد مصروفات",
+    "descriptionPlaceholder": "وصف المصروف...", "paymentMethod": "طريقة الدفع", 
     "cash": "نقدي", "wallet": "إلكتروني", "selectCategory": "اختر الفئة", "requiredFields": "يرجى ملء الحقول المطلوبة",
     "addSuccess": "تم إضافة المصروف بنجاح", "editSuccess": "تم تعديل المصروف بنجاح", "deleteSuccess": "تم حذف المصروف بنجاح",
     "categories": {
       "rent": "إيجار", "utilities": "فواتير", "salaries": "رواتب", "supplies": "مستلزمات", 
       "maintenance": "صيانة", "marketing": "تسويق", "other": "أخرى"
-    }
+    },
+    "amount": "المبلغ",
+    "description": "الوصف",
+    "notes": "ملاحظات"
   },
   "payment": { "title": "إتمام الدفع", "totalAmount": "المبلغ الإجمالي", "selectMethod": "اختر طريقة الدفع", "cash": "نقدي", "wallet": "محفظة", "credit": "دين", "walletType": "نوع المحفظة", "selectWallet": "اختر المحفظة", "transactionCode": "رقم العملية", "enterTransactionCode": "أدخل رقم/كود العملية", "selectCustomer": "اختر العميل", "chooseCustomer": "اختر عميل", "creditNote": "سيتم تسجيل هذه الفاتورة كدين على العميل المحدد", "confirm": "تأكيد الدفع", "cashSuccess": "تم الدفع نقداً بنجاح", "walletSuccess": "تم الدفع عبر", "creditSuccess": "تم تسجيل الفاتورة كدين على" },
   "debts": { "title": "إدارة الديون", "subtitle": "تتبع وتحصيل ديون العملاء", "totalDebts": "إجمالي الديون", "debtorsCount": "عدد المدينين", "unpaidInvoices": "الفواتير غير المدفوعة", "customersList": "قائمة العملاء المدينين", "searchCustomer": "بحث عن عميل...", "customerName": "اسم العميل", "phone": "الهاتف", "totalDebt": "إجمالي الدين", "invoices": "فواتير", "lastPurchase": "آخر شراء", "viewDetails": "عرض التفاصيل", "customerDetails": "تفاصيل ديون العميل", "manageCustomerDebt": "إدارة وتحصيل ديون العميل", "customerInfo": "معلومات العميل", "email": "البريد الإلكتروني", "address": "العنوان", "remainingDebt": "الدين المتبقي", "collectPayment": "تحصيل دفعة", "invoiceNumber": "رقم الفاتورة", "date": "التاريخ", "invoiceAmount": "مبلغ الفاتورة", "paidAmount": "المبلغ المدفوع", "remainingAmount": "المبلغ المتبقي", "pay": "دفع", "noUnpaidInvoices": "لا توجد فواتير غير مدفوعة", "paymentHistory": "سجل الدفعات", "amount": "المبلغ", "forInvoice": "للفاتورة", "noPayments": "لا توجد دفعات مسجلة", "recordPayment": "تسجيل دفعة", "payingFor": "الدفع لـ", "remaining": "المتبقي", "paymentAmount": "مبلغ الدفعة", "confirmPayment": "تأكيد الدفعة", "invalidAmount": "مبلغ غير صالح", "amountExceedsDebt": "المبلغ يتجاوز الدين المتبقي", "paymentSuccess": "تم تسجيل الدفعة بنجاح" },

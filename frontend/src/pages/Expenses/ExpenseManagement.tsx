@@ -3,8 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Plus, Search, Edit2, Trash2, Receipt, Calendar, DollarSign,
-  Filter, TrendingDown, Wallet, X, Loader2, AlertCircle
+  Plus, Search, Edit2, Trash2, Receipt, DollarSign,
+  TrendingDown, Wallet, Loader2, AlertCircle, X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -29,7 +29,7 @@ import { toast } from 'sonner';
 import { DateRangeFilter } from '@/components/reports/DateRangeFilter';
 import { expenseService, type Expense, type CreateExpenseData, type UpdateExpenseData } from '@/api/expenseService';
 
-const expenseCategories = [
+const defaultCategories = [
   { id: 'rent', key: 'expenses.categories.rent' },
   { id: 'utilities', key: 'expenses.categories.utilities' },
   { id: 'salaries', key: 'expenses.categories.salaries' },
@@ -47,6 +47,12 @@ interface FormData {
   notes: string;
 }
 
+interface CategoryOption {
+  id: string;
+  key: string;
+  label?: string;
+}
+
 const ExpenseManagement: React.FC = () => {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -55,6 +61,9 @@ const ExpenseManagement: React.FC = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [customCategories, setCustomCategories] = useState<CategoryOption[]>([]);
+  const [showNewCategoryInput, setShowNewCategoryInput] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
   
   // Form state
   const [formData, setFormData] = useState<FormData>({
@@ -65,6 +74,12 @@ const ExpenseManagement: React.FC = () => {
     notes: '',
   });
 
+  // Combine default and custom categories
+  const allCategories = useMemo(() => [
+    ...defaultCategories,
+    ...customCategories,
+  ], [customCategories]);
+
   // Fetch expenses
   const { data: expensesResponse, isLoading, error } = useQuery({
     queryKey: ['expenses', currentPage, filterCategory, searchQuery],
@@ -74,12 +89,16 @@ const ExpenseManagement: React.FC = () => {
       category: filterCategory !== 'all' ? filterCategory : undefined,
       search: searchQuery || undefined,
     }),
+    retry: 2,
+    staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
   // Fetch summary for statistics
   const { data: summaryData } = useQuery({
     queryKey: ['expenses-summary'],
     queryFn: () => expenseService.getSummary(),
+    retry: 2,
+    staleTime: 1000 * 60 * 5,
   });
 
   // Create expense mutation
@@ -96,6 +115,7 @@ const ExpenseManagement: React.FC = () => {
       }
     },
     onError: (error: any) => {
+      console.error('Create expense error:', error);
       let message = t('common.error');
       if (error.response?.data?.message) {
         message = error.response.data.message;
@@ -124,6 +144,7 @@ const ExpenseManagement: React.FC = () => {
       }
     },
     onError: (error: any) => {
+      console.error('Update expense error:', error);
       let message = t('common.error');
       if (error.response?.data?.message) {
         message = error.response.data.message;
@@ -145,6 +166,7 @@ const ExpenseManagement: React.FC = () => {
       }
     },
     onError: (error: any) => {
+      console.error('Delete expense error:', error);
       let message = t('common.error');
       if (error.response?.data?.message) {
         message = error.response.data.message;
@@ -161,8 +183,37 @@ const ExpenseManagement: React.FC = () => {
   }), [summaryData]);
 
   const getCategoryLabel = (categoryId: string) => {
-    const category = expenseCategories.find(c => c.id === categoryId);
-    return category ? t(category.key) : categoryId;
+    const category = allCategories.find(c => c.id === categoryId);
+    if (category) {
+      return category.label || t(category.key);
+    }
+    return categoryId;
+  };
+
+  const handleAddNewCategory = () => {
+    if (!newCategoryName.trim()) {
+      toast.error(t('common.required') || 'هذا الحقل مطلوب');
+      return;
+    }
+
+    const categoryId = newCategoryName.toLowerCase().replace(/\s+/g, '_');
+
+    if (customCategories.some(c => c.id === categoryId)) {
+      toast.error(t('common.alreadyExists') || 'التصنيف موجود بالفعل');
+      return;
+    }
+
+    const newCategory: CategoryOption = {
+      id: categoryId,
+      key: '',
+      label: newCategoryName,
+    };
+
+    setCustomCategories(prev => [...prev, newCategory]);
+    setFormData(prev => ({ ...prev, category: categoryId }));
+    setShowNewCategoryInput(false);
+    setNewCategoryName('');
+    toast.success(t('common.success') || 'تم إضافة التصنيف بنجاح');
   };
 
   const handleAddExpense = () => {
@@ -214,6 +265,8 @@ const ExpenseManagement: React.FC = () => {
     });
     setEditingExpense(null);
     setIsAddModalOpen(false);
+    setShowNewCategoryInput(false);
+    setNewCategoryName('');
   };
 
   const expenses = expensesResponse?.data?.data || [];
@@ -308,9 +361,9 @@ const ExpenseManagement: React.FC = () => {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">{t('common.all')}</SelectItem>
-            {expenseCategories.map(cat => (
+            {allCategories.map(cat => (
               <SelectItem key={cat.id} value={cat.id}>
-                {t(cat.key)}
+                {getCategoryLabel(cat.id)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -456,24 +509,66 @@ const ExpenseManagement: React.FC = () => {
 
             <div>
               <Label>{t('common.category')}</Label>
-              <Select value={formData.category} onValueChange={(value) => 
-                setFormData(prev => ({ ...prev, category: value }))
-              }>
-                <SelectTrigger>
-                  <SelectValue placeholder={t('common.selectCategory')} />
-                </SelectTrigger>
-                <SelectContent>
-                  {expenseCategories.map(cat => (
-                    <SelectItem key={cat.id} value={cat.id}>
-                      {t(cat.key)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {showNewCategoryInput ? (
+                <div className="flex gap-2">
+                  <Input
+                    value={newCategoryName}
+                    onChange={(e) => setNewCategoryName(e.target.value)}
+                    placeholder={t('common.enterCategory') || 'أدخل اسم التصنيف'}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        handleAddNewCategory();
+                      }
+                    }}
+                  />
+                  <Button
+                    size="sm"
+                    onClick={handleAddNewCategory}
+                  >
+                    {t('common.add')}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setShowNewCategoryInput(false);
+                      setNewCategoryName('');
+                    }}
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Select value={formData.category} onValueChange={(value) => 
+                    setFormData(prev => ({ ...prev, category: value }))
+                  }>
+                    <SelectTrigger>
+                      <SelectValue placeholder={t('common.selectCategory')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {allCategories.map(cat => (
+                        <SelectItem key={cat.id} value={cat.id}>
+                          {getCategoryLabel(cat.id)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => setShowNewCategoryInput(true)}
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    {t('common.addNewCategory') || 'إضافة تصنيف جديد'}
+                  </Button>
+                </div>
+              )}
             </div>
 
             <div>
-              <Label>{t('common.description')}</Label>
+              <Label>{t('expenses.description')}</Label>
               <Input
                 value={formData.description}
                 onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
@@ -482,7 +577,7 @@ const ExpenseManagement: React.FC = () => {
             </div>
 
             <div>
-              <Label>{t('common.amount')}</Label>
+              <Label>{t('expenses.amount')}</Label>
               <Input
                 type="number"
                 value={formData.amount}
@@ -494,7 +589,7 @@ const ExpenseManagement: React.FC = () => {
             </div>
 
             <div>
-              <Label>{t('common.notes')}</Label>
+              <Label>{t('expenses.notes')}</Label>
               <Textarea
                 value={formData.notes}
                 onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}

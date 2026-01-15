@@ -42,6 +42,16 @@
     "margin": "Margin"
   },
   "common": {
+    "enterCategory": "Enter Category Name",
+    "selectCategory": "Select Category",
+    "addNewCategory": "Add New Category",
+    "alreadyExists": "Already Exists",
+    "enterDescription": "Enter Description",
+    "optionalNotes": "Optional Notes",
+    "page": "Page",
+    "of": "of",
+    "previous": "Previous",
+    "next": "Next",
     "add": "Add", "edit": "Edit", "delete": "Delete", "save": "Save", "cancel": "Cancel", "search": "Search",
     "actions": "Actions", "status": "Status", "active": "Active", "inactive": "Inactive", "all": "All",
     "date": "Date", "name": "Name", "phone": "Phone", "email": "Email", "address": "Address",
@@ -67,11 +77,12 @@
   "customers": { "customerProfile": "Customer Profile", "view360": "360° View", "memberSince": "Member Since", "loyaltyPoints": "Loyalty Points", "totalPurchases": "Total Purchases", "visits": "Visits", "avgPurchase": "Avg Purchase", "points": "points", "basicInfo": "Basic Info", "invoices": "Invoices", "favorites": "Favorites", "debts": "Debts", "loyalty": "Loyalty", "phone": "Phone", "email": "Email", "address": "Address", "invoiceHistory": "Invoice History", "items": "items", "favoriteProducts": "Favorite Products", "purchased": "Purchased", "times": "times", "debtHistory": "Debt History", "totalAmount": "Total Amount", "paid": "Paid", "remaining": "Remaining", "loyaltyHistory": "Loyalty Points History" },
   "expenses": { 
     "title": "Expense Management", "subtitle": "Track store expenses", "addExpense": "Add Expense", "editExpense": "Edit Expense", 
-    "totalExpenses": "Total Expenses", "cashExpenses": "Cash Expenses", "walletExpenses": "E-Wallet Expenses", 
+    "totalExpenses": "Total Expenses", "monthlyExpenses": "Monthly Expenses", "totalCount": "Total Expenses",
+    "cashExpenses": "Cash Expenses", "walletExpenses": "Wallet Expenses", 
     "searchExpenses": "Search expenses...", "filterByCategory": "Filter by category", "allCategories": "All Categories", 
-    "expensesList": "Expenses List", "date": "Date", "category": "Category", "description": "Description", 
-    "descriptionPlaceholder": "Expense description...", "amount": "Amount", "paymentMethod": "Payment Method", 
-    "cash": "Cash", "wallet": "E-Wallet", "selectCategory": "Select Category", "requiredFields": "Please fill required fields",
+    "list": "Expenses List", "noExpenses": "No expenses found",
+    "descriptionPlaceholder": "Expense description...", "paymentMethod": "Payment Method", 
+    "cash": "Cash", "wallet": "Wallet", "selectCategory": "Select Category", "requiredFields": "Please fill required fields",
     "addSuccess": "Expense added successfully", "editSuccess": "Expense updated successfully", "deleteSuccess": "Expense deleted successfully",
     "categories": {
       "rent": "Rent", "utilities": "Utilities", "salaries": "Salaries", "supplies": "Supplies", 
