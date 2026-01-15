@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { Plus, Edit2, Trash2, UserCog, Shield, Mail, Phone, Search, Loader2, AlertCircle } from 'lucide-react';
+import { Plus, Edit2, Trash2, UserCog, Mail, Phone, Search, Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -28,10 +28,10 @@ import { toast } from 'sonner';
 import { userService, type User, type CreateUserData, type UpdateUserData } from '@/api/userService';
 
 const roles = [
-  { id: 1, name: 'مدير', color: '#3b82f6' },
-  { id: 2, name: 'كاشير', color: '#10b981' },
-  { id: 3, name: 'محاسب', color: '#f59e0b' },
-  { id: 4, name: 'مدير المخزون', color: '#8b5cf6' },
+  { id: 1, nameKey: 'roles.admin', color: '#3b82f6' },
+  { id: 2, nameKey: 'roles.cashier', color: '#10b981' },
+  { id: 3, nameKey: 'roles.accountant', color: '#f59e0b' },
+  { id: 4, nameKey: 'roles.stockManager', color: '#8b5cf6' },
 ];
 
 interface UserFormData {
@@ -60,84 +60,79 @@ const Users: React.FC = () => {
     role_id: null,
   });
 
-  // Fetch users
   const { data: usersResponse, isLoading, error } = useQuery({
     queryKey: ['users', searchQuery],
     queryFn: () => userService.getAll({ search: searchQuery }),
   });
 
-  // Create user mutation
   const createMutation = useMutation({
     mutationFn: (data: CreateUserData) => userService.create(data),
     onSuccess: (response) => {
       if (response.success) {
-        toast.success(response.message || 'تم إضافة المستخدم بنجاح');
+        toast.success(response.message || t('common.success'));
         queryClient.invalidateQueries({ queryKey: ['users'] });
         setIsAddOpen(false);
         resetForm();
       } else {
-        toast.error(response.message || 'فشل إضافة المستخدم');
+        toast.error(response.message || t('common.error'));
       }
     },
     onError: (error: any) => {
-      const message = error.response?.data?.message || 'حدث خطأ أثناء إضافة المستخدم';
+      const message = error.response?.data?.message || t('common.error');
       toast.error(message);
     },
   });
 
-  // Update user mutation
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: number; data: UpdateUserData }) => 
       userService.update(id, data),
     onSuccess: (response) => {
       if (response.success) {
-        toast.success(response.message || 'تم تحديث المستخدم بنجاح');
+        toast.success(response.message || t('common.success'));
         queryClient.invalidateQueries({ queryKey: ['users'] });
         setIsEditOpen(false);
         setEditingUser(null);
         resetForm();
       } else {
-        toast.error(response.message || 'فشل تحديث المستخدم');
+        toast.error(response.message || t('common.error'));
       }
     },
     onError: (error: any) => {
-      const message = error.response?.data?.message || 'حدث خطأ أثناء تحديث المستخدم';
+      const message = error.response?.data?.message || t('common.error');
       toast.error(message);
     },
   });
 
-  // Delete user mutation
   const deleteMutation = useMutation({
     mutationFn: (id: number) => userService.delete(id),
     onSuccess: (response) => {
       if (response.success) {
-        toast.success(response.message || 'تم حذف المستخدم بنجاح');
+        toast.success(response.message || t('common.success'));
         queryClient.invalidateQueries({ queryKey: ['users'] });
         setDeleteUserId(null);
       } else {
-        toast.error(response.message || 'فشل حذف المستخدم');
+        toast.error(response.message || t('common.error'));
       }
     },
     onError: (error: any) => {
-      const message = error.response?.data?.message || 'حدث خطأ أثناء حذف المستخدم';
+      const message = error.response?.data?.message || t('common.error');
       toast.error(message);
       setDeleteUserId(null);
     },
   });
 
-  // Toggle active mutation
   const toggleActiveMutation = useMutation({
     mutationFn: (id: number) => userService.toggleActive(id),
     onSuccess: (response) => {
       if (response.success) {
-        toast.success(response.message || 'تم تغيير حالة المستخدم بنجاح');
+        toast.success(response.message || t('common.success'));
         queryClient.invalidateQueries({ queryKey: ['users'] });
       } else {
-        toast.error(response.message || 'فشل تغيير حالة المستخدم');
+        toast.error(response.message || t('common.error'));
       }
     },
     onError: (error: any) => {
-      const message = error.response?.data?.message || 'حدث خطأ أثناء تغيير حالة المستخدم';
+      const message = error.response?.data?.message || t('common.error');
       toast.error(message);
     },
   });
@@ -154,7 +149,7 @@ const Users: React.FC = () => {
 
   const handleAdd = () => {
     if (!formData.name || !formData.email || !formData.password || !formData.role_id) {
-      toast.error('يرجى ملء جميع الحقول المطلوبة');
+      toast.error(t('common.requiredFields'));
       return;
     }
 
@@ -183,7 +178,7 @@ const Users: React.FC = () => {
     if (!editingUser) return;
 
     if (!formData.name || !formData.email || !formData.role_id) {
-      toast.error('يرجى ملء جميع الحقول المطلوبة');
+      toast.error(t('common.requiredFields'));
       return;
     }
 
@@ -194,22 +189,11 @@ const Users: React.FC = () => {
       role_id: formData.role_id,
     };
 
-    // Only include password if it's provided
     if (formData.password) {
       updateData.password = formData.password;
     }
 
     updateMutation.mutate({ id: editingUser.id, data: updateData });
-  };
-
-  const handleDelete = (id: number) => {
-    setDeleteUserId(id);
-  };
-
-  const confirmDelete = () => {
-    if (deleteUserId) {
-      deleteMutation.mutate(deleteUserId);
-    }
   };
 
   const getRoleBadge = (roleId: number) => {
@@ -219,7 +203,7 @@ const Users: React.FC = () => {
         className="px-2 py-1 rounded-full text-xs font-medium"
         style={{ backgroundColor: role?.color + '20', color: role?.color }}
       >
-        {role?.name || 'غير محدد'}
+        {role ? t(role.nameKey) : t('common.notSpecified')}
       </span>
     );
   };
@@ -234,30 +218,30 @@ const Users: React.FC = () => {
             <UserCog className="w-8 h-8 text-primary" />
             {t('nav.users')}
           </h1>
-          <p className="text-muted-foreground mt-1">إدارة مستخدمي النظام</p>
+          <p className="text-muted-foreground mt-1">{t('people.usersSubtitle')}</p>
         </div>
         <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
           <DialogTrigger asChild>
             <Button className="gradient-primary border-0 gap-2">
               <Plus className="w-4 h-4" />
-              إضافة مستخدم جديد
+              {t('people.addUser')}
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>إضافة مستخدم جديد</DialogTitle>
+              <DialogTitle>{t('people.addUser')}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 pt-4">
               <div className="space-y-2">
-                <Label>الاسم الكامل *</Label>
+                <Label>{t('common.fullName')} *</Label>
                 <Input
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="أدخل الاسم الكامل"
+                  placeholder={t('common.fullNamePlaceholder')}
                 />
               </div>
               <div className="space-y-2">
-                <Label>البريد الإلكتروني *</Label>
+                <Label>{t('common.email')} *</Label>
                 <Input
                   type="email"
                   value={formData.email}
@@ -266,7 +250,7 @@ const Users: React.FC = () => {
                 />
               </div>
               <div className="space-y-2">
-                <Label>رقم الهاتف</Label>
+                <Label>{t('common.phone')}</Label>
                 <Input
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
@@ -274,27 +258,27 @@ const Users: React.FC = () => {
                 />
               </div>
               <div className="space-y-2">
-                <Label>كلمة المرور *</Label>
+                <Label>{t('auth.password')} *</Label>
                 <Input
                   type="password"
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  placeholder="أدخل كلمة المرور"
+                  placeholder={t('auth.passwordPlaceholder')}
                 />
               </div>
               <div className="space-y-2">
-                <Label>الدور الوظيفي *</Label>
+                <Label>{t('common.role')} *</Label>
                 <Select
                   value={formData.role_id?.toString()}
                   onValueChange={(value) => setFormData({ ...formData, role_id: parseInt(value) })}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="اختر الدور" />
+                    <SelectValue placeholder={t('common.selectRole')} />
                   </SelectTrigger>
                   <SelectContent>
                     {roles.map((role) => (
                       <SelectItem key={role.id} value={role.id.toString()}>
-                        {role.name}
+                        {t(role.nameKey)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -309,21 +293,9 @@ const Users: React.FC = () => {
                   {createMutation.isPending ? (
                     <>
                       <Loader2 className="w-4 h-4 ml-2 animate-spin" />
-                      جاري الإضافة...
+                      {t('common.adding')}
                     </>
-                  ) : (
-                    'إضافة'
-                  )}
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setIsAddOpen(false);
-                    resetForm();
-                  }}
-                  className="flex-1"
-                >
-                  إلغاء
+                  ) : t('common.add')}
                 </Button>
               </div>
             </div>
@@ -331,186 +303,158 @@ const Users: React.FC = () => {
         </Dialog>
       </div>
 
-      {/* Search */}
-      <div className="glass-card p-4">
-        <div className="relative">
-          <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+      <div className="flex items-center gap-4 bg-card p-4 rounded-xl border shadow-sm">
+        <div className="relative flex-1">
+          <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
-            placeholder="ابحث عن مستخدم..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder={t('common.searchUsers')}
             className="pr-10"
           />
         </div>
       </div>
 
-      {/* Loading State */}
-      {isLoading && (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      {isLoading ? (
+        <div className="flex flex-col items-center justify-center py-20 space-y-4">
+          <Loader2 className="w-10 h-10 text-primary animate-spin" />
+          <p className="text-muted-foreground">{t('common.loading')}</p>
         </div>
-      )}
-
-      {/* Error State */}
-      {error && (
-        <div className="glass-card p-6 text-center">
-          <AlertCircle className="w-12 h-12 text-destructive mx-auto mb-4" />
-          <p className="text-destructive">حدث خطأ أثناء تحميل المستخدمين</p>
-          <Button
-            variant="outline"
-            onClick={() => queryClient.invalidateQueries({ queryKey: ['users'] })}
-            className="mt-4"
-          >
-            إعادة المحاولة
+      ) : error ? (
+        <div className="flex flex-col items-center justify-center py-20 space-y-4 text-destructive">
+          <AlertCircle className="w-12 h-12" />
+          <p>{t('common.errorLoading')}</p>
+          <Button variant="outline" onClick={() => queryClient.invalidateQueries({ queryKey: ['users'] })}>
+            {t('common.retry')}
           </Button>
         </div>
-      )}
-
-      {/* Users Table */}
-      {!isLoading && !error && (
-        <div className="glass-card overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-muted/50">
-                <tr>
-                  <th className="text-right p-4 font-semibold">الاسم</th>
-                  <th className="text-right p-4 font-semibold">البريد الإلكتروني</th>
-                  <th className="text-right p-4 font-semibold">الهاتف</th>
-                  <th className="text-right p-4 font-semibold">الدور</th>
-                  <th className="text-right p-4 font-semibold">الحالة</th>
-                  <th className="text-center p-4 font-semibold">الإجراءات</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="text-center py-12 text-muted-foreground">
-                      لا توجد مستخدمين
-                    </td>
-                  </tr>
-                ) : (
-                  users.map((user: User) => (
-                    <motion.tr
-                      key={user.id}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      className="border-t border-border hover:bg-muted/30 transition-colors"
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {users.map((user: User) => (
+            <motion.div
+              key={user.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-card rounded-xl border shadow-sm hover:shadow-md transition-all overflow-hidden group"
+            >
+              <div className="p-6">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xl">
+                      {user.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-lg group-hover:text-primary transition-colors">
+                        {user.name}
+                      </h3>
+                      {getRoleBadge(user.role_id)}
+                    </div>
+                  </div>
+                  <div className="flex gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-muted-foreground hover:text-primary"
+                      onClick={() => handleEdit(user)}
                     >
-                      <td className="p-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                            <UserCog className="w-5 h-5 text-primary" />
-                          </div>
-                          <span className="font-medium">{user.name}</span>
-                        </div>
-                      </td>
-                      <td className="p-4">
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <Mail className="w-4 h-4" />
-                          {user.email}
-                        </div>
-                      </td>
-                      <td className="p-4">
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <Phone className="w-4 h-4" />
-                          {user.phone || '-'}
-                        </div>
-                      </td>
-                      <td className="p-4">{getRoleBadge(user.role_id)}</td>
-                      <td className="p-4">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => toggleActiveMutation.mutate(user.id)}
-                          disabled={toggleActiveMutation.isPending}
-                          className={user.is_active ? 'text-success' : 'text-muted-foreground'}
-                        >
-                          {user.is_active ? 'نشط' : 'معطل'}
-                        </Button>
-                      </td>
-                      <td className="p-4">
-                        <div className="flex items-center justify-center gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEdit(user)}
-                            className="text-primary hover:text-primary"
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDelete(user.id)}
-                            className="text-destructive hover:text-destructive"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </td>
-                    </motion.tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                      <Edit2 className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                      onClick={() => setDeleteUserId(user.id)}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="space-y-3 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <Mail className="w-4 h-4" />
+                    {user.email}
+                  </div>
+                  {user.phone && (
+                    <div className="flex items-center gap-2">
+                      <Phone className="w-4 h-4" />
+                      {user.phone}
+                    </div>
+                  )}
+                </div>
+
+                <div className="mt-6 pt-6 border-t flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className={`w-2 h-2 rounded-full ${user.is_active ? 'bg-green-500' : 'bg-red-500'}`} />
+                    <span className="text-xs font-medium">
+                      {user.is_active ? t('common.active') : t('common.inactive')}
+                    </span>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs"
+                    onClick={() => toggleActiveMutation.mutate(user.id)}
+                    disabled={toggleActiveMutation.isPending}
+                  >
+                    {user.is_active ? t('common.deactivate') : t('common.activate')}
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
+          ))}
         </div>
       )}
 
-      {/* Edit Dialog */}
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>تعديل المستخدم</DialogTitle>
+            <DialogTitle>{t('common.editUser')}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 pt-4">
             <div className="space-y-2">
-              <Label>الاسم الكامل *</Label>
+              <Label>{t('common.fullName')} *</Label>
               <Input
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="أدخل الاسم الكامل"
               />
             </div>
             <div className="space-y-2">
-              <Label>البريد الإلكتروني *</Label>
+              <Label>{t('common.email')} *</Label>
               <Input
                 type="email"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                placeholder="example@domain.com"
               />
             </div>
             <div className="space-y-2">
-              <Label>رقم الهاتف</Label>
+              <Label>{t('common.phone')}</Label>
               <Input
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                placeholder="+966XXXXXXXXX"
               />
             </div>
             <div className="space-y-2">
-              <Label>كلمة المرور الجديدة (اتركها فارغة إذا لم ترد التغيير)</Label>
+              <Label>{t('auth.password')} ({t('common.leaveEmptyToKeep')})</Label>
               <Input
                 type="password"
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                placeholder="أدخل كلمة المرور الجديدة"
               />
             </div>
             <div className="space-y-2">
-              <Label>الدور الوظيفي *</Label>
+              <Label>{t('common.role')} *</Label>
               <Select
                 value={formData.role_id?.toString()}
                 onValueChange={(value) => setFormData({ ...formData, role_id: parseInt(value) })}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="اختر الدور" />
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   {roles.map((role) => (
                     <SelectItem key={role.id} value={role.id.toString()}>
-                      {role.name}
+                      {t(role.nameKey)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -525,52 +469,30 @@ const Users: React.FC = () => {
                 {updateMutation.isPending ? (
                   <>
                     <Loader2 className="w-4 h-4 ml-2 animate-spin" />
-                    جاري التحديث...
+                    {t('common.saving')}
                   </>
-                ) : (
-                  'تحديث'
-                )}
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setIsEditOpen(false);
-                  setEditingUser(null);
-                  resetForm();
-                }}
-                className="flex-1"
-              >
-                إلغاء
+                ) : t('common.save')}
               </Button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteUserId !== null} onOpenChange={() => setDeleteUserId(null)}>
+      <AlertDialog open={!!deleteUserId} onOpenChange={(open) => !open && setDeleteUserId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>تأكيد الحذف</AlertDialogTitle>
+            <AlertDialogTitle>{t('common.confirmDelete')}</AlertDialogTitle>
             <AlertDialogDescription>
-              هل أنت متأكد من حذف هذا المستخدم؟ لا يمكن التراجع عن هذا الإجراء.
+              {t('common.deleteUserWarning')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmDelete}
-              disabled={deleteMutation.isPending}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {deleteMutation.isPending ? (
-                <>
-                  <Loader2 className="w-4 h-4 ml-2 animate-spin" />
-                  جاري الحذف...
-                </>
-              ) : (
-                'حذف'
-              )}
+              {deleteMutation.isPending ? t('common.deleting') : t('common.delete')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -38,13 +38,13 @@ interface Expense {
 }
 
 const expenseCategories = [
-  { id: 'rent', labelAr: 'إيجار', labelEn: 'Rent' },
-  { id: 'utilities', labelAr: 'فواتير', labelEn: 'Utilities' },
-  { id: 'salaries', labelAr: 'رواتب', labelEn: 'Salaries' },
-  { id: 'supplies', labelAr: 'مستلزمات', labelEn: 'Supplies' },
-  { id: 'maintenance', labelAr: 'صيانة', labelEn: 'Maintenance' },
-  { id: 'marketing', labelAr: 'تسويق', labelEn: 'Marketing' },
-  { id: 'other', labelAr: 'أخرى', labelEn: 'Other' },
+  { id: 'rent', key: 'expenses.categories.rent' },
+  { id: 'utilities', key: 'expenses.categories.utilities' },
+  { id: 'salaries', key: 'expenses.categories.salaries' },
+  { id: 'supplies', key: 'expenses.categories.supplies' },
+  { id: 'maintenance', key: 'expenses.categories.maintenance' },
+  { id: 'marketing', key: 'expenses.categories.marketing' },
+  { id: 'other', key: 'expenses.categories.other' },
 ];
 
 const initialExpenses: Expense[] = [
@@ -85,7 +85,7 @@ const ExpenseManagement: React.FC = () => {
 
   const getCategoryLabel = (categoryId: string) => {
     const category = expenseCategories.find(c => c.id === categoryId);
-    return i18n.language === 'ar' ? category?.labelAr : category?.labelEn;
+    return category ? t(category.key) : categoryId;
   };
 
   const handleAddExpense = () => {
@@ -231,7 +231,7 @@ const ExpenseManagement: React.FC = () => {
                 <SelectItem value="all">{t('expenses.allCategories')}</SelectItem>
                 {expenseCategories.map(cat => (
                   <SelectItem key={cat.id} value={cat.id}>
-                    {i18n.language === 'ar' ? cat.labelAr : cat.labelEn}
+                    {t(cat.key)}
                   </SelectItem>
                 ))}
               </SelectContent>

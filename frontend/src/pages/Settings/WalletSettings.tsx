@@ -50,10 +50,10 @@ const WalletSettingsContent: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['payment-methods'] });
       setNewWallet({ name: '', icon: '💳' });
       setIsAddOpen(false);
-      toast.success('تم إضافة طريقة الدفع بنجاح');
+      toast.success(t('wallets.addSuccess'));
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'فشل في إضافة طريقة الدفع');
+      toast.error(error.response?.data?.message || t('common.error'));
     },
   });
 
@@ -65,10 +65,10 @@ const WalletSettingsContent: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['payment-methods'] });
       setIsEditOpen(false);
       setEditingWallet(null);
-      toast.success('تم تحديث طريقة الدفع بنجاح');
+      toast.success(t('wallets.editSuccess'));
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'فشل في تحديث طريقة الدفع');
+      toast.error(error.response?.data?.message || t('common.error'));
     },
   });
 
@@ -77,10 +77,10 @@ const WalletSettingsContent: React.FC = () => {
     mutationFn: (id: number) => paymentMethodService.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['payment-methods'] });
-      toast.success('تم حذف طريقة الدفع بنجاح');
+      toast.success(t('wallets.deleteSuccess'));
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'فشل في حذف طريقة الدفع');
+      toast.error(error.response?.data?.message || t('common.error'));
     },
   });
 
@@ -91,13 +91,13 @@ const WalletSettingsContent: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['payment-methods'] });
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'فشل في تغيير حالة طريقة الدفع');
+      toast.error(error.response?.data?.message || t('common.error'));
     },
   });
 
   const handleAdd = () => {
     if (!newWallet.name) {
-      toast.error('يرجى إدخال اسم طريقة الدفع');
+      toast.error(t('wallets.requiredFields'));
       return;
     }
     createMutation.mutate(newWallet);
@@ -105,7 +105,7 @@ const WalletSettingsContent: React.FC = () => {
 
   const handleEdit = () => {
     if (!editingWallet || !editingWallet.name) {
-      toast.error('يرجى إدخال اسم طريقة الدفع');
+      toast.error(t('wallets.requiredFields'));
       return;
     }
     updateMutation.mutate({
@@ -135,7 +135,7 @@ const WalletSettingsContent: React.FC = () => {
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">جاري التحميل...</p>
+          <p className="text-muted-foreground">{t('common.loading')}</p>
         </div>
       </div>
     );
@@ -145,23 +145,23 @@ const WalletSettingsContent: React.FC = () => {
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-foreground">إعدادات المحافظ</h1>
-          <p className="text-muted-foreground mt-1">إدارة طرق الدفع الإلكترونية</p>
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground">{t('wallets.title')}</h1>
+          <p className="text-muted-foreground mt-1">{t('wallets.subtitle')}</p>
         </div>
         <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
           <DialogTrigger asChild>
             <Button className="gradient-primary border-0 gap-2">
               <Plus className="w-4 h-4" />
-              إضافة طريقة دفع
+              {t('wallets.addWallet')}
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>إضافة طريقة دفع جديدة</DialogTitle>
+              <DialogTitle>{t('wallets.addWallet')}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 pt-4">
               <div className="space-y-2">
-                <Label>الاسم *</Label>
+                <Label>{t('wallets.name')} *</Label>
                 <Input
                   value={newWallet.name}
                   onChange={(e) => setNewWallet({ ...newWallet, name: e.target.value })}
@@ -169,7 +169,7 @@ const WalletSettingsContent: React.FC = () => {
                 />
               </div>
               <div className="space-y-2">
-                <Label>الأيقونة</Label>
+                <Label>{t('wallets.icon')}</Label>
                 <Input
                   value={newWallet.icon}
                   onChange={(e) => setNewWallet({ ...newWallet, icon: e.target.value })}
@@ -179,14 +179,14 @@ const WalletSettingsContent: React.FC = () => {
               </div>
               <div className="flex justify-end gap-2 pt-4">
                 <Button variant="outline" onClick={() => setIsAddOpen(false)}>
-                  إلغاء
+                  {t('common.cancel')}
                 </Button>
                 <Button 
                   onClick={handleAdd} 
                   className="gradient-primary border-0"
                   disabled={createMutation.isPending}
                 >
-                  {createMutation.isPending ? 'جاري الإضافة...' : 'إضافة'}
+                  {createMutation.isPending ? t('common.adding') : t('common.add')}
                 </Button>
               </div>
             </div>
@@ -198,20 +198,20 @@ const WalletSettingsContent: React.FC = () => {
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>تعديل طريقة الدفع</DialogTitle>
+            <DialogTitle>{t('wallets.editWallet')}</DialogTitle>
           </DialogHeader>
           {editingWallet && (
             <div className="space-y-4 pt-4">
               <div className="space-y-2">
-                <Label>الاسم *</Label>
+                <Label>{t('wallets.name')} *</Label>
                 <Input
                   value={editingWallet.name}
                   onChange={(e) => setEditingWallet({ ...editingWallet, name: e.target.value })}
-                  placeholder="اسم طريقة الدفع"
+                  placeholder={t('wallets.name')}
                 />
               </div>
               <div className="space-y-2">
-                <Label>الأيقونة</Label>
+                <Label>{t('wallets.icon')}</Label>
                 <Input
                   value={editingWallet.icon}
                   onChange={(e) => setEditingWallet({ ...editingWallet, icon: e.target.value })}
@@ -221,14 +221,14 @@ const WalletSettingsContent: React.FC = () => {
               </div>
               <div className="flex justify-end gap-2 pt-4">
                 <Button variant="outline" onClick={() => setIsEditOpen(false)}>
-                  إلغاء
+                  {t('common.cancel')}
                 </Button>
                 <Button 
                   onClick={handleEdit} 
                   className="gradient-primary border-0"
                   disabled={updateMutation.isPending}
                 >
-                  {updateMutation.isPending ? 'جاري الحفظ...' : 'حفظ'}
+                  {updateMutation.isPending ? t('common.saving') : t('common.save')}
                 </Button>
               </div>
             </div>
@@ -254,7 +254,7 @@ const WalletSettingsContent: React.FC = () => {
                 <div>
                   <h4 className="font-semibold text-foreground">{wallet.name}</h4>
                   <p className="text-sm text-muted-foreground">
-                    {wallet.is_active ? 'مفعل' : 'غير مفعل'}
+                    {wallet.is_active ? t('common.active') : t('common.inactive')}
                   </p>
                 </div>
               </div>
@@ -270,19 +270,18 @@ const WalletSettingsContent: React.FC = () => {
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
-                      <AlertDialogTitle>تأكيد الحذف</AlertDialogTitle>
+                      <AlertDialogTitle>{t('common.confirmDelete')}</AlertDialogTitle>
                       <AlertDialogDescription>
-                        هل أنت متأكد من حذف طريقة الدفع "{wallet.name}"؟
-                        لا يمكن التراجع عن هذا الإجراء.
+                        {t('common.deleteUserWarning')}
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                      <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                      <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
                       <AlertDialogAction
                         onClick={() => handleDelete(wallet.id)}
                         className="bg-destructive hover:bg-destructive/90"
                       >
-                        حذف
+                        {t('common.delete')}
                       </AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>
@@ -291,7 +290,7 @@ const WalletSettingsContent: React.FC = () => {
             </div>
 
             <div className="flex items-center justify-between pt-3 border-t border-border">
-              <span className="text-sm text-muted-foreground">الحالة</span>
+              <span className="text-sm text-muted-foreground">{t('common.status')}</span>
               <Button
                 variant={wallet.is_active ? 'default' : 'outline'}
                 size="sm"
@@ -299,7 +298,7 @@ const WalletSettingsContent: React.FC = () => {
                 className={wallet.is_active ? 'bg-success hover:bg-success/90' : ''}
                 disabled={toggleActiveMutation.isPending}
               >
-                {wallet.is_active ? 'مفعل' : 'غير مفعل'}
+                {wallet.is_active ? t('common.active') : t('common.inactive')}
               </Button>
             </div>
           </motion.div>
@@ -309,8 +308,8 @@ const WalletSettingsContent: React.FC = () => {
       {wallets.length === 0 && (
         <div className="text-center py-12">
           <Wallet className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
-          <h3 className="text-lg font-semibold text-foreground mb-2">لا توجد طرق دفع</h3>
-          <p className="text-muted-foreground mb-4">ابدأ بإضافة طريقة دفع جديدة</p>
+          <h3 className="text-lg font-semibold text-foreground mb-2">{t('common.noData')}</h3>
+          <p className="text-muted-foreground mb-4">{t('wallets.addWallet')}</p>
         </div>
       )}
     </div>

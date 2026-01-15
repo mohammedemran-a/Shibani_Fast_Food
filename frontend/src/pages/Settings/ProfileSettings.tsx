@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { 
@@ -31,6 +32,7 @@ import { profileService, type UpdateProfileData, type ChangePasswordData } from 
 import { apiClient } from '@/api/apiClient';
 
 const ProfileSettings: React.FC = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -71,15 +73,15 @@ const ProfileSettings: React.FC = () => {
     mutationFn: (data: UpdateProfileData) => profileService.updateProfile(data),
     onSuccess: (response) => {
       if (response.success) {
-        toast.success(response.message || 'تم تحديث الملف الشخصي بنجاح');
+        toast.success(response.message || t('profile.updateSuccess'));
         queryClient.invalidateQueries({ queryKey: ['profile'] });
         setIsEditingProfile(false);
       } else {
-        toast.error(response.message || 'فشل تحديث الملف الشخصي');
+        toast.error(response.message || t('profile.updateError'));
       }
     },
     onError: (error: any) => {
-      const message = error.response?.data?.message || 'حدث خطأ أثناء تحديث الملف الشخصي';
+      const message = error.response?.data?.message || t('profile.updateError');
       toast.error(message);
     },
   });
@@ -89,14 +91,14 @@ const ProfileSettings: React.FC = () => {
     mutationFn: (file: File) => profileService.updateAvatar(file),
     onSuccess: (response) => {
       if (response.success) {
-        toast.success(response.message || 'تم تحديث الصورة الشخصية بنجاح');
+        toast.success(response.message || t('profile.avatarUpdateSuccess'));
         queryClient.invalidateQueries({ queryKey: ['profile'] });
       } else {
-        toast.error(response.message || 'فشل تحديث الصورة الشخصية');
+        toast.error(response.message || t('profile.avatarUpdateError'));
       }
     },
     onError: (error: any) => {
-      const message = error.response?.data?.message || 'حدث خطأ أثناء تحديث الصورة الشخصية';
+      const message = error.response?.data?.message || t('profile.avatarUpdateError');
       toast.error(message);
     },
   });
@@ -106,14 +108,14 @@ const ProfileSettings: React.FC = () => {
     mutationFn: () => profileService.deleteAvatar(),
     onSuccess: (response) => {
       if (response.success) {
-        toast.success(response.message || 'تم حذف الصورة الشخصية بنجاح');
+        toast.success(response.message || t('profile.avatarDeleteSuccess'));
         queryClient.invalidateQueries({ queryKey: ['profile'] });
       } else {
-        toast.error(response.message || 'فشل حذف الصورة الشخصية');
+        toast.error(response.message || t('profile.avatarDeleteError'));
       }
     },
     onError: (error: any) => {
-      const message = error.response?.data?.message || 'حدث خطأ أثناء حذف الصورة الشخصية';
+      const message = error.response?.data?.message || t('profile.avatarDeleteError');
       toast.error(message);
     },
   });
@@ -123,7 +125,7 @@ const ProfileSettings: React.FC = () => {
     mutationFn: (data: ChangePasswordData) => profileService.changePassword(data),
     onSuccess: (response) => {
       if (response.success) {
-        toast.success(response.message || 'تم تغيير كلمة المرور بنجاح');
+        toast.success(response.message || t('profile.passwordChangeSuccess'));
         setIsChangingPassword(false);
         setPasswordData({
           current_password: '',
@@ -131,18 +133,18 @@ const ProfileSettings: React.FC = () => {
           new_password_confirmation: '',
         });
       } else {
-        toast.error(response.message || 'فشل تغيير كلمة المرور');
+        toast.error(response.message || t('profile.passwordChangeError'));
       }
     },
     onError: (error: any) => {
-      const message = error.response?.data?.message || 'حدث خطأ أثناء تغيير كلمة المرور';
+      const message = error.response?.data?.message || t('profile.passwordChangeError');
       toast.error(message);
     },
   });
 
   const handleUpdateProfile = () => {
     if (!profileData.name || !profileData.email) {
-      toast.error('الاسم والبريد الإلكتروني مطلوبان');
+      toast.error(t('profile.nameEmailRequired'));
       return;
     }
 
@@ -151,17 +153,17 @@ const ProfileSettings: React.FC = () => {
 
   const handleChangePassword = () => {
     if (!passwordData.current_password || !passwordData.new_password || !passwordData.new_password_confirmation) {
-      toast.error('جميع الحقول مطلوبة');
+      toast.error(t('profile.allFieldsRequired'));
       return;
     }
 
     if (passwordData.new_password !== passwordData.new_password_confirmation) {
-      toast.error('كلمة المرور الجديدة غير متطابقة');
+      toast.error(t('profile.passwordMismatch'));
       return;
     }
 
     if (passwordData.new_password.length < 6) {
-      toast.error('كلمة المرور يجب أن تكون 6 أحرف على الأقل');
+      toast.error(t('profile.passwordTooShort'));
       return;
     }
 
@@ -173,13 +175,13 @@ const ProfileSettings: React.FC = () => {
     if (file) {
       // Validate file size (2MB)
       if (file.size > 2 * 1024 * 1024) {
-        toast.error('حجم الصورة يجب ألا يتجاوز 2 ميجابايت');
+        toast.error(t('profile.avatarTooLarge'));
         return;
       }
 
       // Validate file type
       if (!file.type.startsWith('image/')) {
-        toast.error('يجب أن يكون الملف صورة');
+        toast.error(t('profile.avatarInvalidType'));
         return;
       }
 
@@ -191,10 +193,10 @@ const ProfileSettings: React.FC = () => {
     try {
       await apiClient.post('/auth/logout');
       localStorage.removeItem('token');
-      toast.success('تم تسجيل الخروج بنجاح');
+      toast.success(t('auth.logoutSuccess'));
       navigate('/login');
     } catch (error) {
-      toast.error('حدث خطأ أثناء تسجيل الخروج');
+      toast.error(t('auth.logoutError'));
     }
   };
 
@@ -207,9 +209,9 @@ const ProfileSettings: React.FC = () => {
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-foreground flex items-center gap-3">
             <User className="w-8 h-8 text-primary" />
-            الملف الشخصي
+            {t('nav.profile')}
           </h1>
-          <p className="text-muted-foreground mt-1">إدارة معلوماتك الشخصية</p>
+          <p className="text-muted-foreground mt-1">{t('profile.subtitle')}</p>
         </div>
         <Button
           onClick={() => setShowLogoutDialog(true)}
@@ -217,7 +219,7 @@ const ProfileSettings: React.FC = () => {
           className="gap-2"
         >
           <LogOut className="w-4 h-4" />
-          تسجيل الخروج
+          {t('auth.logout')}
         </Button>
       </div>
 
@@ -233,13 +235,13 @@ const ProfileSettings: React.FC = () => {
         <Card className="glass-card">
           <CardContent className="pt-6 text-center">
             <AlertCircle className="w-12 h-12 text-destructive mx-auto mb-4" />
-            <p className="text-destructive">حدث خطأ أثناء تحميل الملف الشخصي</p>
+            <p className="text-destructive">{t('common.errorLoading')}</p>
             <Button
               variant="outline"
               onClick={() => queryClient.invalidateQueries({ queryKey: ['profile'] })}
               className="mt-4"
             >
-              إعادة المحاولة
+              {t('common.retry')}
             </Button>
           </CardContent>
         </Card>
@@ -251,7 +253,7 @@ const ProfileSettings: React.FC = () => {
           {/* Avatar Section */}
           <Card className="glass-card">
             <CardHeader>
-              <CardTitle>الصورة الشخصية</CardTitle>
+              <CardTitle>{t('profile.avatar')}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex flex-col sm:flex-row items-center gap-6">
@@ -271,7 +273,7 @@ const ProfileSettings: React.FC = () => {
                 </div>
                 <div className="flex-1 space-y-3">
                   <p className="text-sm text-muted-foreground">
-                    صورة بصيغة JPG أو PNG. الحد الأقصى 2 ميجابايت.
+                    {t('profile.avatarHelp')}
                   </p>
                   <div className="flex gap-2">
                     <input
@@ -288,7 +290,7 @@ const ProfileSettings: React.FC = () => {
                       className="gap-2"
                     >
                       <Upload className="w-4 h-4" />
-                      رفع صورة
+                      {t('common.upload')}
                     </Button>
                     {avatarUrl && (
                       <Button
@@ -302,7 +304,7 @@ const ProfileSettings: React.FC = () => {
                         ) : (
                           <Trash2 className="w-4 h-4" />
                         )}
-                        حذف
+                        {t('common.delete')}
                       </Button>
                     )}
                   </div>
@@ -314,7 +316,7 @@ const ProfileSettings: React.FC = () => {
           {/* Profile Information */}
           <Card className="glass-card">
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>المعلومات الشخصية</CardTitle>
+              <CardTitle>{t('profile.personalInfo')}</CardTitle>
               <Button
                 onClick={() => setIsEditingProfile(true)}
                 variant="outline"
@@ -322,25 +324,25 @@ const ProfileSettings: React.FC = () => {
                 className="gap-2"
               >
                 <User className="w-4 h-4" />
-                تعديل
+                {t('common.edit')}
               </Button>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-muted-foreground">الاسم</Label>
+                  <Label className="text-muted-foreground">{t('common.name')}</Label>
                   <p className="font-medium">{profile.name}</p>
                 </div>
                 <div>
-                  <Label className="text-muted-foreground">البريد الإلكتروني</Label>
+                  <Label className="text-muted-foreground">{t('common.email')}</Label>
                   <p className="font-medium">{profile.email}</p>
                 </div>
                 <div>
-                  <Label className="text-muted-foreground">رقم الهاتف</Label>
+                  <Label className="text-muted-foreground">{t('common.phone')}</Label>
                   <p className="font-medium">{profile.phone || '-'}</p>
                 </div>
                 <div>
-                  <Label className="text-muted-foreground">الدور الوظيفي</Label>
+                  <Label className="text-muted-foreground">{t('common.role')}</Label>
                   <p className="font-medium">{profile.role?.name || '-'}</p>
                 </div>
               </div>
@@ -350,13 +352,13 @@ const ProfileSettings: React.FC = () => {
           {/* Security Section */}
           <Card className="glass-card">
             <CardHeader>
-              <CardTitle>الأمان</CardTitle>
+              <CardTitle>{t('profile.security')}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium">كلمة المرور</p>
-                  <p className="text-sm text-muted-foreground">آخر تغيير منذ فترة</p>
+                  <p className="font-medium">{t('profile.password')}</p>
+                  <p className="text-sm text-muted-foreground">{t('profile.passwordSubtitle')}</p>
                 </div>
                 <Button
                   onClick={() => setIsChangingPassword(true)}
@@ -364,7 +366,7 @@ const ProfileSettings: React.FC = () => {
                   className="gap-2"
                 >
                   <Lock className="w-4 h-4" />
-                  تغيير كلمة المرور
+                  {t('profile.changePassword')}
                 </Button>
               </div>
             </CardContent>
@@ -376,19 +378,19 @@ const ProfileSettings: React.FC = () => {
       <Dialog open={isEditingProfile} onOpenChange={setIsEditingProfile}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>تعديل المعلومات الشخصية</DialogTitle>
+            <DialogTitle>{t('profile.editProfile')}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 pt-4">
             <div className="space-y-2">
-              <Label>الاسم الكامل *</Label>
+              <Label>{t('common.name')} *</Label>
               <Input
                 value={profileData.name}
                 onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
-                placeholder="أدخل الاسم الكامل"
+                placeholder={t('profile.namePlaceholder')}
               />
             </div>
             <div className="space-y-2">
-              <Label>البريد الإلكتروني *</Label>
+              <Label>{t('common.email')} *</Label>
               <Input
                 type="email"
                 value={profileData.email}
@@ -397,7 +399,7 @@ const ProfileSettings: React.FC = () => {
               />
             </div>
             <div className="space-y-2">
-              <Label>رقم الهاتف</Label>
+              <Label>{t('common.phone')}</Label>
               <Input
                 value={profileData.phone}
                 onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
@@ -413,12 +415,12 @@ const ProfileSettings: React.FC = () => {
                 {updateProfileMutation.isPending ? (
                   <>
                     <Loader2 className="w-4 h-4 ml-2 animate-spin" />
-                    جاري الحفظ...
+                    {t('common.saving')}
                   </>
                 ) : (
                   <>
                     <Save className="w-4 h-4 ml-2" />
-                    حفظ التغييرات
+                    {t('common.saveChanges')}
                   </>
                 )}
               </Button>
@@ -427,7 +429,7 @@ const ProfileSettings: React.FC = () => {
                 onClick={() => setIsEditingProfile(false)}
                 className="flex-1"
               >
-                إلغاء
+                {t('common.cancel')}
               </Button>
             </div>
           </div>
@@ -438,34 +440,34 @@ const ProfileSettings: React.FC = () => {
       <Dialog open={isChangingPassword} onOpenChange={setIsChangingPassword}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>تغيير كلمة المرور</DialogTitle>
+            <DialogTitle>{t('profile.changePassword')}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 pt-4">
             <div className="space-y-2">
-              <Label>كلمة المرور الحالية *</Label>
+              <Label>{t('profile.currentPassword')} *</Label>
               <Input
                 type="password"
                 value={passwordData.current_password}
                 onChange={(e) => setPasswordData({ ...passwordData, current_password: e.target.value })}
-                placeholder="أدخل كلمة المرور الحالية"
+                placeholder={t('profile.currentPasswordPlaceholder')}
               />
             </div>
             <div className="space-y-2">
-              <Label>كلمة المرور الجديدة *</Label>
+              <Label>{t('profile.newPassword')} *</Label>
               <Input
                 type="password"
                 value={passwordData.new_password}
                 onChange={(e) => setPasswordData({ ...passwordData, new_password: e.target.value })}
-                placeholder="أدخل كلمة المرور الجديدة"
+                placeholder={t('profile.newPasswordPlaceholder')}
               />
             </div>
             <div className="space-y-2">
-              <Label>تأكيد كلمة المرور الجديدة *</Label>
+              <Label>{t('profile.confirmNewPassword')} *</Label>
               <Input
                 type="password"
                 value={passwordData.new_password_confirmation}
                 onChange={(e) => setPasswordData({ ...passwordData, new_password_confirmation: e.target.value })}
-                placeholder="أعد إدخال كلمة المرور الجديدة"
+                placeholder={t('profile.confirmNewPasswordPlaceholder')}
               />
             </div>
             <div className="flex gap-2 pt-4">
@@ -477,12 +479,12 @@ const ProfileSettings: React.FC = () => {
                 {changePasswordMutation.isPending ? (
                   <>
                     <Loader2 className="w-4 h-4 ml-2 animate-spin" />
-                    جاري التغيير...
+                    {t('common.processing')}
                   </>
                 ) : (
                   <>
                     <Lock className="w-4 h-4 ml-2" />
-                    تغيير كلمة المرور
+                    {t('profile.changePassword')}
                   </>
                 )}
               </Button>
@@ -498,7 +500,7 @@ const ProfileSettings: React.FC = () => {
                 }}
                 className="flex-1"
               >
-                إلغاء
+                {t('common.cancel')}
               </Button>
             </div>
           </div>
@@ -509,18 +511,18 @@ const ProfileSettings: React.FC = () => {
       <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>تأكيد تسجيل الخروج</AlertDialogTitle>
+            <AlertDialogTitle>{t('auth.logoutConfirmTitle')}</AlertDialogTitle>
             <AlertDialogDescription>
-              هل أنت متأكد من تسجيل الخروج من النظام؟
+              {t('auth.logoutConfirmDescription')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleLogout}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              تسجيل الخروج
+              {t('auth.logout')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -6,20 +6,18 @@ import { Users, TrendingUp, DollarSign, Award, BarChart3, Loader2, AlertCircle }
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { useTheme } from '@/contexts/ThemeContext';
 import { salesPerformanceService, type SalesPerformance } from '@/api/salesPerformanceService';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 
 const SalesPerformanceReport: React.FC = () => {
-  const { t } = useTranslation();
-  const { isRTL } = useTheme();
+  const { t, i18n } = useTranslation();
+  const isAr = i18n.language === 'ar';
   
   const [dateRange] = useState({
     start_date: format(startOfMonth(new Date()), 'yyyy-MM-dd'),
     end_date: format(endOfMonth(new Date()), 'yyyy-MM-dd'),
   });
 
-  // Fetch all users performance
   const { data: performanceResponse, isLoading, error, refetch } = useQuery({
     queryKey: ['sales-performance', dateRange],
     queryFn: () => salesPerformanceService.getAll(dateRange),
@@ -34,24 +32,28 @@ const SalesPerformanceReport: React.FC = () => {
 
   const performanceData = performanceResponse?.data || [];
   
-  // Add rank to performance data
   const rankedData = performanceData.map((item: SalesPerformance, index: number) => ({
     ...item,
     rank: index + 1,
   }));
 
-  // Prepare chart data
   const chartData = rankedData.slice(0, 10).map((p: SalesPerformance & { rank: number }) => ({
     name: p.user_name,
     sales: p.total_sales,
   }));
 
-  // Calculate totals
   const totals = {
     totalSales: performanceData.reduce((sum: number, p: SalesPerformance) => sum + p.total_sales, 0),
     totalInvoices: performanceData.reduce((sum: number, p: SalesPerformance) => sum + p.total_invoices, 0),
     topPerformer: rankedData[0]?.user_name || '-',
     activeCashiers: performanceData.length,
+  };
+
+  const formatCurrency = (value: number) => {
+    return value.toLocaleString(isAr ? 'ar-SA' : 'en-US', { 
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2 
+    });
   };
 
   return (
@@ -60,9 +62,9 @@ const SalesPerformanceReport: React.FC = () => {
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-foreground flex items-center gap-3">
             <BarChart3 className="w-8 h-8 text-primary" />
-            تقرير أداء المبيعات
+            {t('nav.salesPerformance')}
           </h1>
-          <p className="text-muted-foreground mt-1">متابعة أداء الموظفين في المبيعات</p>
+          <p className="text-muted-foreground mt-1">{t('performance.subtitle')}</p>
         </div>
       </div>
 
@@ -76,9 +78,9 @@ const SalesPerformanceReport: React.FC = () => {
         <Card className="glass-card">
           <CardContent className="pt-6 text-center">
             <AlertCircle className="w-12 h-12 text-destructive mx-auto mb-4" />
-            <p className="text-destructive">حدث خطأ أثناء تحميل تقرير الأداء</p>
+            <p className="text-destructive">{t('common.errorLoading')}</p>
             <Button variant="outline" onClick={() => refetch()} className="mt-4">
-              إعادة المحاولة
+              {t('common.retry')}
             </Button>
           </CardContent>
         </Card>
@@ -95,12 +97,9 @@ const SalesPerformanceReport: React.FC = () => {
                   </div>
                   <div>
                     <p className="text-2xl font-bold text-foreground">
-                      {totals.totalSales.toLocaleString('ar-SA', { 
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2 
-                      })}
+                      {formatCurrency(totals.totalSales)}
                     </p>
-                    <p className="text-xs text-muted-foreground">إجمالي المبيعات</p>
+                    <p className="text-xs text-muted-foreground">{t('performance.totalSales')}</p>
                   </div>
                 </div>
               </CardContent>
@@ -113,7 +112,7 @@ const SalesPerformanceReport: React.FC = () => {
                   </div>
                   <div>
                     <p className="text-2xl font-bold text-foreground">{totals.totalInvoices}</p>
-                    <p className="text-xs text-muted-foreground">إجمالي الفواتير</p>
+                    <p className="text-xs text-muted-foreground">{t('performance.totalInvoices')}</p>
                   </div>
                 </div>
               </CardContent>
@@ -126,7 +125,7 @@ const SalesPerformanceReport: React.FC = () => {
                   </div>
                   <div>
                     <p className="text-xl font-bold text-foreground truncate">{totals.topPerformer}</p>
-                    <p className="text-xs text-muted-foreground">الأفضل أداءً</p>
+                    <p className="text-xs text-muted-foreground">{t('performance.topPerformer')}</p>
                   </div>
                 </div>
               </CardContent>
@@ -139,7 +138,7 @@ const SalesPerformanceReport: React.FC = () => {
                   </div>
                   <div>
                     <p className="text-2xl font-bold text-foreground">{totals.activeCashiers}</p>
-                    <p className="text-xs text-muted-foreground">الموظفين النشطين</p>
+                    <p className="text-xs text-muted-foreground">{t('performance.activeEmployees')}</p>
                   </div>
                 </div>
               </CardContent>
@@ -149,7 +148,7 @@ const SalesPerformanceReport: React.FC = () => {
           {chartData.length > 0 && (
             <Card className="glass-card">
               <CardHeader>
-                <CardTitle>المبيعات حسب الموظف</CardTitle>
+                <CardTitle>{t('performance.salesByEmployee')}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="h-[300px]">
@@ -165,7 +164,7 @@ const SalesPerformanceReport: React.FC = () => {
                           borderRadius: '8px',
                         }}
                       />
-                      <Bar dataKey="sales" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} name="المبيعات" />
+                      <Bar dataKey="sales" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} name={t('performance.sales')} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -175,26 +174,26 @@ const SalesPerformanceReport: React.FC = () => {
 
           <Card className="glass-card">
             <CardHeader>
-              <CardTitle>التقرير التفصيلي</CardTitle>
+              <CardTitle>{t('performance.detailedReport')}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-muted/50">
                     <tr>
-                      <th className="text-center py-4 px-4 font-medium text-muted-foreground">الترتيب</th>
-                      <th className="text-start py-4 px-4 font-medium text-muted-foreground">الموظف</th>
-                      <th className="text-center py-4 px-4 font-medium text-muted-foreground">إجمالي المبيعات</th>
-                      <th className="text-center py-4 px-4 font-medium text-muted-foreground">عدد الفواتير</th>
-                      <th className="text-center py-4 px-4 font-medium text-muted-foreground">متوسط الفاتورة</th>
-                      <th className="text-center py-4 px-4 font-medium text-muted-foreground">هامش الربح</th>
+                      <th className="text-center py-4 px-4 font-medium text-muted-foreground">{t('performance.rank')}</th>
+                      <th className="text-start py-4 px-4 font-medium text-muted-foreground">{t('common.employee')}</th>
+                      <th className="text-center py-4 px-4 font-medium text-muted-foreground">{t('performance.totalSales')}</th>
+                      <th className="text-center py-4 px-4 font-medium text-muted-foreground">{t('performance.totalInvoices')}</th>
+                      <th className="text-center py-4 px-4 font-medium text-muted-foreground">{t('performance.averageInvoice')}</th>
+                      <th className="text-center py-4 px-4 font-medium text-muted-foreground">{t('performance.profitMargin')}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {rankedData.length === 0 ? (
                       <tr>
                         <td colSpan={6} className="text-center py-12 text-muted-foreground">
-                          لا توجد بيانات أداء
+                          {t('performance.noData')}
                         </td>
                       </tr>
                     ) : (
@@ -218,19 +217,13 @@ const SalesPerformanceReport: React.FC = () => {
                             </div>
                           </td>
                           <td className="py-4 px-4 text-center text-primary font-semibold">
-                            {employee.total_sales.toLocaleString('ar-SA', { 
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 2 
-                            })}
+                            {formatCurrency(employee.total_sales)}
                           </td>
                           <td className="py-4 px-4 text-center text-muted-foreground">
                             {employee.total_invoices}
                           </td>
                           <td className="py-4 px-4 text-center text-success font-semibold">
-                            {employee.average_invoice_value.toLocaleString('ar-SA', { 
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 2 
-                            })}
+                            {formatCurrency(employee.average_invoice_value)}
                           </td>
                           <td className="py-4 px-4 text-center">
                             <span className="px-2 py-1 rounded-full text-xs font-medium bg-success/10 text-success">

@@ -1,87 +1,64 @@
 {
-  "app": { "name": "" },
   "nav": {
-    "dashboard": "لوحة التحكم", "pos": "نقطة البيع", "products": "المنتجات", "productsList": "قائمة المنتجات",
-    "addProduct": "إضافة منتج", "importProducts": "استيراد المنتجات", "sales": "المبيعات", "purchases": "المشتريات",
-    "addPurchase": "إضافة فاتورة شراء", "returns": "المرتجعات", "debts": "إدارة الديون", "reports": "التقارير",
-    "profitReport": "تقرير الأرباح", "salesReport": "تقرير المبيعات", "purchasesReport": "تقرير المشتريات",
-    "salesSummary": "ملخص المبيعات", "purchasesSummary": "ملخص المشتريات", "summaryReport": "الملخص",
-    "people": "الأشخاص", "customers": "العملاء", "suppliers": "الموردين", "users": "المستخدمين",
-    "settings": "الإعدادات", "generalSettings": "الإعدادات العامة", "wallets": "المحافظ الإلكترونية",
-    "units": "الوحدات", "currencies": "العملات", "categories": "الفئات", "brands": "العلامات التجارية",
-    "roles": "الأدوار والصلاحيات", "analytics": "التحليلات الذكية", "basketAnalysis": "تحليل سلة المشتريات",
-    "productPerformance": "أداء المنتجات", "employees": "الموظفين", "attendance": "الحضور والانصراف",
-    "salesPerformance": "أداء المبيعات", "loyaltySettings": "برنامج الولاء", "expenses": "المصروفات"
+    "dashboard": "لوحة التحكم",
+    "pos": "نقطة البيع",
+    "products": "المنتجات",
+    "categories": "التصنيفات",
+    "brands": "العلامات التجارية",
+    "units": "الوحدات",
+    "purchases": "المشتريات",
+    "sales": "المبيعات",
+    "returns": "المرتجعات",
+    "expenses": "المصروفات",
+    "customers": "العملاء",
+    "suppliers": "الموردين",
+    "reports": "التقارير",
+    "users": "المستخدمين",
+    "settings": "الإعدادات",
+    "generalSettings": "الإعدادات العامة",
+    "profileSettings": "الملف الشخصي",
+    "walletSettings": "إعدادات المحافظ",
+    "attendance": "الحضور والانصراف",
+    "salesPerformance": "أداء المبيعات",
+    "productPerformance": "أداء المنتجات"
   },
-  "dashboard": {
-    "title": "لوحة التحكم", "welcome": "مرحباً بك", "overview": "نظرة عامة على أداء متجرك",
-    "totalSales": "إجمالي المبيعات", "totalPurchases": "إجمالي المشتريات", "totalProfit": "إجمالي الأرباح",
-    "totalProducts": "عدد المنتجات", "totalReturns": "إجمالي المرتجعات", "totalSuppliers": "عدد الموردين",
-    "totalCustomers": "عدد العملاء", "totalDebts": "إجمالي الديون", "recentSales": "آخر المبيعات",
-    "topProducts": "المنتجات الأكثر مبيعاً", "salesChart": "مخطط المبيعات", "today": "اليوم",
-    "thisWeek": "هذا الأسبوع", "thisMonth": "هذا الشهر", "fromLastWeek": "من الأسبوع الماضي",
-    "newProducts": "منتجات جديدة", "cashInHand": "النقد في الصندوق", "currentBalance": "الرصيد الحالي",
-    "totalExpenses": "إجمالي المصروفات", "netProfit": "صافي الربح", "afterExpenses": "بعد المصروفات",
-    "lowStock": "مخزون منخفض", "transactions": "معاملة", "margin": "هامش الربح", "active": "نشط"
+  "common": {
+    "add": "إضافة", "edit": "تعديل", "delete": "حذف", "save": "حفظ", "cancel": "إلغاء", "search": "بحث",
+    "actions": "الإجراءات", "status": "الحالة", "active": "مفعل", "inactive": "غير مفعل", "all": "الكل",
+    "date": "التاريخ", "name": "الاسم", "phone": "الهاتف", "email": "البريد الإلكتروني", "address": "العنوان",
+    "loading": "جاري التحميل...", "error": "حدث خطأ ما", "success": "تمت العملية بنجاح", "retry": "إعادة المحاولة",
+    "confirm": "تأكيد", "confirmDelete": "تأكيد الحذف", "noData": "لا توجد بيانات", "employee": "الموظف",
+    "selectEmployee": "اختر موظف", "allEmployees": "جميع الموظفين", "errorLoading": "فشل في تحميل البيانات",
+    "adding": "جاري الإضافة...", "saving": "جاري الحفظ...", "deleteUserWarning": "هل أنت متأكد من حذف هذا العنصر؟ لا يمكن التراجع عن هذا الإجراء.",
+    "notSpecified": "غير محدد", "requiredFields": "يرجى ملء الحقول المطلوبة"
   },
-  "insights": {
-    "title": "رؤى ذكية", "topSelling": "المنتج الأكثر مبيعاً", "topSellingDesc": "قهوة عربية فاخرة - 450 وحدة هذا الشهر",
-    "lowStock": "تنبيه المخزون", "lowStockDesc": "حليب طازج سينفد خلال 3 أيام بناءً على معدل البيع",
-    "salesTrend": "اتجاه المبيعات", "salesTrendDesc": "المبيعات ارتفعت 15% مقارنة بالأسبوع الماضي",
-    "peakHours": "ساعات الذروة", "peakHoursDesc": "أعلى مبيعات بين 4-7 مساءً"
+  "roles": {
+    "admin": "مدير النظام", "cashier": "كاشير", "accountant": "محاسب", "stockManager": "مدير مخزن"
   },
-  "forecast": {
-    "title": "توقعات المبيعات", "subtitle": "المبيعات الفعلية والمتوقعة للأسبوع القادم",
-    "actualSales": "المبيعات الفعلية", "expectedSales": "المبيعات المتوقعة"
-  },
-  "basketAnalysis": {
-    "title": "تحليل سلة المشتريات", "subtitle": "اكتشف المنتجات التي يشتريها العملاء معاً",
-    "productPairs": "أزواج المنتجات", "highestCorrelation": "أعلى ارتباط", "totalTransactions": "إجمالي المعاملات",
-    "sortBy": "ترتيب حسب", "byPercentage": "النسبة المئوية", "byCount": "عدد المعاملات",
-    "pairsList": "قائمة الأزواج", "ifBuys": "إذا اشترى العميل...", "alsoBuys": "فإنه يشتري أيضاً...",
-    "probability": "الاحتمالية", "transactions": "المعاملات"
-  },
-  "productPerformance": {
-    "title": "تحليل أداء المنتجات", "subtitle": "تعرف على المنتجات الذهبية والراكدة",
-    "goldenProducts": "المنتجات الذهبية", "stagnantProducts": "المنتجات الراكدة",
-    "goldenProductsTitle": "المنتجات الأعلى ربحاً", "stagnantProductsTitle": "منتجات لم تُباع منذ 30 يوم",
-    "totalProfit": "إجمالي الربح", "stagnantValue": "قيمة الراكد", "soldQuantity": "الكمية المباعة",
-    "profitMargin": "هامش الربح", "lastSold": "آخر بيع", "daysStagnant": "أيام الركود",
-    "stockValue": "قيمة المخزون", "quickDiscount": "خصم سريع", "discountCreated": "تم إنشاء خصم لـ", "days": "يوم"
-  },
-  "loyalty": {
-    "settingsTitle": "إعدادات برنامج الولاء", "settingsSubtitle": "إدارة نقاط المكافآت وقواعد الاستبدال",
-    "programStatus": "حالة البرنامج", "enableProgram": "تفعيل برنامج الولاء",
-    "enableProgramDesc": "السماح للعملاء بكسب واستبدال النقاط", "activeMembers": "الأعضاء النشطين",
-    "totalPointsIssued": "إجمالي النقاط الصادرة", "pointsConfig": "إعدادات النقاط",
-    "pointsPerCurrency": "نقاط لكل ريال", "pointsPerCurrencyDesc": "نقطة لكل ريال مصروف",
-    "currencyPerPoint": "قيمة النقطة", "currencyPerPointDesc": "ريال لكل نقطة عند الاستبدال",
-    "minimumRedemption": "الحد الأدنى للاستبدال", "minimumRedemptionDesc": "نقطة كحد أدنى",
-    "bonusSettings": "مكافآت إضافية", "welcomeBonus": "مكافأة الترحيب",
-    "welcomeBonusDesc": "نقطة عند التسجيل", "birthdayBonus": "مكافأة عيد الميلاد",
-    "birthdayBonusDesc": "نقطة في عيد الميلاد", "expirySettings": "انتهاء الصلاحية",
-    "expiryDays": "مدة الصلاحية", "expiryDaysDesc": "يوم قبل انتهاء النقاط",
-    "expiryWarning": "النقاط غير المستخدمة ستنتهي صلاحيتها بعد المدة المحددة", "settingsSaved": "تم حفظ الإعدادات"
-  },
-  "attendance": {
-    "title": "الحضور والانصراف", "subtitle": "متابعة دوام الموظفين", "records": "سجل الحضور",
-    "employee": "الموظف", "date": "التاريخ", "checkIn": "تسجيل الدخول", "checkOut": "تسجيل الخروج",
-    "totalHours": "إجمالي الساعات", "presentToday": "حاضرون اليوم", "lateToday": "متأخرون",
-    "absentToday": "غائبون", "totalEmployees": "إجمالي الموظفين", "selectEmployee": "اختر موظف",
-    "allEmployees": "جميع الموظفين", "present": "حاضر", "late": "متأخر", "absent": "غائب"
-  },
-  "salesPerformance": {
-    "title": "تقرير أداء المبيعات", "subtitle": "أداء الكاشير وإحصائيات المبيعات",
-    "totalSales": "إجمالي المبيعات", "totalTransactions": "إجمالي المعاملات", "topPerformer": "أفضل أداء",
-    "activeCashiers": "الكاشير النشط", "salesByEmployee": "المبيعات حسب الموظف", "detailedReport": "التقرير التفصيلي",
-    "rank": "الترتيب", "employee": "الموظف", "transactions": "المعاملات", "avgTransaction": "متوسط المعاملة", "sales": "المبيعات"
+  "auth": { 
+    "login": "تسجيل الدخول", "logout": "تسجيل الخروج", "email": "البريد الإلكتروني", "password": "كلمة المرور", 
+    "signingIn": "جاري تسجيل الدخول...", "welcomeBack": "مرحباً بك مجدداً", "invalidCredentials": "بيانات الدخول غير صحيحة",
+    "logoutSuccess": "تم تسجيل الخروج بنجاح", "logoutError": "حدث خطأ أثناء تسجيل الخروج",
+    "logoutConfirmTitle": "تأكيد تسجيل الخروج", "logoutConfirmDescription": "هل أنت متأكد من تسجيل الخروج من النظام؟"
   },
   "pos": { "title": "نقطة البيع", "searchProducts": "البحث عن منتج...", "scanBarcode": "امسح الباركود أو اكتب الرقم...", "productNotFound": "المنتج غير موجود", "available": "متوفر", "cart": "السلة", "emptyCart": "السلة فارغة", "subtotal": "المجموع الفرعي", "tax": "الضريبة", "discount": "الخصم", "total": "الإجمالي", "pay": "الدفع", "clear": "مسح", "hold": "تعليق", "quantity": "الكمية", "price": "السعر", "all": "الكل", "customer": "العميل", "walkInCustomer": "عميل عابر", "addedToCart": "تمت إضافة", "cartCleared": "تم مسح السلة" },
   "categories": { "drinks": "مشروبات", "snacks": "وجبات خفيفة", "dairy": "منتجات ألبان", "bakery": "مخبوزات", "spices": "توابل" },
   "units": { "piece": "حبة", "box": "علبة", "kg": "كيلوجرام", "liter": "لتر", "gram": "جرام" },
   "receipt": { "title": "إرسال الإيصال", "paymentSuccess": "تم الدفع بنجاح!", "sendReceipt": "كيف تريد إرسال الإيصال؟", "phonePlaceholder": "رقم الواتساب (مثال: 966501234567)", "emailPlaceholder": "البريد الإلكتروني", "whatsapp": "واتساب", "email": "إيميل", "print": "طباعة", "done": "تم", "enterPhone": "أدخل رقم الهاتف", "enterEmail": "أدخل البريد الإلكتروني", "whatsappSent": "تم فتح الواتساب", "emailSent": "تم إرسال الإيصال", "printing": "جاري الطباعة...", "whatsappMessage": "إيصال مشترياتك - المبلغ الإجمالي: {{total}} ريال" },
   "customers": { "customerProfile": "ملف العميل", "view360": "عرض شامل 360 درجة", "memberSince": "عضو منذ", "loyaltyPoints": "نقاط الولاء", "totalPurchases": "إجمالي المشتريات", "visits": "الزيارات", "avgPurchase": "متوسط الشراء", "points": "نقاط", "basicInfo": "المعلومات الأساسية", "invoices": "الفواتير", "favorites": "المفضلة", "debts": "الديون", "loyalty": "الولاء", "phone": "الهاتف", "email": "البريد", "address": "العنوان", "invoiceHistory": "سجل الفواتير", "items": "عناصر", "favoriteProducts": "المنتجات المفضلة", "purchased": "اشترى", "times": "مرات", "debtHistory": "سجل الديون", "totalAmount": "المبلغ الكلي", "paid": "المدفوع", "remaining": "المتبقي", "loyaltyHistory": "سجل نقاط الولاء" },
-  "expenses": { "title": "إدارة المصروفات", "subtitle": "تتبع مصروفات المتجر", "addExpense": "إضافة مصروف", "editExpense": "تعديل المصروف", "totalExpenses": "إجمالي المصروفات", "cashExpenses": "مصروفات نقدية", "walletExpenses": "مصروفات إلكترونية", "searchExpenses": "بحث في المصروفات...", "filterByCategory": "فلترة حسب الفئة", "allCategories": "جميع الفئات", "expensesList": "قائمة المصروفات", "date": "التاريخ", "category": "الفئة", "description": "الوصف", "descriptionPlaceholder": "وصف المصروف...", "amount": "المبلغ", "paymentMethod": "طريقة الدفع", "cash": "نقدي", "wallet": "إلكتروني", "selectCategory": "اختر الفئة", "requiredFields": "يرجى ملء الحقول المطلوبة", "addSuccess": "تم إضافة المصروف", "editSuccess": "تم تعديل المصروف", "deleteSuccess": "تم حذف المصروف" },
+  "expenses": { 
+    "title": "إدارة المصروفات", "subtitle": "تتبع مصروفات المتجر", "addExpense": "إضافة مصروف", "editExpense": "تعديل المصروف", 
+    "totalExpenses": "إجمالي المصروفات", "cashExpenses": "مصروفات نقدية", "walletExpenses": "مصروفات إلكترونية", 
+    "searchExpenses": "بحث في المصروفات...", "filterByCategory": "فلترة حسب الفئة", "allCategories": "جميع الفئات", 
+    "expensesList": "قائمة المصروفات", "date": "التاريخ", "category": "الفئة", "description": "الوصف", 
+    "descriptionPlaceholder": "وصف المصروف...", "amount": "المبلغ", "paymentMethod": "طريقة الدفع", 
+    "cash": "نقدي", "wallet": "إلكتروني", "selectCategory": "اختر الفئة", "requiredFields": "يرجى ملء الحقول المطلوبة",
+    "addSuccess": "تم إضافة المصروف بنجاح", "editSuccess": "تم تعديل المصروف بنجاح", "deleteSuccess": "تم حذف المصروف بنجاح",
+    "categories": {
+      "rent": "إيجار", "utilities": "فواتير", "salaries": "رواتب", "supplies": "مستلزمات", 
+      "maintenance": "صيانة", "marketing": "تسويق", "other": "أخرى"
+    }
+  },
   "payment": { "title": "إتمام الدفع", "totalAmount": "المبلغ الإجمالي", "selectMethod": "اختر طريقة الدفع", "cash": "نقدي", "wallet": "محفظة", "credit": "دين", "walletType": "نوع المحفظة", "selectWallet": "اختر المحفظة", "transactionCode": "رقم العملية", "enterTransactionCode": "أدخل رقم/كود العملية", "selectCustomer": "اختر العميل", "chooseCustomer": "اختر عميل", "creditNote": "سيتم تسجيل هذه الفاتورة كدين على العميل المحدد", "confirm": "تأكيد الدفع", "cashSuccess": "تم الدفع نقداً بنجاح", "walletSuccess": "تم الدفع عبر", "creditSuccess": "تم تسجيل الفاتورة كدين على" },
   "debts": { "title": "إدارة الديون", "subtitle": "تتبع وتحصيل ديون العملاء", "totalDebts": "إجمالي الديون", "debtorsCount": "عدد المدينين", "unpaidInvoices": "الفواتير غير المدفوعة", "customersList": "قائمة العملاء المدينين", "searchCustomer": "بحث عن عميل...", "customerName": "اسم العميل", "phone": "الهاتف", "totalDebt": "إجمالي الدين", "invoices": "فواتير", "lastPurchase": "آخر شراء", "viewDetails": "عرض التفاصيل", "customerDetails": "تفاصيل ديون العميل", "manageCustomerDebt": "إدارة وتحصيل ديون العميل", "customerInfo": "معلومات العميل", "email": "البريد الإلكتروني", "address": "العنوان", "remainingDebt": "الدين المتبقي", "collectPayment": "تحصيل دفعة", "invoiceNumber": "رقم الفاتورة", "date": "التاريخ", "invoiceAmount": "مبلغ الفاتورة", "paidAmount": "المبلغ المدفوع", "remainingAmount": "المبلغ المتبقي", "pay": "دفع", "noUnpaidInvoices": "لا توجد فواتير غير مدفوعة", "paymentHistory": "سجل الدفعات", "amount": "المبلغ", "forInvoice": "للفاتورة", "noPayments": "لا توجد دفعات مسجلة", "recordPayment": "تسجيل دفعة", "payingFor": "الدفع لـ", "remaining": "المتبقي", "paymentAmount": "مبلغ الدفعة", "confirmPayment": "تأكيد الدفعة", "invalidAmount": "مبلغ غير صالح", "amountExceedsDebt": "المبلغ يتجاوز الدين المتبقي", "paymentSuccess": "تم تسجيل الدفعة بنجاح" },
   "products": { "title": "المنتجات", "subtitle": "إدارة منتجات متجرك", "name": "اسم المنتج", "sku": "رمز المنتج", "category": "الفئة", "brand": "العلامة التجارية", "unit": "الوحدة", "purchasePrice": "سعر الشراء", "salePrice": "سعر البيع", "quantity": "الكمية", "expiryDate": "تاريخ الانتهاء", "addProduct": "إضافة منتج", "addProductDesc": "أدخل بيانات المنتج الجديد", "editProduct": "تعديل المنتج", "deleteProduct": "حذف المنتج", "deleteAll": "حذف الكل", "deleteAllConfirm": "هل أنت متأكد من حذف جميع المنتجات؟", "deleteAllSuccess": "تم حذف جميع المنتجات", "basicInfo": "المعلومات الأساسية", "pricingUnits": "الأسعار والوحدات", "selectCategory": "اختر الفئة", "selectBrand": "اختر العلامة", "selectUnit": "اختر الوحدة", "innerUnits": "الوحدات الداخلية", "totalPurchasePrice": "إجمالي سعر الشراء", "unitPrice": "سعر الوحدة", "initialQuantity": "الكمية الابتدائية", "expectedProfit": "الربح المتوقع", "multipleBarcodes": "باركودات متعددة", "multipleBarcodesDesc": "أضف باركودات مختلفة لأوزان مختلفة", "addVariant": "إضافة باركود", "weight": "الوزن", "weightUnit": "وحدة الوزن", "barcode": "الباركود", "stockDeduction": "خصم من المخزون", "noBarcodeVariants": "لم تتم إضافة باركودات بعد", "productAdded": "تمت إضافة المنتج بنجاح", "import": "استيراد", "export": "تصدير", "uploadCSV": "رفع ملف CSV", "downloadTemplate": "تحميل القالب", "filter": "فلترة", "available": "متوفر", "lowStock": "مخزون منخفض", "outOfStock": "نفذ", "status": "حالة المنتج", "statusDescription": "تفعيل أو إلغاء تفعيل المنتج", "image": "صورة المنتج", "imageHint": "PNG أو JPG بحجم أقصى 2MB" },
@@ -90,8 +67,49 @@
   "returns": { "title": "المرتجعات", "subtitle": "إدارة مرتجعات المنتجات", "addReturn": "إضافة مرتجع", "supplier": "المورد", "product": "المنتج", "originalDate": "تاريخ الشراء الأصلي", "returnedQuantity": "الكمية المرتجعة", "originalInvoice": "رقم الفاتورة الأصلية", "amount": "المبلغ", "reason": "السبب" },
   "suppliers": { "title": "الموردين", "subtitle": "إدارة بيانات الموردين", "addSupplier": "إضافة مورد جديد", "editSupplier": "تعديل المورد", "name": "اسم المورد", "phone": "رقم الهاتف", "email": "البريد الإلكتروني", "address": "العنوان", "totalPurchases": "إجمالي المشتريات", "requiredFields": "يرجى ملء الحقول المطلوبة", "addSuccess": "تم إضافة المورد بنجاح", "editSuccess": "تم تعديل المورد بنجاح", "deleteSuccess": "تم حذف المورد" },
   "people": { "customersSubtitle": "إدارة بيانات العملاء", "addCustomer": "إضافة عميل", "visits": "زيارة", "totalPurchases": "إجمالي المشتريات", "suppliersSubtitle": "إدارة بيانات الموردين", "usersSubtitle": "إدارة مستخدمي النظام", "addUser": "إضافة مستخدم" },
-  "wallets": { "title": "المحافظ الإلكترونية", "subtitle": "إدارة طرق الدفع الإلكتروني", "addWallet": "إضافة محفظة جديدة", "editWallet": "تعديل المحفظة", "name": "اسم المحفظة", "icon": "الأيقونة", "status": "الحالة", "requiredFields": "يرجى ملء الحقول المطلوبة", "addSuccess": "تم إضافة المحفظة بنجاح", "editSuccess": "تم تعديل المحفظة بنجاح", "deleteSuccess": "تم حذف المحفظة" },
-  "reports": { "title": "التقارير", "salesSummary": "ملخص المبيعات", "salesSummaryDesc": "تحليل شامل لأداء المبيعات", "totalRevenue": "إجمالي الإيرادات", "ordersCount": "عدد الطلبات", "avgOrderValue": "متوسط قيمة الطلب", "uniqueCustomers": "العملاء الفريدين", "weeklySales": "المبيعات الأسبوعية", "topSellingProducts": "المنتجات الأكثر مبيعاً", "soldQuantity": "الكمية المباعة", "dateRange": "الفترة الزمنية", "today": "اليوم", "yesterday": "أمس", "thisWeek": "هذا الأسبوع", "thisMonth": "هذا الشهر", "custom": "فترة مخصصة", "from": "من", "to": "إلى", "generate": "إنشاء التقرير", "profit": "الأرباح", "revenue": "الإيرادات", "expenses": "المصروفات" },
-  "common": { "search": "بحث", "add": "إضافة", "edit": "تعديل", "delete": "حذف", "deleteAll": "حذف الكل", "confirmDeleteAll": "تأكيد حذف الكل", "save": "حفظ", "cancel": "إلغاء", "confirm": "تأكيد", "actions": "الإجراءات", "status": "الحالة", "active": "نشط", "inactive": "غير نشط", "completed": "مكتمل", "pending": "معلق", "cancelled": "ملغي", "loading": "جاري التحميل...", "noData": "لا توجد بيانات", "viewAll": "عرض الكل", "yes": "نعم", "no": "لا", "warning": "تحذير", "filter": "فلترة", "export": "تصدير", "import": "استيراد", "auto": "تلقائي" },
-  "settings": { "title": "الإعدادات", "companyName": "اسم الشركة", "logo": "الشعار", "taxRate": "نسبة الضريبة", "defaultDiscount": "الخصم الافتراضي", "currency": "العملة", "language": "اللغة", "theme": "المظهر", "light": "نهاري", "dark": "ليلي" }
+  "wallets": { 
+    "title": "المحافظ الإلكترونية", "subtitle": "إدارة طرق الدفع الإلكتروني", "addWallet": "إضافة محفظة جديدة", 
+    "editWallet": "تعديل المحفظة", "name": "اسم المحفظة", "icon": "الأيقونة", "status": "الحالة", 
+    "requiredFields": "يرجى ملء الحقول المطلوبة", "addSuccess": "تم إضافة المحفظة بنجاح", 
+    "editSuccess": "تم تعديل المحفظة بنجاح", "deleteSuccess": "تم حذف المحفظة" 
+  },
+  "reports": {
+    "title": "التقارير", "salesSummary": "ملخص المبيعات", "salesSummaryDesc": "تحليل شامل لأداء المبيعات",
+    "uniqueCustomers": "العملاء الفريدون", "weeklySales": "المبيعات الأسبوعية", "topSellingProducts": "المنتجات الأكثر مبيعاً",
+    "soldQuantity": "الكمية المباعة", "dateRange": "الفترة الزمنية", "today": "اليوم", "yesterday": "أمس",
+    "thisWeek": "هذا الأسبوع", "thisMonth": "هذا الشهر", "custom": "مخصص", "from": "من", "to": "إلى",
+    "generate": "إنشاء التقرير", "profit": "الربح", "revenue": "الإيرادات", "expenses": "المصروفات"
+  },
+  "settings": { 
+    "title": "الإعدادات", "companyName": "اسم الشركة", "logo": "الشعار", "taxRate": "نسبة الضريبة", 
+    "defaultDiscount": "الخصم الافتراضي", "currency": "العملة", "language": "اللغة", "theme": "المظهر", 
+    "light": "نهاري", "dark": "ليلي", "profile": "الملف الشخصي", "personalInfo": "المعلومات الشخصية", 
+    "changePassword": "تغيير كلمة المرور", "logout": "تسجيل الخروج",
+    "basicSettings": "إعدادات النظام الأساسية", "companyInfo": "معلومات الشركة", "companyEmail": "البريد الإلكتروني",
+    "companyPhone": "رقم الهاتف", "companyAddress": "العنوان", "companyAddressPlaceholder": "أدخل عنوان الشركة",
+    "selectLogo": "اختر شعار", "uploadLogo": "رفع الشعار", "uploading": "جاري الرفع...",
+    "taxAndPricing": "الضرائب والأسعار", "taxRateHelp": "نسبة الضريبة المضافة على الفواتير (مثال: 15 للضريبة 15%)",
+    "discountHelp": "نسبة الخصم الافتراضية عند إنشاء فاتورة جديدة", "saveSettings": "حفظ الإعدادات",
+    "savingSettings": "جاري الحفظ...", "settingsSaved": "تم حفظ الإعدادات بنجاح", "settingsSaveError": "فشل في حفظ الإعدادات",
+    "logoUploadSuccess": "تم رفع الشعار بنجاح", "logoUploadError": "فشل في رفع الشعار", "selectImageFirst": "يرجى اختيار صورة أولاً",
+    "loadingSettings": "جاري تحميل الإعدادات...", "companyNamePlaceholder": "أدخل اسم الشركة"
+  },
+  "attendance": {
+    "subtitle": "إدارة حضور وانصراف الموظفين", "checkIn": "تسجيل حضور", "checkOut": "تسجيل انصراف", "presentToday": "حاضرون اليوم",
+    "lateToday": "متأخرون اليوم", "absentToday": "غائبون اليوم", "totalEmployees": "إجمالي الموظفين", "records": "سجل الحضور والانصراف",
+    "checkInTime": "وقت الحضور", "checkOutTime": "وقت الانصراف", "workHours": "ساعات العمل", "noRecords": "لا توجد سجلات حضور لهذا اليوم",
+    "present": "حاضر", "late": "متأخر", "absent": "غائب", "halfDay": "نصف يوم"
+  },
+  "performance": {
+    "subtitle": "تحليل أداء مبيعات الموظفين", "totalSales": "إجمالي المبيعات", "totalInvoices": "إجمالي الفواتير", "topPerformer": "الأفضل أداءً",
+    "activeEmployees": "الموظفون النشطون", "salesByEmployee": "المبيعات حسب الموظف", "sales": "المبيعات", "detailedReport": "تقرير الأداء التفصيلي",
+    "rank": "الترتيب", "averageInvoice": "متوسط الفاتورة", "profitMargin": "هامش الربح", "noData": "لا توجد بيانات أداء للفترة المحددة"
+  },
+  "productPerformance": {
+    "title": "أداء المنتجات", "subtitle": "تحليل المنتجات الأكثر مبيعاً والراكدة", "goldenProducts": "المنتجات الذهبية",
+    "stagnantProducts": "المنتجات الراكدة", "totalProfit": "إجمالي الربح", "stagnantValue": "قيمة الركود",
+    "goldenProductsTitle": "المنتجات الأكثر ربحية ومبيعاً", "soldQuantity": "الكمية المباعة", "profitMargin": "هامش الربح",
+    "stagnantProductsTitle": "المنتجات الراكدة (تحتاج تصفية)", "lastSold": "آخر بيع", "daysStagnant": "أيام الركود",
+    "stockValue": "قيمة المخزون", "quickDiscount": "خصم سريع", "days": "يوم", "discountCreated": "تم إنشاء خصم لمنتج"
+  }
 }

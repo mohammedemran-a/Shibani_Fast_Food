@@ -55,10 +55,10 @@ const GeneralSettingsContent: React.FC = () => {
     mutationFn: (data: any) => settingsService.updateSettings(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['settings'] });
-      toast.success('تم حفظ الإعدادات بنجاح');
+      toast.success(t('settings.settingsSaved'));
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'فشل في حفظ الإعدادات');
+      toast.error(error.response?.data?.message || t('settings.settingsSaveError'));
     },
   });
 
@@ -75,11 +75,11 @@ const GeneralSettingsContent: React.FC = () => {
         setLogoPreview(data.data.logo_url);
       }
       setLogoFile(null);
-      toast.success('تم رفع الشعار بنجاح');
+      toast.success(t('settings.logoUploadSuccess'));
     },
     onError: (error: any) => {
       console.error('Upload error:', error);
-      toast.error(error.response?.data?.message || 'فشل في رفع الشعار');
+      toast.error(error.response?.data?.message || t('settings.logoUploadError'));
     },
   });
 
@@ -106,7 +106,7 @@ const GeneralSettingsContent: React.FC = () => {
       uploadLogoMutation.mutate(logoFile);
     } else {
       console.error('No logo file selected');
-      toast.error('يرجى اختيار صورة أولاً');
+      toast.error(t('settings.selectImageFirst'));
     }
   };
 
@@ -116,7 +116,7 @@ const GeneralSettingsContent: React.FC = () => {
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="flex flex-col items-center gap-3">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          <div className="text-muted-foreground">جاري تحميل الإعدادات...</div>
+          <div className="text-muted-foreground">{t('settings.loadingSettings')}</div>
         </div>
       </div>
     );
@@ -126,7 +126,7 @@ const GeneralSettingsContent: React.FC = () => {
     <div className="space-y-6 animate-fade-in">
       <div>
         <h1 className="text-2xl md:text-3xl font-bold text-foreground">{t('nav.generalSettings')}</h1>
-        <p className="text-muted-foreground mt-1">إعدادات النظام الأساسية</p>
+        <p className="text-muted-foreground mt-1">{t('settings.basicSettings')}</p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -138,23 +138,23 @@ const GeneralSettingsContent: React.FC = () => {
         >
           <h3 className="font-semibold text-foreground text-lg flex items-center gap-2">
             <Building2 className="w-5 h-5 text-primary" />
-            معلومات الشركة
+            {t('settings.companyInfo')}
           </h3>
 
           <div className="space-y-2">
-            <Label htmlFor="companyName">اسم الشركة</Label>
+            <Label htmlFor="companyName">{t('settings.companyName')}</Label>
             <Input
               id="companyName"
               value={formData.company_name}
               onChange={(e) => setFormData({ ...formData, company_name: e.target.value })}
-              placeholder="أدخل اسم الشركة"
+              placeholder={t('settings.companyNamePlaceholder')}
             />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="companyEmail" className="flex items-center gap-2">
               <Mail className="w-4 h-4" />
-              البريد الإلكتروني
+              {t('settings.companyEmail')}
             </Label>
             <Input
               id="companyEmail"
@@ -168,7 +168,7 @@ const GeneralSettingsContent: React.FC = () => {
           <div className="space-y-2">
             <Label htmlFor="companyPhone" className="flex items-center gap-2">
               <Phone className="w-4 h-4" />
-              رقم الهاتف
+              {t('settings.companyPhone')}
             </Label>
             <Input
               id="companyPhone"
@@ -181,19 +181,19 @@ const GeneralSettingsContent: React.FC = () => {
           <div className="space-y-2">
             <Label htmlFor="companyAddress" className="flex items-center gap-2">
               <MapPin className="w-4 h-4" />
-              العنوان
+              {t('settings.companyAddress')}
             </Label>
             <Textarea
               id="companyAddress"
               value={formData.company_address}
               onChange={(e) => setFormData({ ...formData, company_address: e.target.value })}
-              placeholder="أدخل عنوان الشركة"
+              placeholder={t('settings.companyAddressPlaceholder')}
               rows={3}
             />
           </div>
 
           <div className="space-y-2">
-            <Label>الشعار</Label>
+            <Label>{t('settings.logo')}</Label>
             <div className="flex items-center gap-4">
               <div className="w-20 h-20 rounded-xl bg-muted flex items-center justify-center overflow-hidden">
                 {logoPreview ? (
@@ -216,7 +216,7 @@ const GeneralSettingsContent: React.FC = () => {
                   onClick={() => document.getElementById('logoInput')?.click()}
                 >
                   <Upload className="w-4 h-4" />
-                  اختر شعار
+                  {t('settings.selectLogo')}
                 </Button>
                 {logoFile && (
                   <Button
@@ -224,7 +224,7 @@ const GeneralSettingsContent: React.FC = () => {
                     disabled={uploadLogoMutation.isPending}
                     size="sm"
                   >
-                    {uploadLogoMutation.isPending ? 'جاري الرفع...' : 'رفع الشعار'}
+                    {uploadLogoMutation.isPending ? t('settings.uploading') : t('settings.uploadLogo')}
                   </Button>
                 )}
               </div>
@@ -239,10 +239,10 @@ const GeneralSettingsContent: React.FC = () => {
           transition={{ delay: 0.1 }}
           className="glass-card p-6 space-y-4"
         >
-          <h3 className="font-semibold text-foreground text-lg">الضرائب والأسعار</h3>
+          <h3 className="font-semibold text-foreground text-lg">{t('settings.taxAndPricing')}</h3>
 
           <div className="space-y-2">
-            <Label htmlFor="taxRate">نسبة الضريبة (%)</Label>
+            <Label htmlFor="taxRate">{t('settings.taxRate')} (%)</Label>
             <Input
               id="taxRate"
               type="number"
@@ -253,12 +253,12 @@ const GeneralSettingsContent: React.FC = () => {
               onChange={(e) => setFormData({ ...formData, tax_rate: Number(e.target.value) })}
             />
             <p className="text-xs text-muted-foreground">
-              نسبة الضريبة المضافة على الفواتير (مثال: 15 للضريبة 15%)
+              {t('settings.taxRateHelp')}
             </p>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="discount">الخصم الافتراضي (%)</Label>
+            <Label htmlFor="discount">{t('settings.defaultDiscount')} (%)</Label>
             <Input
               id="discount"
               type="number"
@@ -269,7 +269,7 @@ const GeneralSettingsContent: React.FC = () => {
               onChange={(e) => setFormData({ ...formData, default_discount: Number(e.target.value) })}
             />
             <p className="text-xs text-muted-foreground">
-              نسبة الخصم الافتراضية عند إنشاء فاتورة جديدة
+              {t('settings.discountHelp')}
             </p>
           </div>
         </motion.div>
@@ -283,7 +283,7 @@ const GeneralSettingsContent: React.FC = () => {
           className="gap-2"
         >
           <Save className="w-4 h-4" />
-          {updateMutation.isPending ? 'جاري الحفظ...' : 'حفظ الإعدادات'}
+          {updateMutation.isPending ? t('settings.savingSettings') : t('settings.saveSettings')}
         </Button>
       </div>
     </div>
