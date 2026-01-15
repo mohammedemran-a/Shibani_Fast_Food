@@ -443,12 +443,7 @@ const ProfileSettings: React.FC = () => {
                     <User className="w-16 h-16 text-primary" />
                   )}
                 </div>
-                <button 
-                  onClick={() => fileInputRef.current?.click()}
-                  className="absolute bottom-0 right-0 p-2 bg-primary text-white rounded-full shadow-lg hover:scale-110 transition-transform"
-                >
-                  <Camera className="w-4 h-4" />
-                </button>
+
                 {updateAvatarMutation.isPending && (
                   <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
                     <Loader2 className="w-8 h-8 animate-spin text-white" />
@@ -459,26 +454,7 @@ const ProfileSettings: React.FC = () => {
                 <h3 className="font-bold text-xl">{profile.name}</h3>
                 <p className="text-sm text-muted-foreground">{profile.role?.name || t('roles.admin')}</p>
               </div>
-              <div className="flex gap-2 w-full">
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleAvatarChange}
-                  className="hidden"
-                />
-                {avatarUrl && (
-                  <Button
-                    onClick={() => deleteAvatarMutation.mutate()}
-                    disabled={deleteAvatarMutation.isPending}
-                    variant="outline"
-                    className="flex-1 gap-2 text-destructive hover:text-destructive"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    {t('common.delete')}
-                  </Button>
-                )}
-              </div>
+
             </CardContent>
           </Card>
 

@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Plus, Search, Edit2, Trash2, Receipt, Calendar, DollarSign,
-  Filter, Download, TrendingDown, Wallet, X
+  Filter, TrendingDown, Wallet, X, Loader2, AlertCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,16 +27,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { DateRangeFilter } from '@/components/reports/DateRangeFilter';
-
-interface Expense {
-  id: number;
-  date: string;
-  category: string;
-  description: string;
-  amount: number;
-  paymentMethod: string;
-  reference?: string;
-}
+import { expenseService, type Expense, type CreateExpenseData, type UpdateExpenseData } from '@/api/expenseService';
 
 const expenseCategories = [
   { id: 'rent', key: 'expenses.categories.rent' },
@@ -47,41 +39,126 @@ const expenseCategories = [
   { id: 'other', key: 'expenses.categories.other' },
 ];
 
-const initialExpenses: Expense[] = [
-  { id: 1, date: '2024-12-18', category: 'rent', description: 'إيجار المحل - ديسمبر', amount: 5000, paymentMethod: 'cash' },
-  { id: 2, date: '2024-12-17', category: 'utilities', description: 'فاتورة الكهرباء', amount: 850, paymentMethod: 'wallet' },
-  { id: 3, date: '2024-12-16', category: 'salaries', description: 'راتب موظف - أحمد', amount: 3500, paymentMethod: 'cash' },
-  { id: 4, date: '2024-12-15', category: 'supplies', description: 'أدوات تنظيف', amount: 120, paymentMethod: 'cash' },
-  { id: 5, date: '2024-12-14', category: 'maintenance', description: 'صيانة التكييف', amount: 300, paymentMethod: 'wallet' },
-];
+interface FormData {
+  date: string;
+  category: string;
+  description: string;
+  amount: string;
+  notes: string;
+}
 
 const ExpenseManagement: React.FC = () => {
-  const { t, i18n } = useTranslation();
-  const [expenses, setExpenses] = useState<Expense[]>(initialExpenses);
+  const { t } = useTranslation();
+  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCategory, setFilterCategory] = useState('all');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
   
   // Form state
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     date: new Date().toISOString().split('T')[0],
     category: '',
     description: '',
     amount: '',
-    paymentMethod: 'cash',
-    reference: '',
+    notes: '',
   });
 
-  const totalExpenses = expenses.reduce((sum, exp) => sum + exp.amount, 0);
-  const cashExpenses = expenses.filter(e => e.paymentMethod === 'cash').reduce((sum, e) => sum + e.amount, 0);
-  const walletExpenses = expenses.filter(e => e.paymentMethod === 'wallet').reduce((sum, e) => sum + e.amount, 0);
-
-  const filteredExpenses = expenses.filter(expense => {
-    const matchesSearch = expense.description.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = filterCategory === 'all' || expense.category === filterCategory;
-    return matchesSearch && matchesCategory;
+  // Fetch expenses
+  const { data: expensesResponse, isLoading, error } = useQuery({
+    queryKey: ['expenses', currentPage, filterCategory, searchQuery],
+    queryFn: () => expenseService.getAll({
+      page: currentPage,
+      per_page: 10,
+      category: filterCategory !== 'all' ? filterCategory : undefined,
+      search: searchQuery || undefined,
+    }),
   });
+
+  // Fetch summary for statistics
+  const { data: summaryData } = useQuery({
+    queryKey: ['expenses-summary'],
+    queryFn: () => expenseService.getSummary(),
+  });
+
+  // Create expense mutation
+  const createMutation = useMutation({
+    mutationFn: (data: CreateExpenseData) => expenseService.create(data),
+    onSuccess: (response) => {
+      if (response.success) {
+        toast.success(t('expenses.addSuccess'));
+        queryClient.invalidateQueries({ queryKey: ['expenses'] });
+        queryClient.invalidateQueries({ queryKey: ['expenses-summary'] });
+        resetForm();
+      } else {
+        toast.error(response.message || t('common.error'));
+      }
+    },
+    onError: (error: any) => {
+      let message = t('common.error');
+      if (error.response?.data?.message) {
+        message = error.response.data.message;
+      } else if (error.response?.data?.errors) {
+        const errors = error.response.data.errors;
+        if (typeof errors === 'object') {
+          message = Object.values(errors)[0] as string;
+        }
+      }
+      toast.error(message);
+    },
+  });
+
+  // Update expense mutation
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: number; data: UpdateExpenseData }) => 
+      expenseService.update(id, data),
+    onSuccess: (response) => {
+      if (response.success) {
+        toast.success(t('expenses.editSuccess'));
+        queryClient.invalidateQueries({ queryKey: ['expenses'] });
+        queryClient.invalidateQueries({ queryKey: ['expenses-summary'] });
+        resetForm();
+      } else {
+        toast.error(response.message || t('common.error'));
+      }
+    },
+    onError: (error: any) => {
+      let message = t('common.error');
+      if (error.response?.data?.message) {
+        message = error.response.data.message;
+      }
+      toast.error(message);
+    },
+  });
+
+  // Delete expense mutation
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => expenseService.delete(id),
+    onSuccess: (response) => {
+      if (response.success) {
+        toast.success(t('expenses.deleteSuccess'));
+        queryClient.invalidateQueries({ queryKey: ['expenses'] });
+        queryClient.invalidateQueries({ queryKey: ['expenses-summary'] });
+      } else {
+        toast.error(response.message || t('common.error'));
+      }
+    },
+    onError: (error: any) => {
+      let message = t('common.error');
+      if (error.response?.data?.message) {
+        message = error.response.data.message;
+      }
+      toast.error(message);
+    },
+  });
+
+  // Memoized statistics
+  const stats = useMemo(() => ({
+    totalExpenses: summaryData?.data?.total_expenses || 0,
+    totalByCategory: summaryData?.data?.total_by_category || {},
+    monthlyTotal: summaryData?.data?.monthly_total || 0,
+  }), [summaryData]);
 
   const getCategoryLabel = (categoryId: string) => {
     const category = expenseCategories.find(c => c.id === categoryId);
@@ -94,30 +171,25 @@ const ExpenseManagement: React.FC = () => {
       return;
     }
 
-    const newExpense: Expense = {
-      id: Date.now(),
-      date: formData.date,
+    const data: CreateExpenseData = {
       category: formData.category,
       description: formData.description,
       amount: parseFloat(formData.amount),
-      paymentMethod: formData.paymentMethod,
-      reference: formData.reference,
+      date: formData.date,
+      notes: formData.notes || undefined,
     };
 
     if (editingExpense) {
-      setExpenses(prev => prev.map(e => e.id === editingExpense.id ? { ...newExpense, id: editingExpense.id } : e));
-      toast.success(t('expenses.editSuccess'));
+      updateMutation.mutate({ id: editingExpense.id, data });
     } else {
-      setExpenses(prev => [newExpense, ...prev]);
-      toast.success(t('expenses.addSuccess'));
+      createMutation.mutate(data);
     }
-
-    resetForm();
   };
 
   const handleDeleteExpense = (id: number) => {
-    setExpenses(prev => prev.filter(e => e.id !== id));
-    toast.success(t('expenses.deleteSuccess'));
+    if (confirm(t('common.confirmDelete'))) {
+      deleteMutation.mutate(id);
+    }
   };
 
   const handleEditExpense = (expense: Expense) => {
@@ -127,8 +199,7 @@ const ExpenseManagement: React.FC = () => {
       category: expense.category,
       description: expense.description,
       amount: expense.amount.toString(),
-      paymentMethod: expense.paymentMethod,
-      reference: expense.reference || '',
+      notes: expense.notes || '',
     });
     setIsAddModalOpen(true);
   };
@@ -139,12 +210,14 @@ const ExpenseManagement: React.FC = () => {
       category: '',
       description: '',
       amount: '',
-      paymentMethod: 'cash',
-      reference: '',
+      notes: '',
     });
     setEditingExpense(null);
     setIsAddModalOpen(false);
   };
+
+  const expenses = expensesResponse?.data?.data || [];
+  const pagination = expensesResponse?.data || { current_page: 1, last_page: 1, total: 0 };
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -157,13 +230,10 @@ const ExpenseManagement: React.FC = () => {
           </h1>
           <p className="text-muted-foreground mt-1">{t('expenses.subtitle')}</p>
         </div>
-        <div className="flex gap-2">
-          <DateRangeFilter />
-          <Button className="gradient-primary border-0 gap-2" onClick={() => setIsAddModalOpen(true)}>
-            <Plus className="w-4 h-4" />
-            {t('expenses.addExpense')}
-          </Button>
-        </div>
+        <Button className="gradient-primary border-0 gap-2" onClick={() => setIsAddModalOpen(true)}>
+          <Plus className="w-4 h-4" />
+          {t('expenses.addExpense')}
+        </Button>
       </div>
 
       {/* Summary Cards */}
@@ -175,7 +245,9 @@ const ExpenseManagement: React.FC = () => {
                 <TrendingDown className="w-6 h-6 text-destructive" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-foreground">${totalExpenses.toLocaleString()}</p>
+                <p className="text-2xl font-bold text-foreground">
+                  {stats.totalExpenses.toLocaleString()}
+                </p>
                 <p className="text-sm text-muted-foreground">{t('expenses.totalExpenses')}</p>
               </div>
             </div>
@@ -188,8 +260,10 @@ const ExpenseManagement: React.FC = () => {
                 <DollarSign className="w-6 h-6 text-success" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-foreground">${cashExpenses.toLocaleString()}</p>
-                <p className="text-sm text-muted-foreground">{t('expenses.cashExpenses')}</p>
+                <p className="text-2xl font-bold text-foreground">
+                  {stats.monthlyTotal.toLocaleString()}
+                </p>
+                <p className="text-sm text-muted-foreground">{t('expenses.monthlyExpenses')}</p>
               </div>
             </div>
           </CardContent>
@@ -201,166 +275,250 @@ const ExpenseManagement: React.FC = () => {
                 <Wallet className="w-6 h-6 text-primary" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-foreground">${walletExpenses.toLocaleString()}</p>
-                <p className="text-sm text-muted-foreground">{t('expenses.walletExpenses')}</p>
+                <p className="text-2xl font-bold text-foreground">
+                  {pagination.total}
+                </p>
+                <p className="text-sm text-muted-foreground">{t('expenses.totalCount')}</p>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Filters */}
-      <Card className="glass-card">
-        <CardContent className="py-4">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder={t('expenses.searchExpenses')}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="ps-10"
-              />
-            </div>
-            <Select value={filterCategory} onValueChange={setFilterCategory}>
-              <SelectTrigger className="w-full sm:w-48">
-                <Filter className="w-4 h-4 me-2" />
-                <SelectValue placeholder={t('expenses.filterByCategory')} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t('expenses.allCategories')}</SelectItem>
-                {expenseCategories.map(cat => (
-                  <SelectItem key={cat.id} value={cat.id}>
-                    {t(cat.key)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Filters and Search */}
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="flex-1 relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder={t('common.search')}
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="pl-10"
+          />
+        </div>
+        <Select value={filterCategory} onValueChange={(value) => {
+          setFilterCategory(value);
+          setCurrentPage(1);
+        }}>
+          <SelectTrigger className="w-full sm:w-[200px]">
+            <SelectValue placeholder={t('common.category')} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">{t('common.all')}</SelectItem>
+            {expenseCategories.map(cat => (
+              <SelectItem key={cat.id} value={cat.id}>
+                {t(cat.key)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
-      {/* Expenses List */}
+      {/* Expenses Table */}
       <Card className="glass-card">
         <CardHeader>
-          <CardTitle>{t('expenses.expensesList')}</CardTitle>
+          <CardTitle>{t('expenses.list')}</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
-            <AnimatePresence>
-              {filteredExpenses.map((expense, index) => (
-                <motion.div
-                  key={expense.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  transition={{ delay: index * 0.03 }}
-                  className="flex items-center justify-between p-4 rounded-xl bg-muted/50 hover:bg-muted transition-colors"
+          {isLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-6 h-6 animate-spin text-primary" />
+            </div>
+          ) : error ? (
+            <div className="flex items-center gap-3 p-4 bg-destructive/10 rounded-lg text-destructive">
+              <AlertCircle className="w-5 h-5" />
+              <span>{t('common.error')}</span>
+            </div>
+          ) : expenses.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              {t('expenses.noExpenses')}
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="text-left py-3 px-4 font-semibold">{t('common.date')}</th>
+                    <th className="text-left py-3 px-4 font-semibold">{t('common.description')}</th>
+                    <th className="text-left py-3 px-4 font-semibold">{t('common.category')}</th>
+                    <th className="text-right py-3 px-4 font-semibold">{t('common.amount')}</th>
+                    <th className="text-center py-3 px-4 font-semibold">{t('common.actions')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <AnimatePresence>
+                    {expenses.map((expense) => (
+                      <motion.tr
+                        key={expense.id}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="border-b border-border hover:bg-muted/50 transition-colors"
+                      >
+                        <td className="py-3 px-4">
+                          {new Date(expense.date).toLocaleDateString()}
+                        </td>
+                        <td className="py-3 px-4">
+                          <div>
+                            <p className="font-medium">{expense.description}</p>
+                            {expense.notes && (
+                              <p className="text-sm text-muted-foreground">{expense.notes}</p>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <Badge variant="outline">
+                            {getCategoryLabel(expense.category)}
+                          </Badge>
+                        </td>
+                        <td className="py-3 px-4 text-right font-semibold">
+                          {expense.amount.toLocaleString()}
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="flex items-center justify-center gap-2">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleEditExpense(expense)}
+                              disabled={updateMutation.isPending}
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleDeleteExpense(expense.id)}
+                              disabled={deleteMutation.isPending}
+                              className="text-destructive hover:text-destructive"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </td>
+                      </motion.tr>
+                    ))}
+                  </AnimatePresence>
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* Pagination */}
+          {pagination.last_page > 1 && (
+            <div className="flex items-center justify-between mt-4 pt-4 border-t border-border">
+              <p className="text-sm text-muted-foreground">
+                {t('common.page')} {pagination.current_page} {t('common.of')} {pagination.last_page}
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
                 >
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-destructive/10 flex items-center justify-center">
-                      <Receipt className="w-6 h-6 text-destructive" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-foreground">{expense.description}</p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <Badge variant="outline" className="text-xs">
-                          {getCategoryLabel(expense.category)}
-                        </Badge>
-                        <span className="text-xs text-muted-foreground">{expense.date}</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div className="text-end">
-                      <p className="font-bold text-destructive text-lg">-${expense.amount.toLocaleString()}</p>
-                      <Badge variant={expense.paymentMethod === 'cash' ? 'default' : 'secondary'} className="text-xs">
-                        {expense.paymentMethod === 'cash' ? t('expenses.cash') : t('expenses.wallet')}
-                      </Badge>
-                    </div>
-                    <div className="flex gap-1">
-                      <Button variant="ghost" size="icon" onClick={() => handleEditExpense(expense)}>
-                        <Edit2 className="w-4 h-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDeleteExpense(expense.id)}>
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
-            </AnimatePresence>
-          </div>
+                  {t('common.previous')}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setCurrentPage(prev => Math.min(pagination.last_page, prev + 1))}
+                  disabled={currentPage === pagination.last_page}
+                >
+                  {t('common.next')}
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
       {/* Add/Edit Modal */}
-      <Dialog open={isAddModalOpen} onOpenChange={resetForm}>
-        <DialogContent className="sm:max-w-md">
+      <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>
               {editingExpense ? t('expenses.editExpense') : t('expenses.addExpense')}
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 mt-4">
-            <div className="space-y-2">
-              <Label>{t('expenses.date')}</Label>
+
+          <div className="space-y-4">
+            <div>
+              <Label>{t('common.date')}</Label>
               <Input
                 type="date"
                 value={formData.date}
-                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
               />
             </div>
-            <div className="space-y-2">
-              <Label>{t('expenses.category')}</Label>
-              <Select value={formData.category} onValueChange={(v) => setFormData({ ...formData, category: v })}>
+
+            <div>
+              <Label>{t('common.category')}</Label>
+              <Select value={formData.category} onValueChange={(value) => 
+                setFormData(prev => ({ ...prev, category: value }))
+              }>
                 <SelectTrigger>
-                  <SelectValue placeholder={t('expenses.selectCategory')} />
+                  <SelectValue placeholder={t('common.selectCategory')} />
                 </SelectTrigger>
                 <SelectContent>
                   {expenseCategories.map(cat => (
                     <SelectItem key={cat.id} value={cat.id}>
-                      {i18n.language === 'ar' ? cat.labelAr : cat.labelEn}
+                      {t(cat.key)}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label>{t('expenses.description')}</Label>
-              <Textarea
+
+            <div>
+              <Label>{t('common.description')}</Label>
+              <Input
                 value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder={t('expenses.descriptionPlaceholder')}
+                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                placeholder={t('common.enterDescription')}
               />
             </div>
-            <div className="space-y-2">
-              <Label>{t('expenses.amount')}</Label>
+
+            <div>
+              <Label>{t('common.amount')}</Label>
               <Input
                 type="number"
                 value={formData.amount}
-                onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                onChange={(e) => setFormData(prev => ({ ...prev, amount: e.target.value }))}
                 placeholder="0.00"
+                min="0"
+                step="0.01"
               />
             </div>
-            <div className="space-y-2">
-              <Label>{t('expenses.paymentMethod')}</Label>
-              <Select value={formData.paymentMethod} onValueChange={(v) => setFormData({ ...formData, paymentMethod: v })}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="cash">{t('expenses.cash')}</SelectItem>
-                  <SelectItem value="wallet">{t('expenses.wallet')}</SelectItem>
-                </SelectContent>
-              </Select>
+
+            <div>
+              <Label>{t('common.notes')}</Label>
+              <Textarea
+                value={formData.notes}
+                onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                placeholder={t('common.optionalNotes')}
+              />
             </div>
-            <div className="flex gap-3 mt-6">
-              <Button variant="outline" className="flex-1" onClick={resetForm}>
+
+            <div className="flex gap-2 pt-4">
+              <Button
+                variant="outline"
+                onClick={resetForm}
+                className="flex-1"
+              >
                 {t('common.cancel')}
               </Button>
-              <Button className="flex-1 gradient-primary border-0" onClick={handleAddExpense}>
-                {editingExpense ? t('common.save') : t('common.add')}
+              <Button
+                onClick={handleAddExpense}
+                disabled={createMutation.isPending || updateMutation.isPending}
+                className="flex-1 gap-2"
+              >
+                {(createMutation.isPending || updateMutation.isPending) && (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                )}
+                {editingExpense ? t('common.update') : t('common.add')}
               </Button>
             </div>
           </div>
