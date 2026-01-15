@@ -78,8 +78,24 @@ const ProfileSettings: React.FC = () => {
       }
     },
     onError: (error: any) => {
-      const message = error.response?.data?.message || t('common.error');
-      toast.error(message);
+      let errorMessage = t('common.error');
+      
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.response?.data?.errors) {
+        const errors = error.response.data.errors;
+        if (Array.isArray(errors)) {
+          errorMessage = errors[0];
+        } else if (typeof errors === 'object') {
+          const firstError = Object.values(errors)[0];
+          errorMessage = Array.isArray(firstError) ? firstError[0] : String(firstError);
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      console.error('Profile update error:', error.response?.data || error);
+      toast.error(errorMessage);
     },
   });
 
@@ -95,7 +111,23 @@ const ProfileSettings: React.FC = () => {
       }
     },
     onError: (error: any) => {
-      const errorMessage = error.response?.data?.message || error.message || t('common.error');
+      let errorMessage = t('common.error');
+      
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.response?.data?.errors) {
+        const errors = error.response.data.errors;
+        if (Array.isArray(errors)) {
+          errorMessage = errors[0];
+        } else if (typeof errors === 'object') {
+          const firstError = Object.values(errors)[0];
+          errorMessage = Array.isArray(firstError) ? firstError[0] : String(firstError);
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      console.error('Avatar upload error:', error.response?.data || error);
       toast.error(errorMessage);
     },
   });
@@ -112,7 +144,23 @@ const ProfileSettings: React.FC = () => {
       }
     },
     onError: (error: any) => {
-      const errorMessage = error.response?.data?.message || error.message || t('common.error');
+      let errorMessage = t('common.error');
+      
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.response?.data?.errors) {
+        const errors = error.response.data.errors;
+        if (Array.isArray(errors)) {
+          errorMessage = errors[0];
+        } else if (typeof errors === 'object') {
+          const firstError = Object.values(errors)[0];
+          errorMessage = Array.isArray(firstError) ? firstError[0] : String(firstError);
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      console.error('Avatar delete error:', error.response?.data || error);
       toast.error(errorMessage);
     },
   });
@@ -134,7 +182,23 @@ const ProfileSettings: React.FC = () => {
       }
     },
     onError: (error: any) => {
-      const errorMessage = error.response?.data?.message || error.message || t('common.error');
+      let errorMessage = t('common.error');
+      
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.response?.data?.errors) {
+        const errors = error.response.data.errors;
+        if (Array.isArray(errors)) {
+          errorMessage = errors[0];
+        } else if (typeof errors === 'object') {
+          const firstError = Object.values(errors)[0];
+          errorMessage = Array.isArray(firstError) ? firstError[0] : String(firstError);
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      console.error('Password change error:', error.response?.data || error);
       toast.error(errorMessage);
     },
   });
