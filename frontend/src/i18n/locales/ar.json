@@ -61,12 +61,30 @@
     "confirm": "تأكيد", "confirmDelete": "تأكيد الحذف", "noData": "لا توجد بيانات", "employee": "الموظف",
     "selectEmployee": "اختر موظف", "allEmployees": "جميع الموظفين", "errorLoading": "فشل في تحميل البيانات",
     "adding": "جاري الإضافة...", "saving": "جاري الحفظ...", "deleteUserWarning": "هل أنت متأكد من حذف هذا العنصر؟ لا يمكن التراجع عن هذا الإجراء.",
-    "notSpecified": "غير محدد", "requiredFields": "يرجى ملء الحقول المطلوبة", "filter": "تصفية", "viewAll": "عرض الكل"
+     "notSpecified": "غير محدد", "requiredFields": "يرجى ملء الحقول المطلوبة", "filter": "تصفية", "viewAll": "عرض الكل",
+    "fileTooLarge": "حجم الملف كبير جداً",
+    "invalidFileType": "نوع الملف غير صحيح",
+    "fullName": "الاسم الكامل",
+    "fullNamePlaceholder": "أدخل الاسم الكامل",
+    "role": "الدور",
+    "selectRole": "اختر دور",
+    "searchUsers": "بحث عن مستخدم...",
+    "editUser": "تعديل مستخدم",
+    "leaveEmptyToKeep": "اترك فارغا للبقاء على الحالي",
+    "deleting": "جاري الحذف...",
+    "deactivate": "تعطيل",
+    "activate": "تفعيل"
+  },
+  "people": {
+    "addUser": "إضافة مستخدم",
+    "usersSubtitle": "إدارة مستخدمي النظام والأدوار والصلاحيات"
   },
   "roles": {
     "admin": "مدير النظام", "cashier": "كاشير", "accountant": "محاسب", "stockManager": "مدير مخزن"
   },
-  "auth": { 
+  "auth": {
+    "password": "كلمة المرور",
+    "passwordPlaceholder": "أدخل كلمة المرور",
     "login": {
       "title": "تسجيل الدخول",
       "welcomeBack": "مرحباً بك مجدداً",
@@ -87,7 +105,9 @@
     "logoutSuccess": "تم تسجيل الخروج بنجاح",
     "logoutError": "حدث خطأ أثناء تسجيل الخروج",
     "logoutConfirmTitle": "تأكيد تسجيل الخروج",
-    "logoutConfirmDescription": "هل أنت متأكد من تسجيل الخروج من النظام؟"
+    "logoutConfirmDescription": "هل أنت متأكد من تسجيل الخروج من النظام؟",
+    "passwordMismatch": "كلمات المرور غير متطابقة",
+    "passwordTooShort": "كلمة المرور قصيرة جداً"
   },
   "pos": { "title": "نقطة البيع", "searchProducts": "البحث عن منتج...", "scanBarcode": "امسح الباركود أو اكتب الرقم...", "productNotFound": "المنتج غير موجود", "available": "متوفر", "cart": "السلة", "emptyCart": "السلة فارغة", "subtotal": "المجموع الفرعي", "tax": "الضريبة", "discount": "الخصم", "total": "الإجمالي", "pay": "الدفع", "clear": "مسح", "hold": "تعليق", "quantity": "الكمية", "price": "السعر", "all": "الكل", "customer": "العميل", "walkInCustomer": "عميل عابر", "addedToCart": "تمت إضافة", "cartCleared": "تم مسح السلة" },
   "categories": { "drinks": "مشروبات", "snacks": "وجبات خفيفة", "dairy": "منتجات ألبان", "bakery": "مخبوزات", "spices": "توابل" },

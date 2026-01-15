@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
@@ -37,6 +37,12 @@ interface EditFieldState {
   isLoading: boolean;
 }
 
+interface PasswordData {
+  current_password: string;
+  new_password: string;
+  new_password_confirmation: string;
+}
+
 const ProfileSettings: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -51,7 +57,7 @@ const ProfileSettings: React.FC = () => {
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
 
-  const [passwordData, setPasswordData] = useState<ChangePasswordData>({
+  const [passwordData, setPasswordData] = useState<PasswordData>({
     current_password: '',
     new_password: '',
     new_password_confirmation: '',
@@ -93,8 +99,8 @@ const ProfileSettings: React.FC = () => {
       }
     },
     onError: (error: any) => {
-      const message = error.response?.data?.message || t('common.error');
-      toast.error(message);
+      const errorMessage = error.response?.data?.message || error.message || t('common.error');
+      toast.error(errorMessage);
     },
   });
 
@@ -110,8 +116,8 @@ const ProfileSettings: React.FC = () => {
       }
     },
     onError: (error: any) => {
-      const message = error.response?.data?.message || t('common.error');
-      toast.error(message);
+      const errorMessage = error.response?.data?.message || error.message || t('common.error');
+      toast.error(errorMessage);
     },
   });
 
@@ -132,18 +138,25 @@ const ProfileSettings: React.FC = () => {
       }
     },
     onError: (error: any) => {
-      const message = error.response?.data?.message || t('common.error');
-      toast.error(message);
+      const errorMessage = error.response?.data?.message || error.message || t('common.error');
+      toast.error(errorMessage);
     },
   });
 
-  const handleStartEdit = (fieldName: string, currentValue: string) => {
+  const handleStartEdit = useCallback((fieldName: string, currentValue: string) => {
     setEditField({
       field: fieldName,
       value: currentValue,
       isLoading: false,
     });
-  };
+  }, []);
+
+  const handleFieldChange = useCallback((newValue: string) => {
+    setEditField(prev => ({
+      ...prev,
+      value: newValue,
+    }));
+  }, []);
 
   const handleSaveField = async () => {
     if (!editField.field) return;
@@ -192,11 +205,11 @@ const ProfileSettings: React.FC = () => {
     const file = event.target.files?.[0];
     if (file) {
       if (file.size > 2 * 1024 * 1024) {
-        toast.error(t('common.error'));
+        toast.error(t('common.fileTooLarge') || 'حجم الملف كبير جداً');
         return;
       }
       if (!file.type.startsWith('image/')) {
-        toast.error(t('common.error'));
+        toast.error(t('common.invalidFileType') || 'نوع الملف غير صحيح');
         return;
       }
       updateAvatarMutation.mutate(file);
@@ -227,6 +240,7 @@ const ProfileSettings: React.FC = () => {
   }> = ({ label, fieldName, icon: Icon, type = 'text', placeholder }) => {
     const isEditing = editField.field === fieldName;
     const currentValue = profile?.[fieldName as keyof typeof profile] || '';
+    const displayValue = isEditing ? editField.value : currentValue;
 
     return (
       <div className="space-y-2">
@@ -236,12 +250,8 @@ const ProfileSettings: React.FC = () => {
             <Icon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               type={type}
-              value={isEditing ? editField.value : currentValue}
-              onChange={(e) => {
-                if (isEditing) {
-                  setEditField({ ...editField, value: e.target.value });
-                }
-              }}
+              value={displayValue}
+              onChange={(e) => handleFieldChange(e.target.value)}
               disabled={!isEditing}
               className="pl-10"
               placeholder={placeholder}
@@ -425,7 +435,7 @@ const ProfileSettings: React.FC = () => {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="current_password">{t('auth.login.password')}</Label>
+              <Label htmlFor="current_password">{t('auth.password')}</Label>
               <Input
                 id="current_password"
                 type="password"
@@ -434,7 +444,7 @@ const ProfileSettings: React.FC = () => {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="new_password">{t('settings.changePassword')}</Label>
+              <Label htmlFor="new_password">{t('settings.newPassword')}</Label>
               <Input
                 id="new_password"
                 type="password"
