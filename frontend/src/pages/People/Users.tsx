@@ -39,6 +39,7 @@ interface UserFormData {
   email: string;
   phone: string;
   password: string;
+  password_confirmation?: string;
   role_id: number | null;
 }
 
@@ -57,6 +58,7 @@ const Users: React.FC = () => {
     email: '',
     phone: '',
     password: '',
+    password_confirmation: '',
     role_id: null,
   });
 
@@ -79,6 +81,12 @@ const Users: React.FC = () => {
     },
     onError: (error: any) => {
       let message = t('common.error');
+      console.error('User creation error:', {
+        status: error.response?.status,
+        data: error.response?.data,
+        message: error.message,
+      });
+      
       if (error.response?.data?.message) {
         message = error.response.data.message;
       } else if (error.response?.data?.errors) {
@@ -86,9 +94,17 @@ const Users: React.FC = () => {
         if (Array.isArray(errors)) {
           message = errors[0];
         } else if (typeof errors === 'object') {
-          message = Object.values(errors)[0] as string;
+          // Build a detailed error message from validation errors
+          const errorMessages = Object.entries(errors)
+            .map(([field, msgs]: [string, any]) => {
+              const fieldMsg = Array.isArray(msgs) ? msgs.join(', ') : String(msgs);
+              return `${field}: ${fieldMsg}`;
+            })
+            .join(' | ');
+          message = errorMessages || t('common.error');
         }
       }
+      console.error('Final error message:', message);
       toast.error(message);
     },
   });
@@ -109,6 +125,12 @@ const Users: React.FC = () => {
     },
     onError: (error: any) => {
       let message = t('common.error');
+      console.error('User creation error:', {
+        status: error.response?.status,
+        data: error.response?.data,
+        message: error.message,
+      });
+      
       if (error.response?.data?.message) {
         message = error.response.data.message;
       } else if (error.response?.data?.errors) {
@@ -116,9 +138,17 @@ const Users: React.FC = () => {
         if (Array.isArray(errors)) {
           message = errors[0];
         } else if (typeof errors === 'object') {
-          message = Object.values(errors)[0] as string;
+          // Build a detailed error message from validation errors
+          const errorMessages = Object.entries(errors)
+            .map(([field, msgs]: [string, any]) => {
+              const fieldMsg = Array.isArray(msgs) ? msgs.join(', ') : String(msgs);
+              return `${field}: ${fieldMsg}`;
+            })
+            .join(' | ');
+          message = errorMessages || t('common.error');
         }
       }
+      console.error('Final error message:', message);
       toast.error(message);
     },
   });
@@ -168,50 +198,79 @@ const Users: React.FC = () => {
   });
 
   const resetForm = () => {
+    console.log('Resetting form');
     setFormData({
       name: '',
       email: '',
       phone: '',
       password: '',
+      password_confirmation: '',
       role_id: null,
     });
   };
 
   const handleAdd = () => {
+    console.log('Adding new user with form data:', {
+      name: formData.name,
+      email: formData.email,
+      phone: formData.phone,
+      role_id: formData.role_id,
+      password: '***hidden***',
+    });
+    
     // Validate required fields
     if (!formData.name?.trim()) {
-      toast.error(t('common.fullName') + ' ' + t('common.requiredFields'));
+      const error = t('common.fullName') + ' ' + t('common.requiredFields');
+      console.error('Validation failed:', error);
+      toast.error(error);
       return;
     }
     if (!formData.email?.trim()) {
-      toast.error(t('common.email') + ' ' + t('common.requiredFields'));
+      const error = t('common.email') + ' ' + t('common.requiredFields');
+      console.error('Validation failed:', error);
+      toast.error(error);
       return;
     }
     if (!formData.password?.trim()) {
-      toast.error(t('auth.password') + ' ' + t('common.requiredFields'));
+      const error = t('auth.password') + ' ' + t('common.requiredFields');
+      console.error('Validation failed:', error);
+      toast.error(error);
+      return;
+    }
+    if (formData.password.length < 6) {
+      const error = t('auth.passwordTooShort') || 'كلمة المرور يجب أن تكون 6 أحرف على الأقل';
+      console.error('Validation failed:', error);
+      toast.error(error);
       return;
     }
     if (!formData.role_id) {
-      toast.error(t('common.role') + ' ' + t('common.requiredFields'));
+      const error = t('common.role') + ' ' + t('common.requiredFields');
+      console.error('Validation failed:', error);
+      toast.error(error);
       return;
     }
 
+    console.log('All validations passed, submitting user creation');
     createMutation.mutate({
       name: formData.name,
       email: formData.email,
       password: formData.password,
-      phone: formData.phone,
+      password_confirmation: formData.password_confirmation || formData.password,
+      phone: formData.phone || undefined,
       role_id: formData.role_id,
+      is_active: true,
     });
   };
 
   const handleEdit = (user: User) => {
+    console.log('Editing user:', user.id);
     setEditingUser(user);
     setFormData({
       name: user.name,
       email: user.email,
       phone: user.phone || '',
       password: '',
+      password_confirmation: '',
       role_id: user.role_id,
     });
     setIsEditOpen(true);
