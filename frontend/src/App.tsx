@@ -39,7 +39,7 @@ const AppContent = () => {
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <BrowserRouter>
+
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
@@ -83,7 +83,7 @@ const AppContent = () => {
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
-        </BrowserRouter>
+
       </TooltipProvider>
     </ThemeProvider>
   );
@@ -92,9 +92,11 @@ const AppContent = () => {
 const App = () => (
   <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <AppContent />
-      </AuthProvider>
+      <BrowserRouter>
+        <AuthProvider>
+          <AppContent />
+        </AuthProvider>
+      </BrowserRouter>
     </QueryClientProvider>
   </ErrorBoundary>
 );

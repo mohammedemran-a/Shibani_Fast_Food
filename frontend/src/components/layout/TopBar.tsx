@@ -10,9 +10,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { toast } from 'sonner';
-import { apiClient } from '@/api/apiClient';
 
 interface TopBarProps {
   onToggleSidebar: () => void;
@@ -22,18 +21,10 @@ export const TopBar: React.FC<TopBarProps> = ({ onToggleSidebar }) => {
   const { t } = useTranslation();
   const { theme, toggleTheme, language, toggleLanguage } = useTheme();
   const navigate = useNavigate();
+  const { logout } = useAuth();
 
   const handleLogout = async () => {
-    try {
-      await apiClient.post('/auth/logout');
-      localStorage.removeItem('token');
-      toast.success('تم تسجيل الخروج بنجاح');
-      navigate('/login');
-    } catch (error) {
-      toast.error('حدث خطأ أثناء تسجيل الخروج');
-      localStorage.removeItem('token'); // Force logout even if API fails
-      navigate('/login');
-    }
+    await logout();
   };
 
   return (

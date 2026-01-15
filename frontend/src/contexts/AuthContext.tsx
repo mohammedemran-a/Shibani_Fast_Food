@@ -1,9 +1,7 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { authService, User } from '@/api';
 import { useNavigate } from 'react-router-dom';
-import { useToast } from '@/hooks/use-toast';
-
-interface AuthContextType {
+import { useToast } from '@/hooks/use-toast';interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
@@ -18,6 +16,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true); // Initial loading state
+
   const navigate = useNavigate();
   const { toast } = useToast();
 
