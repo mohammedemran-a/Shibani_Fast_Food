@@ -196,6 +196,12 @@ const Users: React.FC = () => {
     updateMutation.mutate({ id: editingUser.id, data: updateData });
   };
 
+  const handleConfirmDelete = () => {
+    if (deleteUserId) {
+      deleteMutation.mutate(deleteUserId);
+    }
+  };
+
   const getRoleBadge = (roleId: number) => {
     const role = roles.find(r => r.id === roleId);
     return (
@@ -489,7 +495,7 @@ const Users: React.FC = () => {
           <AlertDialogFooter>
             <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
             <AlertDialogAction
-              onClick={confirmDelete}
+              onClick={handleConfirmDelete}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {deleteMutation.isPending ? t('common.deleting') : t('common.delete')}
