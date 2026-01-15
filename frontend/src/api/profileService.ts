@@ -61,7 +61,10 @@ export const profileService = {
    */
   async updateAvatar(file: File): Promise<ProfileResponse> {
     const formData = new FormData();
+    // Try different field names that the backend might expect
     formData.append('avatar', file);
+    formData.append('image', file);
+    formData.append('photo', file);
 
     // Don't set Content-Type header - let axios handle it automatically
     const response = await apiClient.post('/profile/avatar', formData);

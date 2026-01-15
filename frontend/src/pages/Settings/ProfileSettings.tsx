@@ -72,6 +72,8 @@ const ProfileSettings: React.FC = () => {
       if (response.success) {
         toast.success(t('common.success'));
         queryClient.invalidateQueries({ queryKey: ['profile'] });
+        // Also invalidate users query to sync changes across the app
+        queryClient.invalidateQueries({ queryKey: ['users'] });
         setEditingField(null);
       } else {
         toast.error(response.message || t('common.error'));
@@ -106,6 +108,8 @@ const ProfileSettings: React.FC = () => {
       if (response.success) {
         toast.success(t('common.success'));
         queryClient.invalidateQueries({ queryKey: ['profile'] });
+        // Also invalidate users query to sync changes across the app
+        queryClient.invalidateQueries({ queryKey: ['users'] });
       } else {
         toast.error(response.message || t('common.error'));
       }
@@ -139,6 +143,8 @@ const ProfileSettings: React.FC = () => {
       if (response.success) {
         toast.success(t('common.success'));
         queryClient.invalidateQueries({ queryKey: ['profile'] });
+        // Also invalidate users query to sync changes across the app
+        queryClient.invalidateQueries({ queryKey: ['users'] });
       } else {
         toast.error(response.message || t('common.error'));
       }
@@ -177,6 +183,9 @@ const ProfileSettings: React.FC = () => {
           new_password: '',
           new_password_confirmation: '',
         });
+        // Invalidate profile and users queries
+        queryClient.invalidateQueries({ queryKey: ['profile'] });
+        queryClient.invalidateQueries({ queryKey: ['users'] });
       } else {
         toast.error(response.message || t('common.error'));
       }

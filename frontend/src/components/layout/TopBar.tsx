@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Menu, Sun, Moon, Globe, Bell, Search, User } from 'lucide-react';
@@ -13,6 +13,7 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { profileService } from '@/api/profileService';
+import { useQuery } from '@tanstack/react-query';
 
 interface TopBarProps {
   onToggleSidebar: () => void;
@@ -23,31 +24,22 @@ export const TopBar: React.FC<TopBarProps> = ({ onToggleSidebar }) => {
   const { theme, toggleTheme, language, toggleLanguage } = useTheme();
   const navigate = useNavigate();
   const { logout, user } = useAuth();
-  const [profileData, setProfileData] = useState<any>(null);
-  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
 
-  useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const response = await profileService.getProfile();
-        if (response.success && response.data) {
-          setProfileData(response.data);
-        }
-      } catch (error) {
-        console.error('Failed to fetch profile:', error);
-      } finally {
-        setIsLoadingProfile(false);
-      }
-    };
+  // Use React Query to keep profile data in sync
+  const { data: profileResponse, isLoading: isLoadingProfile } = useQuery({
+    queryKey: ['profile'],
+    queryFn: () => profileService.getProfile(),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
+  });
 
-    fetchProfile();
-  }, []);
+  const profileData = profileResponse?.data;
 
   const handleLogout = async () => {
     await logout();
   };
 
-  const userName = profileData?.name || user?.name || 'المستخدم';
+  const userName = profileData?.name || user?.name || t('common.user');
   const avatarUrl = profileData?.avatar 
     ? `${import.meta.env.VITE_API_BASE_URL?.replace('/api', '')}/storage/${profileData.avatar}`
     : null;
