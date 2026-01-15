@@ -66,7 +66,7 @@ export const profileService = {
     // Don't set Content-Type header - let axios handle it automatically
     const response = await apiClient.post('/profile/avatar', formData);
     return response.data;
-  }
+  },
 
   /**
    * Delete user avatar
