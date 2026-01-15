@@ -18,7 +18,7 @@ import { useBrands, useCreateBrand, useDeleteBrand } from '@/hooks/useBrands';
 const Brands: React.FC = () => {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = React.useState(false);
-  const [newBrand, setNewBrand] = React.useState({ name: '', description: '' });
+  const [newBrand, setNewBrand] = React.useState({ name: '', name_ar: '', description: '' });
 
   // Fetch brands from API
   const { data: brandsData, isLoading } = useBrands();
@@ -28,17 +28,18 @@ const Brands: React.FC = () => {
   const brands = brandsData?.data || [];
 
   const handleAdd = async () => {
-    if (!newBrand.name) {
-      toast.error('يرجى إدخال اسم العلامة التجارية');
+    if (!newBrand.name || !newBrand.name_ar) {
+      toast.error('يرجى إدخال اسم العلامة التجارية بالعربية والإنجليزية');
       return;
     }
 
     try {
       await createBrand.mutateAsync({
         name: newBrand.name,
+        name_ar: newBrand.name_ar,
         description: newBrand.description,
       });
-      setNewBrand({ name: '', description: '' });
+      setNewBrand({ name: '', name_ar: '', description: '' });
       setIsOpen(false);
       toast.success('تم إضافة العلامة التجارية بنجاح');
     } catch (error: any) {
@@ -86,6 +87,15 @@ const Brands: React.FC = () => {
               <DialogTitle>إضافة علامة تجارية جديدة</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 pt-4">
+              <div className="space-y-2">
+                <Label>الاسم (بالعربية)</Label>
+                <Input
+                  value={newBrand.name_ar}
+                  onChange={(e) => setNewBrand({ ...newBrand, name_ar: e.target.value })}
+                  placeholder="سامسونج"
+                />
+              </div>
+
               <div className="space-y-2">
                 <Label>الاسم (English)</Label>
                 <Input
@@ -157,6 +167,7 @@ const Brands: React.FC = () => {
                   onClick={() => {
                     setNewBrand({
                       name: brand.name || '',
+                      name_ar: brand.name_ar || '',
                       description: brand.description || ''
                     });
                     setIsOpen(true);

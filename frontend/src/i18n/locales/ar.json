@@ -72,7 +72,7 @@
     "confirm": "تأكيد", "confirmDelete": "تأكيد الحذف", "noData": "لا توجد بيانات", "employee": "الموظف",
     "selectEmployee": "اختر موظف", "allEmployees": "جميع الموظفين", "errorLoading": "فشل في تحميل البيانات",
     "adding": "جاري الإضافة...", "saving": "جاري الحفظ...", "deleteUserWarning": "هل أنت متأكد من حذف هذا العنصر؟ لا يمكن التراجع عن هذا الإجراء.",
-     "notSpecified": "غير محدد", "requiredFields": "يرجى ملء الحقول المطلوبة", "filter": "تصفية", "viewAll": "عرض الكل",
+    "notSpecified": "غير محدد", "requiredFields": "يرجى ملء الحقول المطلوبة", "filter": "تصفية", "viewAll": "عرض الكل",
     "fileTooLarge": "حجم الملف كبير جداً",
     "invalidFileType": "نوع الملف غير صحيح",
     "fullName": "الاسم الكامل",
@@ -88,7 +88,12 @@
   },
   "people": {
     "addUser": "إضافة مستخدم",
-    "usersSubtitle": "إدارة مستخدمي النظام والأدوار والصلاحيات"
+    "usersSubtitle": "إدارة مستخدمي النظام والأدوار والصلاحيات",
+    "customersSubtitle": "إدارة بيانات العملاء",
+    "addCustomer": "إضافة عميل",
+    "visits": "زيارة",
+    "totalPurchases": "إجمالي المشتريات",
+    "suppliersSubtitle": "إدارة بيانات الموردين"
   },
   "roles": {
     "admin": "مدير النظام", "cashier": "كاشير", "accountant": "محاسب", "stockManager": "مدير مخزن"
@@ -149,14 +154,29 @@
   "sales": { "title": "المبيعات", "subtitle": "إدارة فواتير المبيعات", "newInvoice": "فاتورة جديدة", "invoiceNumber": "رقم الفاتورة", "customer": "العميل", "date": "التاريخ", "items": "المنتجات", "total": "الإجمالي", "status": "الحالة", "completed": "مكتمل", "pending": "معلق", "cancelled": "ملغي", "deleteAll": "حذف الكل", "deleteAllConfirm": "هل أنت متأكد من حذف جميع فواتير المبيعات؟", "deleteAllSuccess": "تم حذف جميع فواتير المبيعات" },
   "returns": { "title": "المرتجعات", "subtitle": "إدارة مرتجعات المنتجات", "addReturn": "إضافة مرتجع", "supplier": "المورد", "product": "المنتج", "originalDate": "تاريخ الشراء الأصلي", "returnedQuantity": "الكمية المرتجعة", "originalInvoice": "رقم الفاتورة الأصلية", "amount": "المبلغ", "reason": "السبب" },
   "suppliers": { "title": "الموردين", "subtitle": "إدارة بيانات الموردين", "addSupplier": "إضافة مورد جديد", "editSupplier": "تعديل المورد", "name": "اسم المورد", "phone": "رقم الهاتف", "email": "البريد الإلكتروني", "address": "العنوان", "totalPurchases": "إجمالي المشتريات", "requiredFields": "يرجى ملء الحقول المطلوبة", "addSuccess": "تم إضافة المورد بنجاح", "editSuccess": "تم تعديل المورد بنجاح", "deleteSuccess": "تم حذف المورد" },
-  "people": { "customersSubtitle": "إدارة بيانات العملاء", "addCustomer": "إضافة عميل", "visits": "زيارة", "totalPurchases": "إجمالي المشتريات", "suppliersSubtitle": "إدارة بيانات الموردين", "usersSubtitle": "إدارة مستخدمي النظام", "addUser": "إضافة مستخدم" },
   "wallets": { 
     "title": "المحافظ الإلكترونية", "subtitle": "إدارة طرق الدفع الإلكتروني", "addWallet": "إضافة محفظة جديدة", 
     "editWallet": "تعديل المحفظة", "name": "اسم المحفظة", "icon": "الأيقونة", "status": "الحالة", 
-    "requiredFields": "يرجى ملء الحقول المطلوبة", "addSuccess": "تم إضافة المحفظة بنجاح", 
+    "requiredFields": "يرجى ملء الحقول المطلوبة",    "addSuccess": "تم إضافة المحفظة بنجاح", 
     "editSuccess": "تم تعديل المحفظة بنجاح", "deleteSuccess": "تم حذف المحفظة" 
   },
-  "reports": {
+  "currencies": {
+    "title": "العملات",
+    "subtitle": "إدارة العملات وأسعار الصرف",
+    "addCurrency": "إضافة عملة جديدة",
+    "editCurrency": "تعديل العملة",
+    "name": "اسم العملة",
+    "code": "الرمز الدولي",
+    "symbol": "الرمز",
+    "exchangeRate": "سعر الصرف",
+    "exchangeRateHelp": "سعر الصرف مقابل العملة الافتراضية",
+    "isDefault": "عملة افتراضية",
+    "requiredFields": "يرجى ملء جميع الحقول المطلوبة",
+    "addSuccess": "تم إضافة العملة بنجاح",
+    "editSuccess": "تم تحديث العملة بنجاح",
+    "deleteSuccess": "تم حذف العملة بنجاح",
+    "deleteDefaultError": "لا يمكن حذف العملة الافتراضية"
+  },"reports": {
     "title": "التقارير", "salesSummary": "ملخص المبيعات", "salesSummaryDesc": "تحليل شامل لأداء المبيعات",
     "uniqueCustomers": "العملاء الفريدون", "weeklySales": "المبيعات الأسبوعية", "topSellingProducts": "المنتجات الأكثر مبيعاً",
     "soldQuantity": "الكمية المباعة", "dateRange": "الفترة الزمنية", "today": "اليوم", "yesterday": "أمس",

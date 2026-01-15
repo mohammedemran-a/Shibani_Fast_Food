@@ -18,7 +18,7 @@ import { useCategories, useCreateCategory, useDeleteCategory } from '@/hooks/use
 const Categories: React.FC = () => {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = React.useState(false);
-  const [newCategory, setNewCategory] = React.useState({ name: '', description: '' });
+  const [newCategory, setNewCategory] = React.useState({ name: '', name_ar: '', description: '' });
 
   // Fetch categories from API
   const { data: categoriesData, isLoading } = useCategories();
@@ -28,17 +28,18 @@ const Categories: React.FC = () => {
   const categories = categoriesData?.data || [];
 
   const handleAdd = async () => {
-    if (!newCategory.name) {
-      toast.error('يرجى إدخال اسم الفئة');
+    if (!newCategory.name || !newCategory.name_ar) {
+      toast.error('يرجى إدخال اسم الفئة بالعربية والإنجليزية');
       return;
     }
 
     try {
       await createCategory.mutateAsync({
         name: newCategory.name,
+        name_ar: newCategory.name_ar,
         description: newCategory.description,
       });
-      setNewCategory({ name: '', description: '' });
+      setNewCategory({ name: '', name_ar: '', description: '' });
       setIsOpen(false);
       toast.success('تم إضافة الفئة بنجاح');
     } catch (error: any) {
@@ -86,6 +87,15 @@ const Categories: React.FC = () => {
               <DialogTitle>إضافة فئة جديدة</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 pt-4">
+              <div className="space-y-2">
+                <Label>الاسم (بالعربية)</Label>
+                <Input
+                  value={newCategory.name_ar}
+                  onChange={(e) => setNewCategory({ ...newCategory, name_ar: e.target.value })}
+                  placeholder="إلكترونيات"
+                />
+              </div>
+
               <div className="space-y-2">
                 <Label>الاسم (English)</Label>
                 <Input
@@ -157,6 +167,7 @@ const Categories: React.FC = () => {
                   onClick={() => {
                     setNewCategory({
                       name: category.name || '',
+                      name_ar: category.name_ar || '',
                       description: category.description || ''
                     });
                     setIsOpen(true);

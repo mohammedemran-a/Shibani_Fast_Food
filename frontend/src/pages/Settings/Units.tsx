@@ -38,6 +38,7 @@ const Units: React.FC = () => {
   const [editingId, setEditingId] = React.useState<number | null>(null);
   const [newUnit, setNewUnit] = React.useState({ 
     name: '', 
+    name_ar: '',
     abbreviation: '',
     parent_unit_id: '',
     conversion_factor: ''
@@ -55,8 +56,8 @@ const Units: React.FC = () => {
   const parentUnits = units.filter((u: Unit) => !u.parent_unit_id);
 
   const handleSubmit = async () => {
-    if (!newUnit.name) {
-      toast.error('يرجى إدخال اسم الوحدة');
+    if (!newUnit.name || !newUnit.name_ar) {
+      toast.error('يرجى إدخال اسم الوحدة بالعربية والإنجليزية');
       return;
     }
     if (!newUnit.abbreviation) {
@@ -66,6 +67,7 @@ const Units: React.FC = () => {
 
     const data: any = {
       name: newUnit.name,
+      name_ar: newUnit.name_ar,
       abbreviation: newUnit.abbreviation,
     };
 
@@ -93,7 +95,7 @@ const Units: React.FC = () => {
   };
 
   const resetForm = () => {
-    setNewUnit({ name: '', abbreviation: '', parent_unit_id: '', conversion_factor: '' });
+    setNewUnit({ name: '', name_ar: '', abbreviation: '', parent_unit_id: '', conversion_factor: '' });
     setEditingId(null);
     setIsOpen(false);
   };
@@ -102,6 +104,7 @@ const Units: React.FC = () => {
     setEditingId(unit.id);
     setNewUnit({
       name: unit.name || '',
+      name_ar: unit.name_ar || '',
       abbreviation: unit.abbreviation || '',
       parent_unit_id: unit.parent_unit_id?.toString() || '',
       conversion_factor: unit.conversion_factor?.toString() || ''
@@ -204,11 +207,20 @@ const Units: React.FC = () => {
             </DialogHeader>
             <div className="space-y-4 pt-4">
               <div className="space-y-2">
-                <Label>الاسم</Label>
+                <Label>الاسم (بالعربية)</Label>
+                <Input
+                  value={newUnit.name_ar}
+                  onChange={(e) => setNewUnit({ ...newUnit, name_ar: e.target.value })}
+                  placeholder="كيلوجرام"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>الاسم (English)</Label>
                 <Input
                   value={newUnit.name}
                   onChange={(e) => setNewUnit({ ...newUnit, name: e.target.value })}
-                  placeholder="كيلوجرام"
+                  placeholder="Kilogram"
                 />
               </div>
 

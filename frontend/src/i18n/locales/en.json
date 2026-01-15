@@ -103,6 +103,23 @@
     "requiredFields": "Please fill required fields", "addSuccess": "Wallet added successfully", 
     "editSuccess": "Wallet updated successfully", "deleteSuccess": "Wallet deleted" 
   },
+  "currencies": {
+    "title": "Currencies",
+    "subtitle": "Manage currencies and exchange rates",
+    "addCurrency": "Add New Currency",
+    "editCurrency": "Edit Currency",
+    "name": "Currency Name",
+    "code": "International Code",
+    "symbol": "Symbol",
+    "exchangeRate": "Exchange Rate",
+    "exchangeRateHelp": "Exchange rate against the default currency",
+    "isDefault": "Default Currency",
+    "requiredFields": "Please fill all required fields",
+    "addSuccess": "Currency added successfully",
+    "editSuccess": "Currency updated successfully",
+    "deleteSuccess": "Currency deleted successfully",
+    "deleteDefaultError": "Cannot delete the default currency"
+  },
   "reports": {
     "title": "Reports", "salesSummary": "Sales Summary", "salesSummaryDesc": "Comprehensive analysis of sales performance",
     "uniqueCustomers": "Unique Customers", "weeklySales": "Weekly Sales", "topSellingProducts": "Top Selling Products",

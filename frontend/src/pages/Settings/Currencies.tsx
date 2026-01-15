@@ -54,10 +54,10 @@ const CurrenciesContent: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['currencies'] });
       setNewCurrency({ name: '', code: '', symbol: '', exchange_rate: '1.00' });
       setIsAddOpen(false);
-      toast.success('تم إضافة العملة بنجاح');
+      toast.success(t('currencies.addSuccess'));
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'فشل في إضافة العملة');
+      toast.error(error.response?.data?.message || t('common.error'));
     },
   });
 
@@ -69,10 +69,10 @@ const CurrenciesContent: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['currencies'] });
       setIsEditOpen(false);
       setEditingCurrency(null);
-      toast.success('تم تحديث العملة بنجاح');
+      toast.success(t('currencies.editSuccess'));
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'فشل في تحديث العملة');
+      toast.error(error.response?.data?.message || t('common.error'));
     },
   });
 
@@ -81,16 +81,16 @@ const CurrenciesContent: React.FC = () => {
     mutationFn: (id: number) => settingsService.deleteCurrency(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['currencies'] });
-      toast.success('تم حذف العملة بنجاح');
+      toast.success(t('currencies.deleteSuccess'));
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'فشل في حذف العملة');
+      toast.error(error.response?.data?.message || t('common.error'));
     },
   });
 
   const handleAdd = () => {
     if (!newCurrency.name || !newCurrency.code || !newCurrency.symbol) {
-      toast.error('يرجى ملء جميع الحقول المطلوبة');
+      toast.error(t('currencies.requiredFields'));
       return;
     }
 
@@ -104,7 +104,7 @@ const CurrenciesContent: React.FC = () => {
 
   const handleEdit = () => {
     if (!editingCurrency || !editingCurrency.name || !editingCurrency.code || !editingCurrency.symbol) {
-      toast.error('يرجى ملء جميع الحقول المطلوبة');
+      toast.error(t('currencies.requiredFields'));
       return;
     }
 
@@ -129,7 +129,7 @@ const CurrenciesContent: React.FC = () => {
 
   const handleDelete = (id: number, isDefault: boolean) => {
     if (isDefault) {
-      toast.error('لا يمكن حذف العملة الافتراضية');
+      toast.error(t('currencies.deleteDefaultError'));
       return;
     }
     deleteMutation.mutate(id);
@@ -150,23 +150,23 @@ const CurrenciesContent: React.FC = () => {
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-foreground">العملات</h1>
-          <p className="text-muted-foreground mt-1">إدارة العملات وأسعار الصرف</p>
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground">{t('currencies.title')}</h1>
+          <p className="text-muted-foreground mt-1">{t('currencies.subtitle')}</p>
         </div>
         <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
           <DialogTrigger asChild>
             <Button className="gradient-primary border-0 gap-2">
               <Plus className="w-4 h-4" />
-              إضافة عملة جديدة
+              {t('currencies.addCurrency')}
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>إضافة عملة جديدة</DialogTitle>
+              <DialogTitle>{t('currencies.addCurrency')}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 pt-4">
               <div className="space-y-2">
-                <Label>اسم العملة *</Label>
+                <Label>{t('currencies.name')} *</Label>
                 <Input
                   value={newCurrency.name}
                   onChange={(e) => setNewCurrency({ ...newCurrency, name: e.target.value })}
@@ -175,7 +175,7 @@ const CurrenciesContent: React.FC = () => {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>الرمز الدولي *</Label>
+                  <Label>{t('currencies.code')} *</Label>
                   <Input
                     value={newCurrency.code}
                     onChange={(e) => setNewCurrency({ ...newCurrency, code: e.target.value.toUpperCase() })}
@@ -184,7 +184,7 @@ const CurrenciesContent: React.FC = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>الرمز *</Label>
+                  <Label>{t('currencies.symbol')} *</Label>
                   <Input
                     value={newCurrency.symbol}
                     onChange={(e) => setNewCurrency({ ...newCurrency, symbol: e.target.value })}
@@ -193,7 +193,7 @@ const CurrenciesContent: React.FC = () => {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label>سعر الصرف *</Label>
+                <Label>{t('currencies.exchangeRate')} *</Label>
                 <Input
                   type="number"
                   step="0.01"
@@ -202,19 +202,19 @@ const CurrenciesContent: React.FC = () => {
                   placeholder="1.00"
                 />
                 <p className="text-xs text-muted-foreground">
-                  سعر الصرف مقابل العملة الافتراضية
+                  {t('currencies.exchangeRateHelp')}
                 </p>
               </div>
               <div className="flex justify-end gap-2 pt-4">
                 <Button variant="outline" onClick={() => setIsAddOpen(false)}>
-                  إلغاء
+                  {t('common.cancel')}
                 </Button>
                 <Button 
                   onClick={handleAdd} 
                   className="gradient-primary border-0"
                   disabled={createMutation.isPending}
                 >
-                  {createMutation.isPending ? 'جاري الإضافة...' : 'إضافة'}
+                  {createMutation.isPending ? t('common.adding') : t('common.add')}
                 </Button>
               </div>
             </div>
@@ -226,21 +226,21 @@ const CurrenciesContent: React.FC = () => {
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>تعديل العملة</DialogTitle>
+            <DialogTitle>{t('currencies.editCurrency')}</DialogTitle>
           </DialogHeader>
           {editingCurrency && (
             <div className="space-y-4 pt-4">
               <div className="space-y-2">
-                <Label>اسم العملة *</Label>
+                <Label>{t('currencies.name')} *</Label>
                 <Input
                   value={editingCurrency.name}
                   onChange={(e) => setEditingCurrency({ ...editingCurrency, name: e.target.value })}
-                  placeholder="اسم العملة"
+                  placeholder={t('currencies.name')}
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>الرمز الدولي *</Label>
+                  <Label>{t('currencies.code')} *</Label>
                   <Input
                     value={editingCurrency.code}
                     onChange={(e) => setEditingCurrency({ ...editingCurrency, code: e.target.value.toUpperCase() })}
@@ -249,7 +249,7 @@ const CurrenciesContent: React.FC = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>الرمز *</Label>
+                  <Label>{t('currencies.symbol')} *</Label>
                   <Input
                     value={editingCurrency.symbol}
                     onChange={(e) => setEditingCurrency({ ...editingCurrency, symbol: e.target.value })}
@@ -258,7 +258,7 @@ const CurrenciesContent: React.FC = () => {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label>سعر الصرف *</Label>
+                <Label>{t('currencies.exchangeRate')} *</Label>
                 <Input
                   type="number"
                   step="0.01"
@@ -269,14 +269,14 @@ const CurrenciesContent: React.FC = () => {
               </div>
               <div className="flex justify-end gap-2 pt-4">
                 <Button variant="outline" onClick={() => setIsEditOpen(false)}>
-                  إلغاء
+                  {t('common.cancel')}
                 </Button>
                 <Button 
                   onClick={handleEdit} 
                   className="gradient-primary border-0"
                   disabled={updateMutation.isPending}
                 >
-                  {updateMutation.isPending ? 'جاري الحفظ...' : 'حفظ'}
+                  {updateMutation.isPending ? t('common.saving') : t('common.save')}
                 </Button>
               </div>
             </div>
