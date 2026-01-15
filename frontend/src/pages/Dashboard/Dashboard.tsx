@@ -54,7 +54,7 @@ const Dashboard: React.FC = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatsCard
           title={t('dashboard.totalSales')}
-          value={`$${stats?.data?.sales?.total?.toLocaleString() || '0'}`}
+          value={`${stats?.data?.sales?.total?.toLocaleString() || '0'} ريال`}
           change={`${stats?.data?.sales?.count || 0} ${t('dashboard.transactions')}`}
           changeType="positive"
           icon={DollarSign}
@@ -62,7 +62,7 @@ const Dashboard: React.FC = () => {
         />
         <StatsCard
           title={t('dashboard.totalPurchases')}
-          value={`$${stats?.data?.purchases?.total?.toLocaleString() || '0'}`}
+          value={`${stats?.data?.purchases?.total?.toLocaleString() || '0'} ريال`}
           change={`${stats?.data?.purchases?.count || 0} ${t('dashboard.transactions')}`}
           changeType="positive"
           icon={ShoppingCart}
@@ -70,7 +70,7 @@ const Dashboard: React.FC = () => {
         />
         <StatsCard
           title={t('dashboard.totalProfit')}
-          value={`$${stats?.data?.profit?.total?.toLocaleString() || '0'}`}
+          value={`${stats?.data?.profit?.total?.toLocaleString() || '0'} ريال`}
           change={`${stats?.data?.profit?.margin?.toFixed(1) || 0}% ${t('dashboard.margin')}`}
           changeType="positive"
           icon={TrendingUp}
@@ -106,7 +106,7 @@ const Dashboard: React.FC = () => {
         />
         <StatsCard
           title={t('dashboard.totalExpenses')}
-          value={`$${stats?.data?.expenses?.total?.toLocaleString() || '0'}`}
+          value={`${stats?.data?.expenses?.total?.toLocaleString() || '0'} ريال`}
           change={`${stats?.data?.expenses?.count || 0} ${t('dashboard.transactions')}`}
           changeType="neutral"
           icon={RotateCcw}
@@ -114,7 +114,7 @@ const Dashboard: React.FC = () => {
         />
         <StatsCard
           title={t('dashboard.netProfit')}
-          value={`$${stats?.data?.profit?.total?.toLocaleString() || '0'}`}
+          value={`${stats?.data?.profit?.total?.toLocaleString() || '0'} ريال`}
           change={t('dashboard.afterExpenses')}
           changeType="positive"
           icon={Wallet}

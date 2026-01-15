@@ -256,7 +256,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ isOpen, onToggle }) => {
                   animate={{ opacity: 1 }}
                   className="font-bold text-sidebar-foreground text-lg"
                 >
-                  {settings?.company_name}
+                  {settings?.company_name || 'متجري'}
                 </motion.span>
               )
             )}

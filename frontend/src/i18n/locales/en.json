@@ -20,7 +20,26 @@
     "walletSettings": "Wallet Settings",
     "attendance": "Attendance",
     "salesPerformance": "Sales Performance",
-    "productPerformance": "Product Performance"
+    "productPerformance": "Product Performance",
+    "debts": "Debts",
+    "analytics": "Analytics",
+    "people": "People",
+    "employees": "Employees"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "welcome": "Welcome",
+    "overview": "Store Overview",
+    "totalPurchases": "Total Purchases",
+    "totalSales": "Total Sales",
+    "totalProducts": "Total Products",
+    "totalProfit": "Total Profit",
+    "totalSuppliers": "Total Suppliers",
+    "totalCustomers": "Total Customers",
+    "transactions": "Transactions",
+    "lowStock": "Low Stock",
+    "active": "Active",
+    "margin": "Margin"
   },
   "common": {
     "add": "Add", "edit": "Edit", "delete": "Delete", "save": "Save", "cancel": "Cancel", "search": "Search",
@@ -30,7 +49,7 @@
     "confirm": "Confirm", "confirmDelete": "Confirm Delete", "noData": "No Data", "employee": "Employee",
     "selectEmployee": "Select Employee", "allEmployees": "All Employees", "errorLoading": "Failed to load data",
     "adding": "Adding...", "saving": "Saving...", "deleteUserWarning": "Are you sure you want to delete this item? This action cannot be undone.",
-    "notSpecified": "Not Specified", "requiredFields": "Please fill required fields"
+    "notSpecified": "Not Specified", "requiredFields": "Please fill required fields", "filter": "Filter", "viewAll": "View All"
   },
   "roles": {
     "admin": "Admin", "cashier": "Cashier", "accountant": "Accountant", "stockManager": "Stock Manager"

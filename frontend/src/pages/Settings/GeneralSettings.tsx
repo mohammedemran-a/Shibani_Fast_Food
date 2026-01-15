@@ -110,8 +110,8 @@ const GeneralSettingsContent: React.FC = () => {
     }
   };
 
-  // عرض شاشة تحميل حتى يتم تحميل البيانات وتحديث formData
-  if (isLoading || !settings || Object.keys(settings).length === 0) {
+  // عرض شاشة تحميل فقط أثناء التحميل الأولي
+  if (isLoading && (!settings || Object.keys(settings).length === 0)) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="flex flex-col items-center gap-3">

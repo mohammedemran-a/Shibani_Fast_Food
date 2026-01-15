@@ -20,7 +20,26 @@
     "walletSettings": "إعدادات المحافظ",
     "attendance": "الحضور والانصراف",
     "salesPerformance": "أداء المبيعات",
-    "productPerformance": "أداء المنتجات"
+    "productPerformance": "أداء المنتجات",
+    "debts": "الديون",
+    "analytics": "التحليلات",
+    "people": "الأشخاص",
+    "employees": "الموظفون"
+  },
+  "dashboard": {
+    "title": "لوحة التحكم",
+    "welcome": "مرحباً بك",
+    "overview": "نظرة عامة على المتجر",
+    "totalPurchases": "إجمالي المشتريات",
+    "totalSales": "إجمالي المبيعات",
+    "totalProducts": "إجمالي المنتجات",
+    "totalProfit": "إجمالي الربح",
+    "totalSuppliers": "إجمالي الموردين",
+    "totalCustomers": "إجمالي العملاء",
+    "transactions": "عملية",
+    "lowStock": "مخزون منخفض",
+    "active": "نشط",
+    "margin": "الهامش"
   },
   "common": {
     "add": "إضافة", "edit": "تعديل", "delete": "حذف", "save": "حفظ", "cancel": "إلغاء", "search": "بحث",
@@ -30,7 +49,7 @@
     "confirm": "تأكيد", "confirmDelete": "تأكيد الحذف", "noData": "لا توجد بيانات", "employee": "الموظف",
     "selectEmployee": "اختر موظف", "allEmployees": "جميع الموظفين", "errorLoading": "فشل في تحميل البيانات",
     "adding": "جاري الإضافة...", "saving": "جاري الحفظ...", "deleteUserWarning": "هل أنت متأكد من حذف هذا العنصر؟ لا يمكن التراجع عن هذا الإجراء.",
-    "notSpecified": "غير محدد", "requiredFields": "يرجى ملء الحقول المطلوبة"
+    "notSpecified": "غير محدد", "requiredFields": "يرجى ملء الحقول المطلوبة", "filter": "تصفية", "viewAll": "عرض الكل"
   },
   "roles": {
     "admin": "مدير النظام", "cashier": "كاشير", "accountant": "محاسب", "stockManager": "مدير مخزن"
