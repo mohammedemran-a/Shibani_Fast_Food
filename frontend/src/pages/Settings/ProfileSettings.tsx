@@ -1,10 +1,9 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { motion } from 'framer-motion';
 import { 
   User, Mail, Phone, Camera, Lock, LogOut, 
-  Loader2, AlertCircle, Save, X, Upload, Trash2, Edit2
+  Loader2, AlertCircle, Save, X, Trash2, Edit2
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -31,11 +30,7 @@ import { useNavigate } from 'react-router-dom';
 import { profileService, type UpdateProfileData, type ChangePasswordData } from '@/api/profileService';
 import { apiClient } from '@/api/apiClient';
 
-interface EditFieldState {
-  field: string | null;
-  value: string;
-  isLoading: boolean;
-}
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
 interface PasswordData {
   current_password: string;
@@ -49,11 +44,12 @@ const ProfileSettings: React.FC = () => {
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [editField, setEditField] = useState<EditFieldState>({
-    field: null,
-    value: '',
-    isLoading: false,
-  });
+  // Separate states for each field to prevent focus loss
+  const [editingField, setEditingField] = useState<string | null>(null);
+  const [nameValue, setNameValue] = useState('');
+  const [emailValue, setEmailValue] = useState('');
+  const [phoneValue, setPhoneValue] = useState('');
+
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
 
@@ -76,7 +72,7 @@ const ProfileSettings: React.FC = () => {
       if (response.success) {
         toast.success(t('common.success'));
         queryClient.invalidateQueries({ queryKey: ['profile'] });
-        setEditField({ field: null, value: '', isLoading: false });
+        setEditingField(null);
       } else {
         toast.error(response.message || t('common.error'));
       }
@@ -143,43 +139,41 @@ const ProfileSettings: React.FC = () => {
     },
   });
 
-  const handleStartEdit = useCallback((fieldName: string, currentValue: string) => {
-    setEditField({
-      field: fieldName,
-      value: currentValue,
-      isLoading: false,
-    });
-  }, []);
+  const profile = profileResponse?.data;
 
-  const handleFieldChange = useCallback((newValue: string) => {
-    setEditField(prev => ({
-      ...prev,
-      value: newValue,
-    }));
-  }, []);
+  const handleStartEdit = (fieldName: string, currentValue: string) => {
+    setEditingField(fieldName);
+    if (fieldName === 'name') setNameValue(currentValue);
+    if (fieldName === 'email') setEmailValue(currentValue);
+    if (fieldName === 'phone') setPhoneValue(currentValue);
+  };
 
   const handleSaveField = async () => {
-    if (!editField.field) return;
+    if (!editingField) return;
 
-    if (editField.field === 'name' && !editField.value.trim()) {
-      toast.error(t('common.requiredFields'));
-      return;
-    }
-    if (editField.field === 'email' && !editField.value.trim()) {
+    let value = '';
+    if (editingField === 'name') value = nameValue;
+    if (editingField === 'email') value = emailValue;
+    if (editingField === 'phone') value = phoneValue;
+
+    if ((editingField === 'name' || editingField === 'email') && !value.trim()) {
       toast.error(t('common.requiredFields'));
       return;
     }
 
     const updateData: UpdateProfileData = {};
-    if (editField.field === 'name') updateData.name = editField.value;
-    if (editField.field === 'email') updateData.email = editField.value;
-    if (editField.field === 'phone') updateData.phone = editField.value;
+    if (editingField === 'name') updateData.name = value;
+    if (editingField === 'email') updateData.email = value;
+    if (editingField === 'phone') updateData.phone = value;
 
     updateProfileMutation.mutate(updateData);
   };
 
   const handleCancelEdit = () => {
-    setEditField({ field: null, value: '', isLoading: false });
+    setEditingField(null);
+    setNameValue('');
+    setEmailValue('');
+    setPhoneValue('');
   };
 
   const handleChangePassword = () => {
@@ -204,8 +198,8 @@ const ProfileSettings: React.FC = () => {
   const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      if (file.size > 2 * 1024 * 1024) {
-        toast.error(t('common.fileTooLarge') || 'حجم الملف كبير جداً');
+      if (file.size > MAX_FILE_SIZE) {
+        toast.error(t('common.fileTooLarge') || `حجم الملف يجب أن يكون أقل من 5 MB`);
         return;
       }
       if (!file.type.startsWith('image/')) {
@@ -228,7 +222,6 @@ const ProfileSettings: React.FC = () => {
     }
   };
 
-  const profile = profileResponse?.data;
   const avatarUrl = profile?.avatar ? `${import.meta.env.VITE_API_BASE_URL?.replace('/api', '')}/storage/${profile.avatar}` : null;
 
   const EditableField: React.FC<{
@@ -238,9 +231,17 @@ const ProfileSettings: React.FC = () => {
     type?: string;
     placeholder?: string;
   }> = ({ label, fieldName, icon: Icon, type = 'text', placeholder }) => {
-    const isEditing = editField.field === fieldName;
+    const isEditing = editingField === fieldName;
     const currentValue = profile?.[fieldName as keyof typeof profile] || '';
-    const displayValue = isEditing ? editField.value : currentValue;
+    
+    let displayValue = '';
+    if (isEditing) {
+      if (fieldName === 'name') displayValue = nameValue;
+      if (fieldName === 'email') displayValue = emailValue;
+      if (fieldName === 'phone') displayValue = phoneValue;
+    } else {
+      displayValue = String(currentValue);
+    }
 
     return (
       <div className="space-y-2">
@@ -248,14 +249,28 @@ const ProfileSettings: React.FC = () => {
         <div className="flex gap-2">
           <div className="relative flex-1">
             <Icon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              type={type}
-              value={displayValue}
-              onChange={(e) => handleFieldChange(e.target.value)}
-              disabled={!isEditing}
-              className="pl-10"
-              placeholder={placeholder}
-            />
+            {isEditing ? (
+              <Input
+                type={type}
+                value={displayValue}
+                onChange={(e) => {
+                  if (fieldName === 'name') setNameValue(e.target.value);
+                  if (fieldName === 'email') setEmailValue(e.target.value);
+                  if (fieldName === 'phone') setPhoneValue(e.target.value);
+                }}
+                className="pl-10"
+                placeholder={placeholder}
+                autoFocus
+              />
+            ) : (
+              <Input
+                type={type}
+                value={displayValue}
+                disabled
+                className="pl-10 bg-muted/50"
+                placeholder={placeholder}
+              />
+            )}
           </div>
           {isEditing ? (
             <div className="flex gap-1">

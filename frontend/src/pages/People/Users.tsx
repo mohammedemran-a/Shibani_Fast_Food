@@ -78,7 +78,17 @@ const Users: React.FC = () => {
       }
     },
     onError: (error: any) => {
-      const message = error.response?.data?.message || t('common.error');
+      let message = t('common.error');
+      if (error.response?.data?.message) {
+        message = error.response.data.message;
+      } else if (error.response?.data?.errors) {
+        const errors = error.response.data.errors;
+        if (Array.isArray(errors)) {
+          message = errors[0];
+        } else if (typeof errors === 'object') {
+          message = Object.values(errors)[0] as string;
+        }
+      }
       toast.error(message);
     },
   });
@@ -98,7 +108,17 @@ const Users: React.FC = () => {
       }
     },
     onError: (error: any) => {
-      const message = error.response?.data?.message || t('common.error');
+      let message = t('common.error');
+      if (error.response?.data?.message) {
+        message = error.response.data.message;
+      } else if (error.response?.data?.errors) {
+        const errors = error.response.data.errors;
+        if (Array.isArray(errors)) {
+          message = errors[0];
+        } else if (typeof errors === 'object') {
+          message = Object.values(errors)[0] as string;
+        }
+      }
       toast.error(message);
     },
   });
@@ -115,10 +135,20 @@ const Users: React.FC = () => {
       }
     },
     onError: (error: any) => {
-      const message = error.response?.data?.message || t('common.error');
+      let message = t('common.error');
+      if (error.response?.data?.message) {
+        message = error.response.data.message;
+      } else if (error.response?.data?.errors) {
+        const errors = error.response.data.errors;
+        if (Array.isArray(errors)) {
+          message = errors[0];
+        } else if (typeof errors === 'object') {
+          message = Object.values(errors)[0] as string;
+        }
+      }
       toast.error(message);
       setDeleteUserId(null);
-    },
+    }
   });
 
   const toggleActiveMutation = useMutation({
@@ -148,8 +178,21 @@ const Users: React.FC = () => {
   };
 
   const handleAdd = () => {
-    if (!formData.name || !formData.email || !formData.password || !formData.role_id) {
-      toast.error(t('common.requiredFields'));
+    // Validate required fields
+    if (!formData.name?.trim()) {
+      toast.error(t('common.fullName') + ' ' + t('common.requiredFields'));
+      return;
+    }
+    if (!formData.email?.trim()) {
+      toast.error(t('common.email') + ' ' + t('common.requiredFields'));
+      return;
+    }
+    if (!formData.password?.trim()) {
+      toast.error(t('auth.password') + ' ' + t('common.requiredFields'));
+      return;
+    }
+    if (!formData.role_id) {
+      toast.error(t('common.role') + ' ' + t('common.requiredFields'));
       return;
     }
 
@@ -177,8 +220,16 @@ const Users: React.FC = () => {
   const handleUpdate = () => {
     if (!editingUser) return;
 
-    if (!formData.name || !formData.email || !formData.role_id) {
-      toast.error(t('common.requiredFields'));
+    if (!formData.name?.trim()) {
+      toast.error(t('common.fullName') + ' ' + t('common.requiredFields'));
+      return;
+    }
+    if (!formData.email?.trim()) {
+      toast.error(t('common.email') + ' ' + t('common.requiredFields'));
+      return;
+    }
+    if (!formData.role_id) {
+      toast.error(t('common.role') + ' ' + t('common.requiredFields'));
       return;
     }
 
