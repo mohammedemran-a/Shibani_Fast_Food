@@ -55,10 +55,27 @@
     "admin": "مدير النظام", "cashier": "كاشير", "accountant": "محاسب", "stockManager": "مدير مخزن"
   },
   "auth": { 
-    "login": "تسجيل الدخول", "logout": "تسجيل الخروج", "email": "البريد الإلكتروني", "password": "كلمة المرور", 
-    "signingIn": "جاري تسجيل الدخول...", "welcomeBack": "مرحباً بك مجدداً", "invalidCredentials": "بيانات الدخول غير صحيحة",
-    "logoutSuccess": "تم تسجيل الخروج بنجاح", "logoutError": "حدث خطأ أثناء تسجيل الخروج",
-    "logoutConfirmTitle": "تأكيد تسجيل الخروج", "logoutConfirmDescription": "هل أنت متأكد من تسجيل الخروج من النظام؟"
+    "login": {
+      "title": "تسجيل الدخول",
+      "welcomeBack": "مرحباً بك مجدداً",
+      "signInToContinue": "سجل دخولك للمتابعة",
+      "emailAddress": "البريد الإلكتروني",
+      "password": "كلمة المرور",
+      "signIn": "تسجيل الدخول",
+      "signingIn": "جاري تسجيل الدخول...",
+      "demoCredentials": "بيانات تجريبية",
+      "admin": "المدير",
+      "cashier": "الكاشير",
+      "manager": "المشرف",
+      "copyright": "جميع الحقوق محفوظة © 2024",
+      "invalidCredentials": "البريد الإلكتروني أو كلمة المرور غير صحيحة",
+      "error": "خطأ في الدخول"
+    },
+    "logout": "تسجيل الخروج",
+    "logoutSuccess": "تم تسجيل الخروج بنجاح",
+    "logoutError": "حدث خطأ أثناء تسجيل الخروج",
+    "logoutConfirmTitle": "تأكيد تسجيل الخروج",
+    "logoutConfirmDescription": "هل أنت متأكد من تسجيل الخروج من النظام؟"
   },
   "pos": { "title": "نقطة البيع", "searchProducts": "البحث عن منتج...", "scanBarcode": "امسح الباركود أو اكتب الرقم...", "productNotFound": "المنتج غير موجود", "available": "متوفر", "cart": "السلة", "emptyCart": "السلة فارغة", "subtotal": "المجموع الفرعي", "tax": "الضريبة", "discount": "الخصم", "total": "الإجمالي", "pay": "الدفع", "clear": "مسح", "hold": "تعليق", "quantity": "الكمية", "price": "السعر", "all": "الكل", "customer": "العميل", "walkInCustomer": "عميل عابر", "addedToCart": "تمت إضافة", "cartCleared": "تم مسح السلة" },
   "categories": { "drinks": "مشروبات", "snacks": "وجبات خفيفة", "dairy": "منتجات ألبان", "bakery": "مخبوزات", "spices": "توابل" },

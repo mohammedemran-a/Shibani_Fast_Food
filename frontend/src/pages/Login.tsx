@@ -13,19 +13,19 @@ import { Loader2, ShoppingCart } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/contexts/AuthContext';
 
-const loginSchema = z.object({
-  email: z.string().email('Invalid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
-});
-
-type LoginFormValues = z.infer<typeof loginSchema>;
-
 export default function LoginPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(false);
   const { login: authContextLogin } = useAuth();
+
+  const loginSchema = z.object({
+    email: z.string().email(t('auth.login.invalidEmail') || 'البريد الإلكتروني غير صحيح'),
+    password: z.string().min(6, t('auth.login.passwordTooShort') || 'كلمة المرور يجب أن تكون 6 أحرف على الأقل'),
+  });
+
+  type LoginFormValues = z.infer<typeof loginSchema>;
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -46,22 +46,25 @@ export default function LoginPage() {
       if (response.success && response.data?.token && response.data?.user) {
         authContextLogin(response.data.token, response.data.user);
         toast({
-          title: t('auth.login.successTitle'),
-          description: t('auth.login.successDescription'),
+          title: t('common.success'),
+          description: t('auth.login.welcomeBack'),
           variant: 'default',
         });
         navigate('/dashboard');
       } else {
         toast({
-          title: t('auth.login.errorTitle'),
-          description: response.message || t('auth.login.genericError'),
+          title: t('auth.login.error'),
+          description: t('auth.login.invalidCredentials'),
           variant: 'destructive',
         });
       }
     } catch (error: any) {
-      const errorMessage = error.response?.data?.message || 'Login failed. Please try again.';
+      const errorMessage = error.response?.data?.message === 'The provided credentials are incorrect.' 
+        ? t('auth.login.invalidCredentials') 
+        : (error.response?.data?.message || t('auth.login.invalidCredentials'));
+      
       toast({
-        title: 'Error',
+        title: t('auth.login.error'),
         description: errorMessage,
         variant: 'destructive',
       });
@@ -147,7 +150,7 @@ export default function LoginPage() {
                   {isLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Signing in...
+                      {t('auth.login.signingIn')}
                     </>
                   ) : (
                     t('auth.login.signIn')
