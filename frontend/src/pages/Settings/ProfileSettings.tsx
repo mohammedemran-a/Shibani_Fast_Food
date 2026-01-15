@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
@@ -31,6 +31,11 @@ import { profileService, type UpdateProfileData, type ChangePasswordData } from 
 import { apiClient } from '@/api/apiClient';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+
+// Debug logging
+if (typeof window !== 'undefined') {
+  console.log('ProfileSettings component loaded');
+}
 
 interface PasswordData {
   current_password: string;
