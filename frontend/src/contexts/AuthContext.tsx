@@ -1,7 +1,9 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { authService, User } from '@/api';
 import { useNavigate } from 'react-router-dom';
-import { useToast } from '@/hooks/use-toast';interface AuthContextType {
+import { useToast } from '@/hooks/use-toast';
+
+interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
@@ -15,7 +17,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const [isLoading, setIsLoading] = useState<boolean>(true); // Initial loading state
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -23,39 +25,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const initializeAuth = async () => {
       const token = authService.getToken();
-      const storedUser = authService.getUser();
-      
       if (token) {
-        // Set initial state from localStorage to prevent immediate redirect
-        if (storedUser) {
-          setUser(storedUser);
-          setIsAuthenticated(true);
-        }
-        
         try {
           const response = await authService.getCurrentUser();
-          // The response structure from me() is { success: true, data: { id, name, ... } }
-          // NOT { success: true, data: { user: { ... } } }
           if (response.success && response.data) {
             const userData = response.data as unknown as User;
             setUser(userData);
             setIsAuthenticated(true);
             authService.updateUserInLocalStorage(userData);
           } else {
-            authService.removeAuthData();
-            setIsAuthenticated(false);
-            setUser(null);
-            navigate('/login');
+            throw new Error('Failed to authenticate user');
           }
         } catch (error: any) {
-          console.error('Failed to fetch current user:', error);
-          // Only redirect if it's an authentication error (401)
-          if (error.response?.status === 401) {
-            authService.removeAuthData();
-            setIsAuthenticated(false);
-            setUser(null);
-            navigate('/login');
-          }
+          console.error('Authentication failed:', error);
+          authService.removeAuthData();
+          setIsAuthenticated(false);
+          setUser(null);
+          navigate('/login');
         }
       } else {
         setIsAuthenticated(false);
@@ -78,7 +64,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       await authService.logout();
     } catch (error) {
       console.error('Logout failed on server:', error);
-      // Even if server logout fails, clear client-side data
     } finally {
       authService.removeAuthData();
       setUser(null);
@@ -95,14 +80,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const refreshUser = async () => {
     try {
       const response = await authService.getCurrentUser();
-      if (response.success && response.data?.user) {
-        setUser(response.data.user);
-        authService.updateUserInLocalStorage(response.data.user);
+      if (response.success && response.data) {
+        const userData = response.data as unknown as User;
+        setUser(userData);
+        authService.updateUserInLocalStorage(userData);
       }
     } catch (error) {
       console.error('Failed to refresh user data:', error);
-      // Optionally, force logout if refresh fails
-      // logout();
     }
   };
 
