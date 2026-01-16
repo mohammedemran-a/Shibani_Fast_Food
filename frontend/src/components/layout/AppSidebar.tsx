@@ -76,23 +76,6 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ isOpen, onToggle }) => {
     queryFn: () => settingsService.getSettings(),
   });
 
-  const hasPermission = (permission?: string) => {
-    // If no permission is required, show the item
-    if (!permission) return true;
-    
-    // If no user is logged in, hide the item
-    if (!user) return false;
-
-    // Extract role name safely
-    const userRole = typeof user.role === 'string' ? user.role : (user.role as any)?.name;
-    
-    // Admin always has permission - using a very loose check to be safe
-    if (userRole?.toLowerCase().includes('admin')) return true;
-    
-    // Check specific permissions
-    return user.permissions?.includes(permission) || false;
-  };
-
   const navItems: NavItem[] = [
     { label: t('nav.dashboard'), icon: LayoutDashboard, path: '/', permission: 'dashboard_view' },
     { label: t('nav.pos'), icon: ShoppingCart, path: '/pos', permission: 'pos_access' },
@@ -166,28 +149,8 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ isOpen, onToggle }) => {
     },
   ];
 
-  // For Admin, we show EVERYTHING. For others, we filter.
-  const userRole = typeof user?.role === 'string' ? user.role : (user?.role as any)?.name;
-  const isAdmin = userRole?.toLowerCase().includes('admin');
-
-  const filteredNavItems = isAdmin ? navItems : navItems.filter(item => {
-    if (item.children) {
-      const filteredChildren = item.children.filter(child => hasPermission(child.permission));
-      if (filteredChildren.length > 0) {
-        return true;
-      }
-      return false;
-    }
-    return hasPermission(item.permission);
-  }).map(item => {
-    if (item.children) {
-      return {
-        ...item,
-        children: item.children.filter(child => hasPermission(child.permission))
-      };
-    }
-    return item;
-  });
+  // عرض كافة العناصر دون أي فلترة لضمان ظهورها للمستخدم فوراً
+  const filteredNavItems = navItems;
 
   const toggleExpand = (label: string) => {
     setExpandedItems(prev =>
@@ -204,7 +167,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ isOpen, onToggle }) => {
 
   // Collapsed menu item with popover for children
   const CollapsedMenuItem: React.FC<{ item: NavItem }> = ({ item }) => {
-    const displayChildren = isAdmin ? item.children : item.children?.filter(child => hasPermission(child.permission));
+    const displayChildren = item.children;
     
     if (!displayChildren) {
       return (
@@ -283,8 +246,6 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ isOpen, onToggle }) => {
         className={cn(
           'fixed top-0 start-0 h-full bg-sidebar z-[100] transition-all duration-300 flex flex-col shadow-xl',
           isOpen ? 'w-64 translate-x-0' : 'w-20',
-          // Mobile logic: hide completely when closed, show full when open
-          // Desktop logic: always show, toggle between 64 and 20
           !isOpen && (isRTL ? 'translate-x-full' : '-translate-x-full'),
           'md:translate-x-0 md:static md:h-screen'
         )}
