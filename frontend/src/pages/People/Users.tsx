@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { Plus, Edit2, Trash2, UserCog, Mail, Phone, Search, Loader2, AlertCircle } from 'lucide-react';
+import { Plus, Edit2, Trash2, UserCog, Mail, Phone, Search, Loader2, AlertCircle, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -26,13 +26,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { userService, type User, type CreateUserData, type UpdateUserData } from '@/api/userService';
-
-const roles = [
-  { id: 1, nameKey: 'roles.admin', color: '#3b82f6' },
-  { id: 2, nameKey: 'roles.cashier', color: '#10b981' },
-  { id: 3, nameKey: 'roles.accountant', color: '#f59e0b' },
-  { id: 4, nameKey: 'roles.stockManager', color: '#8b5cf6' },
-];
+import { roleService } from '@/api/roleService';
 
 interface UserFormData {
   name: string;
@@ -62,10 +56,19 @@ const Users: React.FC = () => {
     role_id: null,
   });
 
+  // Fetch users
   const { data: usersResponse, isLoading, error } = useQuery({
     queryKey: ['users', searchQuery],
     queryFn: () => userService.getAll({ search: searchQuery }),
   });
+
+  // Fetch roles dynamically from backend
+  const { data: rolesResponse, isLoading: isLoadingRoles } = useQuery({
+    queryKey: ['roles'],
+    queryFn: () => roleService.getAll(),
+  });
+
+  const roles = rolesResponse?.data || [];
 
   const createMutation = useMutation({
     mutationFn: (data: CreateUserData) => userService.create(data),
@@ -80,32 +83,7 @@ const Users: React.FC = () => {
       }
     },
     onError: (error: any) => {
-      let message = t('common.error');
-      console.error('User creation error:', {
-        status: error.response?.status,
-        data: error.response?.data,
-        message: error.message,
-      });
-      
-      if (error.response?.data?.message) {
-        message = error.response.data.message;
-      } else if (error.response?.data?.errors) {
-        const errors = error.response.data.errors;
-        if (Array.isArray(errors)) {
-          message = errors[0];
-        } else if (typeof errors === 'object') {
-          // Build a detailed error message from validation errors
-          const errorMessages = Object.entries(errors)
-            .map(([field, msgs]: [string, any]) => {
-              const fieldMsg = Array.isArray(msgs) ? msgs.join(', ') : String(msgs);
-              return `${field}: ${fieldMsg}`;
-            })
-            .join(' | ');
-          message = errorMessages || t('common.error');
-        }
-      }
-      console.error('Final error message:', message);
-      toast.error(message);
+      toast.error(error.response?.data?.message || t('common.error'));
     },
   });
 
@@ -124,32 +102,7 @@ const Users: React.FC = () => {
       }
     },
     onError: (error: any) => {
-      let message = t('common.error');
-      console.error('User creation error:', {
-        status: error.response?.status,
-        data: error.response?.data,
-        message: error.message,
-      });
-      
-      if (error.response?.data?.message) {
-        message = error.response.data.message;
-      } else if (error.response?.data?.errors) {
-        const errors = error.response.data.errors;
-        if (Array.isArray(errors)) {
-          message = errors[0];
-        } else if (typeof errors === 'object') {
-          // Build a detailed error message from validation errors
-          const errorMessages = Object.entries(errors)
-            .map(([field, msgs]: [string, any]) => {
-              const fieldMsg = Array.isArray(msgs) ? msgs.join(', ') : String(msgs);
-              return `${field}: ${fieldMsg}`;
-            })
-            .join(' | ');
-          message = errorMessages || t('common.error');
-        }
-      }
-      console.error('Final error message:', message);
-      toast.error(message);
+      toast.error(error.response?.data?.message || t('common.error'));
     },
   });
 
@@ -165,40 +118,12 @@ const Users: React.FC = () => {
       }
     },
     onError: (error: any) => {
-      let message = t('common.error');
-      if (error.response?.data?.message) {
-        message = error.response.data.message;
-      } else if (error.response?.data?.errors) {
-        const errors = error.response.data.errors;
-        if (Array.isArray(errors)) {
-          message = errors[0];
-        } else if (typeof errors === 'object') {
-          message = Object.values(errors)[0] as string;
-        }
-      }
-      toast.error(message);
+      toast.error(error.response?.data?.message || t('common.error'));
       setDeleteUserId(null);
     }
   });
 
-  const toggleActiveMutation = useMutation({
-    mutationFn: (id: number) => userService.toggleActive(id),
-    onSuccess: (response) => {
-      if (response.success) {
-        toast.success(response.message || t('common.success'));
-        queryClient.invalidateQueries({ queryKey: ['users'] });
-      } else {
-        toast.error(response.message || t('common.error'));
-      }
-    },
-    onError: (error: any) => {
-      const message = error.response?.data?.message || t('common.error');
-      toast.error(message);
-    },
-  });
-
   const resetForm = () => {
-    console.log('Resetting form');
     setFormData({
       name: '',
       email: '',
@@ -210,60 +135,18 @@ const Users: React.FC = () => {
   };
 
   const handleAdd = () => {
-    console.log('Adding new user with form data:', {
-      name: formData.name,
-      email: formData.email,
-      phone: formData.phone,
-      role_id: formData.role_id,
-      password: '***hidden***',
-    });
-    
-    // Validate required fields
-    if (!formData.name?.trim()) {
-      const error = t('common.fullName') + ' ' + t('common.requiredFields');
-      console.error('Validation failed:', error);
-      toast.error(error);
+    if (!formData.name?.trim() || !formData.email?.trim() || !formData.password?.trim() || !formData.role_id) {
+      toast.error(t('common.requiredFields'));
       return;
     }
-    if (!formData.email?.trim()) {
-      const error = t('common.email') + ' ' + t('common.requiredFields');
-      console.error('Validation failed:', error);
-      toast.error(error);
-      return;
-    }
-    if (!formData.password?.trim()) {
-      const error = t('auth.password') + ' ' + t('common.requiredFields');
-      console.error('Validation failed:', error);
-      toast.error(error);
-      return;
-    }
-    if (formData.password.length < 6) {
-      const error = t('auth.passwordTooShort') || 'كلمة المرور يجب أن تكون 6 أحرف على الأقل';
-      console.error('Validation failed:', error);
-      toast.error(error);
-      return;
-    }
-    if (!formData.role_id) {
-      const error = t('common.role') + ' ' + t('common.requiredFields');
-      console.error('Validation failed:', error);
-      toast.error(error);
-      return;
-    }
-
-    console.log('All validations passed, submitting user creation');
     createMutation.mutate({
-      name: formData.name,
-      email: formData.email,
-      password: formData.password,
+      ...formData,
       password_confirmation: formData.password_confirmation || formData.password,
-      phone: formData.phone || undefined,
-      role_id: formData.role_id,
       is_active: true,
-    });
+    } as CreateUserData);
   };
 
   const handleEdit = (user: User) => {
-    console.log('Editing user:', user.id);
     setEditingUser(user);
     setFormData({
       name: user.name,
@@ -277,338 +160,206 @@ const Users: React.FC = () => {
   };
 
   const handleUpdate = () => {
-    if (!editingUser) return;
-
-    if (!formData.name?.trim()) {
-      toast.error(t('common.fullName') + ' ' + t('common.requiredFields'));
-      return;
-    }
-    if (!formData.email?.trim()) {
-      toast.error(t('common.email') + ' ' + t('common.requiredFields'));
-      return;
-    }
-    if (!formData.role_id) {
-      toast.error(t('common.role') + ' ' + t('common.requiredFields'));
-      return;
-    }
-
+    if (!editingUser || !formData.role_id) return;
     const updateData: UpdateUserData = {
       name: formData.name,
       email: formData.email,
       phone: formData.phone,
       role_id: formData.role_id,
     };
-
-    if (formData.password) {
-      updateData.password = formData.password;
-    }
-
+    if (formData.password) updateData.password = formData.password;
     updateMutation.mutate({ id: editingUser.id, data: updateData });
   };
 
-  const handleConfirmDelete = () => {
-    if (deleteUserId) {
-      deleteMutation.mutate(deleteUserId);
-    }
-  };
-
-  const getRoleBadge = (roleId: number) => {
-    const role = roles.find(r => r.id === roleId);
-    return (
-      <span 
-        className="px-2 py-1 rounded-full text-xs font-medium"
-        style={{ backgroundColor: role?.color + '20', color: role?.color }}
-      >
-        {role ? t(role.nameKey) : t('common.notSpecified')}
-      </span>
-    );
-  };
-
-  const users = usersResponse?.data?.data || [];
+  const users = usersResponse?.data || [];
 
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-foreground flex items-center gap-3">
-            <UserCog className="w-8 h-8 text-primary" />
-            {t('nav.users')}
-          </h1>
-          <p className="text-muted-foreground mt-1">{t('people.usersSubtitle')}</p>
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground">{t('nav.users')}</h1>
+          <p className="text-muted-foreground mt-1">إدارة مستخدمي النظام وصلاحياتهم</p>
         </div>
         <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
           <DialogTrigger asChild>
             <Button className="gradient-primary border-0 gap-2">
               <Plus className="w-4 h-4" />
-              {t('people.addUser')}
+              إضافة مستخدم
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
-              <DialogTitle>{t('people.addUser')}</DialogTitle>
+              <DialogTitle>إضافة مستخدم جديد</DialogTitle>
             </DialogHeader>
-            <div className="space-y-4 pt-4">
-              <div className="space-y-2">
-                <Label>{t('common.fullName')} *</Label>
-                <Input
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder={t('common.fullNamePlaceholder')}
-                />
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label>{t('common.fullName')}</Label>
+                <Input value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
               </div>
-              <div className="space-y-2">
-                <Label>{t('common.email')} *</Label>
-                <Input
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  placeholder="example@domain.com"
-                />
+              <div className="grid gap-2">
+                <Label>{t('common.email')}</Label>
+                <Input type="email" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} />
               </div>
-              <div className="space-y-2">
+              <div className="grid gap-2">
                 <Label>{t('common.phone')}</Label>
-                <Input
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  placeholder="+966XXXXXXXXX"
-                />
+                <Input value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} />
               </div>
-              <div className="space-y-2">
-                <Label>{t('auth.password')} *</Label>
-                <Input
-                  type="password"
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  placeholder={t('auth.passwordPlaceholder')}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>{t('common.role')} *</Label>
-                <Select
-                  value={formData.role_id?.toString()}
-                  onValueChange={(value) => setFormData({ ...formData, role_id: parseInt(value) })}
-                >
+              <div className="grid gap-2">
+                <Label>{t('common.role')}</Label>
+                <Select value={formData.role_id?.toString()} onValueChange={(v) => setFormData({...formData, role_id: parseInt(v)})}>
                   <SelectTrigger>
-                    <SelectValue placeholder={t('common.selectRole')} />
+                    <SelectValue placeholder="اختر الدور" />
                   </SelectTrigger>
                   <SelectContent>
-                    {roles.map((role) => (
+                    {roles.map((role: any) => (
                       <SelectItem key={role.id} value={role.id.toString()}>
-                        {t(role.nameKey)}
+                        {role.name_ar || role.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-              <div className="flex gap-2 pt-4">
-                <Button
-                  onClick={handleAdd}
-                  disabled={createMutation.isPending}
-                  className="flex-1 gradient-primary"
-                >
-                  {createMutation.isPending ? (
-                    <>
-                      <Loader2 className="w-4 h-4 ml-2 animate-spin" />
-                      {t('common.adding')}
-                    </>
-                  ) : t('common.add')}
-                </Button>
+              <div className="grid gap-2">
+                <Label>{t('auth.password')}</Label>
+                <Input type="password" value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} />
               </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setIsAddOpen(false)}>{t('common.cancel')}</Button>
+              <Button onClick={handleAdd} className="gradient-primary border-0" disabled={createMutation.isPending}>
+                {createMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : t('common.add')}
+              </Button>
             </div>
           </DialogContent>
         </Dialog>
       </div>
 
-      <div className="flex items-center gap-4 bg-card p-4 rounded-xl border shadow-sm">
-        <div className="relative flex-1">
-          <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+      <div className="glass-card p-4">
+        <div className="relative mb-6">
+          <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
+            placeholder="البحث عن مستخدم..."
+            className="ps-10"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={t('common.searchUsers')}
-            className="pr-10"
           />
         </div>
-      </div>
 
-      {isLoading ? (
-        <div className="flex flex-col items-center justify-center py-20 space-y-4">
-          <Loader2 className="w-10 h-10 text-primary animate-spin" />
-          <p className="text-muted-foreground">{t('common.loading')}</p>
-        </div>
-      ) : error ? (
-        <div className="flex flex-col items-center justify-center py-20 space-y-4 text-destructive">
-          <AlertCircle className="w-12 h-12" />
-          <p>{t('common.errorLoading')}</p>
-          <Button variant="outline" onClick={() => queryClient.invalidateQueries({ queryKey: ['users'] })}>
-            {t('common.retry')}
-          </Button>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {users.map((user: User) => (
-            <motion.div
-              key={user.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-card rounded-xl border shadow-sm hover:shadow-md transition-all overflow-hidden group"
-            >
-              <div className="p-6">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {isLoading ? (
+            Array(6).fill(0).map((_, i) => (
+              <div key={i} className="h-48 rounded-xl bg-muted/50 animate-pulse" />
+            ))
+          ) : users.length > 0 ? (
+            users.map((user: User) => (
+              <motion.div
+                key={user.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="glass-card p-5 hover:border-primary/30 transition-all group"
+              >
                 <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xl">
-                      {user.name.charAt(0).toUpperCase()}
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-lg group-hover:text-primary transition-colors">
-                        {user.name}
-                      </h3>
-                      {getRoleBadge(user.role_id)}
-                    </div>
+                  <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                    <UserCog className="w-6 h-6 text-primary" />
                   </div>
                   <div className="flex gap-1">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-muted-foreground hover:text-primary"
-                      onClick={() => handleEdit(user)}
-                    >
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(user)}>
                       <Edit2 className="w-4 h-4" />
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                      onClick={() => setDeleteUserId(user.id)}
-                    >
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteUserId(user.id)}>
                       <Trash2 className="w-4 h-4" />
                     </Button>
                   </div>
                 </div>
-
-                <div className="space-y-3 text-sm text-muted-foreground">
+                <h3 className="font-bold text-lg mb-1">{user.name}</h3>
+                <div className="flex items-center gap-2 mb-3">
+                  <Shield className="w-3 h-3 text-primary" />
+                  <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                    {user.role || 'بدون دور'}
+                  </span>
+                </div>
+                <div className="space-y-2 text-sm text-muted-foreground">
                   <div className="flex items-center gap-2">
                     <Mail className="w-4 h-4" />
-                    {user.email}
+                    <span>{user.email}</span>
                   </div>
                   {user.phone && (
                     <div className="flex items-center gap-2">
                       <Phone className="w-4 h-4" />
-                      {user.phone}
+                      <span>{user.phone}</span>
                     </div>
                   )}
                 </div>
-
-                <div className="mt-6 pt-6 border-t flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${user.is_active ? 'bg-green-500' : 'bg-red-500'}`} />
-                    <span className="text-xs font-medium">
-                      {user.is_active ? t('common.active') : t('common.inactive')}
-                    </span>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-xs"
-                    onClick={() => toggleActiveMutation.mutate(user.id)}
-                    disabled={toggleActiveMutation.isPending}
-                  >
-                    {user.is_active ? t('common.deactivate') : t('common.activate')}
-                  </Button>
-                </div>
-              </div>
-            </motion.div>
-          ))}
+              </motion.div>
+            ))
+          ) : (
+            <div className="col-span-full py-12 text-center text-muted-foreground">
+              <AlertCircle className="w-12 h-12 mx-auto mb-4 opacity-20" />
+              <p>لا يوجد مستخدمين مطابقين للبحث</p>
+            </div>
+          )}
         </div>
-      )}
+      </div>
 
+      {/* Edit Dialog */}
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>{t('common.editUser')}</DialogTitle>
+            <DialogTitle>تعديل بيانات المستخدم</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 pt-4">
-            <div className="space-y-2">
-              <Label>{t('common.fullName')} *</Label>
-              <Input
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              />
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label>{t('common.fullName')}</Label>
+              <Input value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
             </div>
-            <div className="space-y-2">
-              <Label>{t('common.email')} *</Label>
-              <Input
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              />
+            <div className="grid gap-2">
+              <Label>{t('common.email')}</Label>
+              <Input type="email" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} />
             </div>
-            <div className="space-y-2">
+            <div className="grid gap-2">
               <Label>{t('common.phone')}</Label>
-              <Input
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              />
+              <Input value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} />
             </div>
-            <div className="space-y-2">
-              <Label>{t('auth.password')} ({t('common.leaveEmptyToKeep')})</Label>
-              <Input
-                type="password"
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>{t('common.role')} *</Label>
-              <Select
-                value={formData.role_id?.toString()}
-                onValueChange={(value) => setFormData({ ...formData, role_id: parseInt(value) })}
-              >
+            <div className="grid gap-2">
+              <Label>{t('common.role')}</Label>
+              <Select value={formData.role_id?.toString()} onValueChange={(v) => setFormData({...formData, role_id: parseInt(v)})}>
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue placeholder="اختر الدور" />
                 </SelectTrigger>
                 <SelectContent>
-                  {roles.map((role) => (
+                  {roles.map((role: any) => (
                     <SelectItem key={role.id} value={role.id.toString()}>
-                      {t(role.nameKey)}
+                      {role.name_ar || role.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex gap-2 pt-4">
-              <Button
-                onClick={handleUpdate}
-                disabled={updateMutation.isPending}
-                className="flex-1 gradient-primary"
-              >
-                {updateMutation.isPending ? (
-                  <>
-                    <Loader2 className="w-4 h-4 ml-2 animate-spin" />
-                    {t('common.saving')}
-                  </>
-                ) : t('common.save')}
-              </Button>
+            <div className="grid gap-2">
+              <Label>{t('auth.password')} (اتركه فارغاً لعدم التغيير)</Label>
+              <Input type="password" value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} />
             </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setIsEditOpen(false)}>{t('common.cancel')}</Button>
+            <Button onClick={handleUpdate} className="gradient-primary border-0" disabled={updateMutation.isPending}>
+              {updateMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : t('common.save')}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={!!deleteUserId} onOpenChange={(open) => !open && setDeleteUserId(null)}>
+      {/* Delete Confirmation */}
+      <AlertDialog open={!!deleteUserId} onOpenChange={() => setDeleteUserId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{t('common.confirmDelete')}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t('common.deleteUserWarning')}
-            </AlertDialogDescription>
+            <AlertDialogTitle>{t('common.areYouSure')}</AlertDialogTitle>
+            <AlertDialogDescription>سيتم حذف المستخدم نهائياً من النظام.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleConfirmDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {deleteMutation.isPending ? t('common.deleting') : t('common.delete')}
+            <AlertDialogAction onClick={() => deleteUserId && deleteMutation.mutate(deleteUserId)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {t('common.delete')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
