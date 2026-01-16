@@ -16,7 +16,7 @@ import { toast } from 'sonner';
 import { useBrands, useCreateBrand, useUpdateBrand, useDeleteBrand } from '@/hooks/useBrands';
 
 const Brands: React.FC = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [isOpen, setIsOpen] = React.useState(false);
   const [isEdit, setIsEdit] = React.useState(false);
   const [currentId, setCurrentId] = React.useState<number | null>(null);
@@ -170,7 +170,7 @@ const Brands: React.FC = () => {
                 </div>
                 <div className="flex-1">
                   <h3 className="font-semibold text-foreground text-lg">
-                    {brand.name}
+                    {i18n.language === 'ar' ? (brand.name_ar || brand.name) : (brand.name || brand.name_ar)}
                   </h3>
                   {brand.description && (
                     <p className="text-sm text-muted-foreground mt-1">

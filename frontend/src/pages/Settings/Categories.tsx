@@ -16,7 +16,7 @@ import { toast } from 'sonner';
 import { useCategories, useCreateCategory, useUpdateCategory, useDeleteCategory } from '@/hooks/useCategories';
 
 const Categories: React.FC = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [isOpen, setIsOpen] = React.useState(false);
   const [isEdit, setIsEdit] = React.useState(false);
   const [currentId, setCurrentId] = React.useState<number | null>(null);
@@ -170,7 +170,8 @@ const Categories: React.FC = () => {
                 </div>
                 <div className="flex-1">
                   <h3 className="font-semibold text-foreground text-lg">
-                    {category.name}
+                    {/* Try name_ar first if language is Arabic, otherwise fallback to name */}
+                    {i18n.language === 'ar' ? (category.name_ar || category.name) : (category.name || category.name_ar)}
                   </h3>
                   {category.description && (
                     <p className="text-sm text-muted-foreground mt-1">

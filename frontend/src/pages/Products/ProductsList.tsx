@@ -21,7 +21,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
 const ProductsList: React.FC = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [search, setSearch] = useState('');
   const queryClient = useQueryClient();
 
@@ -32,16 +32,13 @@ const ProductsList: React.FC = () => {
   const deleteMutation = useDeleteProduct();
 
   const getStatusBadge = (quantity: number) => {
-    let status = 'active';
     let label = t('products.available');
     let styleClass = 'bg-success/10 text-success';
 
     if (quantity === 0) {
-      status = 'out';
       label = t('products.outOfStock');
       styleClass = 'bg-destructive/10 text-destructive';
     } else if (quantity < 10) {
-      status = 'low';
       label = t('products.lowStock');
       styleClass = 'bg-warning/10 text-warning';
     }
@@ -160,11 +157,15 @@ const ProductsList: React.FC = () => {
                           }}
                         />
                       </div>
-                      <span className="font-medium text-foreground">{product.name}</span>
+                      <span className="font-medium text-foreground">
+                        {i18n.language === 'ar' ? (product.name_ar || product.name) : (product.name || product.name_ar)}
+                      </span>
                     </div>
                   </td>
                   <td className="py-4 px-4 text-muted-foreground">{product.sku}</td>
-                  <td className="py-4 px-4 text-muted-foreground">{product.category?.name || '-'}</td>
+                  <td className="py-4 px-4 text-muted-foreground">
+                    {product.category ? (i18n.language === 'ar' ? (product.category.name_ar || product.category.name) : (product.category.name || product.category.name_ar)) : '-'}
+                  </td>
                   <td className="py-4 px-4 text-muted-foreground">${Number(product.purchase_price || 0).toFixed(2)}</td>
                   <td className="py-4 px-4 font-semibold text-primary">${Number(product.selling_price || 0).toFixed(2)}</td>
                   <td className="py-4 px-4 text-muted-foreground">{product.quantity}</td>
@@ -176,7 +177,6 @@ const ProductsList: React.FC = () => {
                         size="icon" 
                         className="h-8 w-8"
                         onClick={() => {
-                          // Toggle is_active
                           const newStatus = !product.is_active;
                           const token = localStorage.getItem('auth_token');
                           fetch(`http://localhost:8000/api/products/${product.id}`, {
@@ -226,7 +226,7 @@ const ProductsList: React.FC = () => {
                               {t('common.warning')}
                             </AlertDialogTitle>
                             <AlertDialogDescription>
-                              Are you sure you want to delete this product?
+                              {t('common.deleteUserWarning')}
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>

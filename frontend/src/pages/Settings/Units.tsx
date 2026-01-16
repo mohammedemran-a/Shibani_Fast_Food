@@ -25,6 +25,7 @@ import { useUnits, useCreateUnit, useUpdateUnit, useDeleteUnit } from '@/hooks/u
 interface Unit {
   id: number;
   name: string;
+  name_ar?: string;
   abbreviation: string;
   parent_unit_id?: number | null;
   conversion_factor?: number | null;
@@ -33,7 +34,7 @@ interface Unit {
 }
 
 const Units: React.FC = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [isOpen, setIsOpen] = React.useState(false);
   const [editingId, setEditingId] = React.useState<number | null>(null);
   const [formData, setFormData] = React.useState({ 
@@ -140,7 +141,7 @@ const Units: React.FC = () => {
           </div>
           <div className="flex-1">
             <h3 className="font-semibold text-foreground text-lg">
-              {unit.name}
+              {i18n.language === 'ar' ? (unit.name_ar || unit.name) : (unit.name || unit.name_ar)}
             </h3>
             <p className="text-sm text-muted-foreground mt-1">
               {unit.abbreviation}
