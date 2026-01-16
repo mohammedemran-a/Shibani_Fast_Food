@@ -27,6 +27,7 @@ import { BasketAnalysis, ProductPerformance } from "@/pages/Analytics";
 import { AttendanceTracking, SalesPerformanceReport } from "@/pages/Employees";
 import { ExpenseManagement } from "@/pages/Expenses";
 import NotFound from "./pages/NotFound";
+import Unauthorized from "./pages/Unauthorized";
 
 const queryClient = new QueryClient();
 
@@ -99,6 +100,7 @@ const AppContent = () => {
             <Route path="/settings/loyalty" element={<ProtectedRoute permission="manage_loyalty_settings"><LoyaltySettings /></ProtectedRoute>} />
             <Route path="/settings/profile" element={<ProfileSettings />} />
           </Route>
+          <Route path="/unauthorized" element={<Unauthorized />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
 

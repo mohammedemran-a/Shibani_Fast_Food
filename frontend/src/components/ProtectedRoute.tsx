@@ -26,8 +26,9 @@ export const ProtectedRoute = ({ children, permission }: ProtectedRouteProps) =>
   // Check permission if required
   if (permission && user) {
     const userPermissions = Array.isArray(user.permissions) ? user.permissions : [];
+
     if (!userPermissions.includes(permission)) {
-      return <Navigate to="/" replace />;
+      return <Navigate to="/unauthorized" replace />;
     }
   }
 
