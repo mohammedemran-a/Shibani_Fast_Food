@@ -171,7 +171,10 @@ const Users: React.FC = () => {
     updateMutation.mutate({ id: editingUser.id, data: updateData });
   };
 
-  const users = usersResponse?.data || [];
+  // Handle the nested data structure from Laravel pagination
+  const users = Array.isArray(usersResponse?.data) 
+    ? usersResponse.data 
+    : (usersResponse?.data as any)?.data || [];
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -275,7 +278,7 @@ const Users: React.FC = () => {
                 <div className="flex items-center gap-2 mb-3">
                   <Shield className="w-3 h-3 text-primary" />
                   <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary">
-                    {user.role || 'بدون دور'}
+                    {typeof user.role === 'string' ? user.role : (user.role as any)?.name_ar || (user.role as any)?.name || 'بدون دور'}
                   </span>
                 </div>
                 <div className="space-y-2 text-sm text-muted-foreground">
