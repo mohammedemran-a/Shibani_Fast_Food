@@ -7,12 +7,14 @@ export const MainLayout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = React.useState(true);
 
   return (
-    <div className="flex min-h-screen w-full bg-background">
+    <div className="flex h-screen w-full bg-background overflow-hidden">
       <AppSidebar isOpen={sidebarOpen} onToggle={() => setSidebarOpen(!sidebarOpen)} />
-      <div className={`flex-1 flex flex-col transition-all duration-300 ${sidebarOpen ? 'md:ms-64' : 'md:ms-20'}`}>
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <TopBar onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
-        <main className="flex-1 p-4 md:p-6 overflow-auto">
-          <Outlet />
+        <main className="flex-1 p-4 md:p-6 overflow-auto bg-muted/10">
+          <div className="max-w-[1600px] mx-auto">
+            <Outlet />
+          </div>
         </main>
       </div>
     </div>

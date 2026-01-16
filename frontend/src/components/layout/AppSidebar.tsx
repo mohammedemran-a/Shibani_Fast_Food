@@ -281,10 +281,12 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ isOpen, onToggle }) => {
       {/* Sidebar */}
       <aside
         className={cn(
-          'fixed top-0 start-0 h-full bg-sidebar z-50 transition-all duration-300 flex flex-col',
-          isOpen ? 'w-64' : 'w-20',
-          'md:translate-x-0',
-          !isOpen && 'max-md:-translate-x-full'
+          'fixed top-0 start-0 h-full bg-sidebar z-[100] transition-all duration-300 flex flex-col shadow-xl',
+          isOpen ? 'w-64 translate-x-0' : 'w-20',
+          // Mobile logic: hide completely when closed, show full when open
+          // Desktop logic: always show, toggle between 64 and 20
+          !isOpen && (isRTL ? 'translate-x-full' : '-translate-x-full'),
+          'md:translate-x-0 md:static md:h-screen'
         )}
       >
         {/* Logo */}
