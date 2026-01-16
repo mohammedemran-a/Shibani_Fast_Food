@@ -149,8 +149,34 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ isOpen, onToggle }) => {
     },
   ];
 
-  // عرض كافة العناصر دون أي فلترة لضمان ظهورها للمستخدم فوراً
-  const filteredNavItems = navItems;
+  const hasPermission = (permission?: string) => {
+    if (!permission) return true;
+    if (!user) return false;
+
+    const userRole = typeof user.role === 'string' ? user.role : (user.role as any)?.name;
+    if (userRole?.toLowerCase().includes('admin')) return true;
+    
+    return user.permissions?.includes(permission) || false;
+  };
+
+  const filteredNavItems = navItems.filter(item => {
+    if (item.children) {
+      const filteredChildren = item.children.filter(child => hasPermission(child.permission));
+      if (filteredChildren.length > 0) {
+        return true;
+      }
+      return false;
+    }
+    return hasPermission(item.permission);
+  }).map(item => {
+    if (item.children) {
+      return {
+        ...item,
+        children: item.children.filter(child => hasPermission(child.permission))
+      };
+    }
+    return item;
+  });
 
   const toggleExpand = (label: string) => {
     setExpandedItems(prev =>

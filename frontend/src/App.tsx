@@ -45,40 +45,58 @@ const AppContent = () => {
           <Route element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
             <Route path="/" element={<Dashboard />} />
             <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/pos" element={<POS />} />
-            <Route path="/products" element={<ProductsList />} />
-            <Route path="/products/add" element={<AddProduct />} />
-            <Route path="/products/edit/:id" element={<EditProduct />} />
-            <Route path="/products/import" element={<ImportProducts />} />
-            <Route path="/sales" element={<Sales />} />
-            <Route path="/purchases" element={<Purchases />} />
-            <Route path="/purchases/add" element={<AddPurchase />} />
-            <Route path="/returns" element={<Returns />} />
-            <Route path="/debts" element={<DebtManagement />} />
-            <Route path="/debts/:id" element={<CustomerDebtDetails />} />
-            <Route path="/analytics/basket" element={<BasketAnalysis />} />
-            <Route path="/analytics/products" element={<ProductPerformance />} />
-            <Route path="/reports/profit" element={<ProfitReport />} />
-            <Route path="/reports/sales" element={<SalesSummary />} />
-            <Route path="/reports/purchases" element={<PurchasesReport />} />
-            <Route path="/reports/sales-summary" element={<SalesSummary />} />
-            <Route path="/reports/purchases-summary" element={<PurchasesSummary />} />
-            <Route path="/reports/summary" element={<SalesSummary />} />
-            <Route path="/people/customers" element={<Customers />} />
-            <Route path="/people/customers/:id" element={<CustomerDetails />} />
-            <Route path="/people/suppliers" element={<Suppliers />} />
-            <Route path="/people/users" element={<Users />} />
-            <Route path="/expenses" element={<ExpenseManagement />} />
-            <Route path="/employees/attendance" element={<AttendanceTracking />} />
-            <Route path="/employees/performance" element={<SalesPerformanceReport />} />
-            <Route path="/settings/general" element={<GeneralSettings />} />
-            <Route path="/settings/units" element={<Units />} />
-            <Route path="/settings/currencies" element={<Currencies />} />
-            <Route path="/settings/categories" element={<Categories />} />
-            <Route path="/settings/brands" element={<Brands />} />
-            <Route path="/settings/roles" element={<RolesPermissions />} />
-            <Route path="/settings/wallets" element={<WalletSettings />} />
-            <Route path="/settings/loyalty" element={<LoyaltySettings />} />
+            
+            {/* POS */}
+            <Route path="/pos" element={<ProtectedRoute permission="pos_access"><POS /></ProtectedRoute>} />
+            
+            {/* Products */}
+            <Route path="/products" element={<ProtectedRoute permission="products_view"><ProductsList /></ProtectedRoute>} />
+            <Route path="/products/add" element={<ProtectedRoute permission="products_add"><AddProduct /></ProtectedRoute>} />
+            <Route path="/products/edit/:id" element={<ProtectedRoute permission="products_edit"><EditProduct /></ProtectedRoute>} />
+            <Route path="/products/import" element={<ProtectedRoute permission="products_add"><ImportProducts /></ProtectedRoute>} />
+            
+            {/* Sales & Purchases */}
+            <Route path="/sales" element={<ProtectedRoute permission="sales_view"><Sales /></ProtectedRoute>} />
+            <Route path="/purchases" element={<ProtectedRoute permission="purchases_view"><Purchases /></ProtectedRoute>} />
+            <Route path="/purchases/add" element={<ProtectedRoute permission="purchases_add"><AddPurchase /></ProtectedRoute>} />
+            <Route path="/returns" element={<ProtectedRoute permission="returns_view"><Returns /></ProtectedRoute>} />
+            
+            {/* Debts */}
+            <Route path="/debts" element={<ProtectedRoute permission="debts_view"><DebtManagement /></ProtectedRoute>} />
+            <Route path="/debts/:id" element={<ProtectedRoute permission="debts_view"><CustomerDebtDetails /></ProtectedRoute>} />
+            
+            {/* Analytics */}
+            <Route path="/analytics/basket" element={<ProtectedRoute permission="analytics_view"><BasketAnalysis /></ProtectedRoute>} />
+            <Route path="/analytics/products" element={<ProtectedRoute permission="analytics_view"><ProductPerformance /></ProtectedRoute>} />
+            
+            {/* Reports */}
+            <Route path="/reports/profit" element={<ProtectedRoute permission="reports_view"><ProfitReport /></ProtectedRoute>} />
+            <Route path="/reports/sales" element={<ProtectedRoute permission="reports_view"><SalesSummary /></ProtectedRoute>} />
+            <Route path="/reports/purchases" element={<ProtectedRoute permission="reports_view"><PurchasesReport /></ProtectedRoute>} />
+            <Route path="/reports/summary" element={<ProtectedRoute permission="reports_view"><SalesSummary /></ProtectedRoute>} />
+            
+            {/* People */}
+            <Route path="/people/customers" element={<ProtectedRoute permission="customers_view"><Customers /></ProtectedRoute>} />
+            <Route path="/people/customers/:id" element={<ProtectedRoute permission="customers_view"><CustomerDetails /></ProtectedRoute>} />
+            <Route path="/people/suppliers" element={<ProtectedRoute permission="suppliers_view"><Suppliers /></ProtectedRoute>} />
+            <Route path="/people/users" element={<ProtectedRoute permission="users_view"><Users /></ProtectedRoute>} />
+            
+            {/* Expenses */}
+            <Route path="/expenses" element={<ProtectedRoute permission="expenses_view"><ExpenseManagement /></ProtectedRoute>} />
+            
+            {/* Employees */}
+            <Route path="/employees/attendance" element={<ProtectedRoute permission="attendance_view"><AttendanceTracking /></ProtectedRoute>} />
+            <Route path="/employees/performance" element={<ProtectedRoute permission="sales_performance_view"><SalesPerformanceReport /></ProtectedRoute>} />
+            
+            {/* Settings */}
+            <Route path="/settings/general" element={<ProtectedRoute permission="settings_manage"><GeneralSettings /></ProtectedRoute>} />
+            <Route path="/settings/units" element={<ProtectedRoute permission="settings_manage"><Units /></ProtectedRoute>} />
+            <Route path="/settings/currencies" element={<ProtectedRoute permission="settings_manage"><Currencies /></ProtectedRoute>} />
+            <Route path="/settings/categories" element={<ProtectedRoute permission="settings_manage"><Categories /></ProtectedRoute>} />
+            <Route path="/settings/brands" element={<ProtectedRoute permission="settings_manage"><Brands /></ProtectedRoute>} />
+            <Route path="/settings/roles" element={<ProtectedRoute permission="roles_manage"><RolesPermissions /></ProtectedRoute>} />
+            <Route path="/settings/wallets" element={<ProtectedRoute permission="settings_manage"><WalletSettings /></ProtectedRoute>} />
+            <Route path="/settings/loyalty" element={<ProtectedRoute permission="settings_manage"><LoyaltySettings /></ProtectedRoute>} />
             <Route path="/settings/profile" element={<ProfileSettings />} />
           </Route>
           <Route path="*" element={<NotFound />} />
