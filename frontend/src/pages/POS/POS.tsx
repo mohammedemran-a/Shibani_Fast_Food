@@ -6,6 +6,9 @@ import { ProductsGrid } from '@/components/pos/ProductsGrid';
 import { CartSection, CartItem } from '@/components/pos/CartSection';
 import { CheckoutModal, PaymentDetails } from '@/components/pos/CheckoutModal';
 import { toast } from 'sonner';
+import { ShoppingCart } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 
 
 const POS: React.FC = () => {
@@ -13,6 +16,7 @@ const POS: React.FC = () => {
   const queryClient = useQueryClient();
   const [cartItems, setCartItems] = React.useState<CartItem[]>([]);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [isCartOpen, setIsCartOpen] = useState(false);
 
   const handleAddToCart = (product: { id: number; name: string; price: number; image: string }) => {
     setCartItems(prev => {
@@ -102,14 +106,16 @@ const POS: React.FC = () => {
 
   const total = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0) * 1.15;
 
+  const cartItemsCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+
   return (
-    <div className="h-[calc(100vh-8rem)] flex gap-4 animate-fade-in">
+    <div className="h-[calc(100vh-8rem)] flex gap-4 animate-fade-in relative">
       {/* Products Section */}
       <div className="flex-1 flex flex-col">
         <ProductsGrid onAddToCart={handleAddToCart} />
       </div>
 
-      {/* Cart Section */}
+      {/* Cart Section - Desktop */}
       <div className="w-full max-w-sm hidden md:block">
         <CartSection
           items={cartItems}
@@ -119,6 +125,36 @@ const POS: React.FC = () => {
           onCheckout={handleCheckout}
         />
       </div>
+
+      {/* Floating Cart Button - Mobile */}
+      <Sheet open={isCartOpen} onOpenChange={setIsCartOpen}>
+        <SheetTrigger asChild>
+          <Button
+            size="lg"
+            className="md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50 gradient-primary border-0 shadow-2xl px-8 py-6 text-lg gap-3 rounded-full"
+          >
+            <ShoppingCart className="w-6 h-6" />
+            <span>السلة</span>
+            {cartItemsCount > 0 && (
+              <span className="bg-white text-primary font-bold px-2.5 py-0.5 rounded-full text-sm">
+                {cartItemsCount}
+              </span>
+            )}
+          </Button>
+        </SheetTrigger>
+        <SheetContent side="bottom" className="h-[85vh] p-0">
+          <CartSection
+            items={cartItems}
+            onUpdateQuantity={handleUpdateQuantity}
+            onRemoveItem={handleRemoveItem}
+            onClearCart={handleClearCart}
+            onCheckout={() => {
+              setIsCartOpen(false);
+              handleCheckout();
+            }}
+          />
+        </SheetContent>
+      </Sheet>
 
       {/* Checkout Modal */}
       <CheckoutModal
