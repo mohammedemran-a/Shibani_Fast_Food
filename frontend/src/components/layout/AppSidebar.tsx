@@ -87,7 +87,9 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ isOpen, onToggle }) => {
 
   const hasPermission = (permission?: string) => {
     if (!permission) return true;
-    if (user?.role === 'Admin') return true;
+    // Check for Admin role (case-insensitive and handle potential object/string)
+    const userRole = typeof user?.role === 'string' ? user.role : (user?.role as any)?.name;
+    if (userRole?.toLowerCase() === 'admin') return true;
     return user?.permissions?.includes(permission);
   };
 

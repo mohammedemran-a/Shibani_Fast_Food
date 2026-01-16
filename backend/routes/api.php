@@ -109,10 +109,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('debts/summary/pending', [DebtController::class, 'pendingSummary']);
 
     // Expenses routes
-    Route::apiResource('expenses', ExpenseController::class);
+    Route::get('expenses/summary', [ExpenseController::class, 'getSummary']);
     Route::get('expenses/summary/daily', [ExpenseController::class, 'dailySummary']);
     Route::get('expenses/summary/weekly', [ExpenseController::class, 'weeklySummary']);
     Route::get('expenses/summary/monthly', [ExpenseController::class, 'monthlySummary']);
+    Route::get('expenses/category/{category}', [ExpenseController::class, 'getByCategory']);
+    Route::apiResource('expenses', ExpenseController::class);
 
     // Product Returns routes (Sales Returns)
     Route::apiResource('product-returns', ProductReturnController::class);

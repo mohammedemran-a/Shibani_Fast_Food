@@ -170,4 +170,24 @@ class ExpenseController extends Controller
             ]
         ]);
     }
+
+    /**
+     * Get expenses by category
+     */
+    public function getByCategory(Request $request, $category)
+    {
+        $query = Expense::with('cashier')
+                        ->where('description', 'like', "[$category]%");
+
+        if ($request->has('start_date') && $request->has('end_date')) {
+            $query->whereBetween('expense_date', [$request->start_date, $request->end_date]);
+        }
+
+        $expenses = $query->orderBy('expense_date', 'desc')->paginate($request->per_page ?? 10);
+
+        return response()->json([
+            'success' => true,
+            'data' => $expenses
+        ]);
+    }
 }
