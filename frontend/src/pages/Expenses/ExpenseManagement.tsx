@@ -116,16 +116,14 @@ const ExpenseManagement: React.FC = () => {
     },
     onError: (error: any) => {
       console.error('Create expense error:', error);
-      let message = t('common.error');
-      if (error.response?.data?.message) {
-        message = error.response.data.message;
-      } else if (error.response?.data?.errors) {
-        const errors = error.response.data.errors;
-        if (typeof errors === 'object') {
-          message = Object.values(errors)[0] as string;
-        }
+      const message = error.response?.data?.message || t('common.error');
+      const errors = error.response?.data?.errors;
+      if (errors) {
+        const firstError = Object.values(errors)[0] as string[];
+        toast.error(`${message}: ${firstError[0]}`);
+      } else {
+        toast.error(message);
       }
-      toast.error(message);
     },
   });
 
@@ -145,11 +143,14 @@ const ExpenseManagement: React.FC = () => {
     },
     onError: (error: any) => {
       console.error('Update expense error:', error);
-      let message = t('common.error');
-      if (error.response?.data?.message) {
-        message = error.response.data.message;
+      const message = error.response?.data?.message || t('common.error');
+      const errors = error.response?.data?.errors;
+      if (errors) {
+        const firstError = Object.values(errors)[0] as string[];
+        toast.error(`${message}: ${firstError[0]}`);
+      } else {
+        toast.error(message);
       }
-      toast.error(message);
     },
   });
 
