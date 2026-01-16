@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useQuery } from '@tantml:parameter>
+import { useQuery } from '@tanstack/react-query';
 import apiClient from '@/api/apiClient';
 import { 
   X, Banknote, Wallet, CreditCard, Check, User, 
@@ -157,7 +157,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold text-center">
             {showSuccessScreen ? 'تمت العملية بنجاح' : 'إتمام عملية البيع'}
@@ -170,9 +170,9 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
         {!showSuccessScreen ? (
           <div className="space-y-6">
             {/* Total Amount Display */}
-            <div className="bg-primary/10 rounded-xl p-4 text-center">
-              <p className="text-sm text-muted-foreground mb-1">المبلغ الإجمالي</p>
-              <p className="text-3xl font-bold text-primary">${total.toFixed(2)}</p>
+            <div className="bg-primary/10 rounded-xl p-3 sm:p-4 text-center">
+              <p className="text-xs sm:text-sm text-muted-foreground mb-1">المبلغ الإجمالي</p>
+              <p className="text-2xl sm:text-3xl font-bold text-primary">${total.toFixed(2)}</p>
             </div>
 
             {/* Customer Selection */}
@@ -246,44 +246,44 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
             </div>
 
             {/* Payment Method Selection */}
-            <div className="space-y-3">
-              <Label className="text-sm font-medium">طريقة الدفع</Label>
-              <div className="grid grid-cols-3 gap-3">
+            <div className="space-y-2 sm:space-y-3">
+              <Label className="text-xs sm:text-sm font-medium">طريقة الدفع</Label>
+              <div className="grid grid-cols-3 gap-2 sm:gap-3">
                 <button
                   onClick={() => setSelectedMethod('cash')}
                   className={cn(
-                    'flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all',
+                    'flex flex-col items-center gap-1 sm:gap-2 p-2 sm:p-4 rounded-lg sm:rounded-xl border-2 transition-all',
                     selectedMethod === 'cash'
                       ? 'border-primary bg-primary/10'
                       : 'border-border hover:border-primary/50'
                   )}
                 >
-                  <Banknote className="w-6 h-6 text-green-500" />
-                  <span className="text-sm font-medium">نقدي</span>
+                  <Banknote className="w-5 h-5 sm:w-6 sm:h-6 text-green-500" />
+                  <span className="text-xs sm:text-sm font-medium">نقدي</span>
                 </button>
                 <button
                   onClick={() => setSelectedMethod('wallet')}
                   className={cn(
-                    'flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all',
+                    'flex flex-col items-center gap-1 sm:gap-2 p-2 sm:p-4 rounded-lg sm:rounded-xl border-2 transition-all',
                     selectedMethod === 'wallet'
                       ? 'border-primary bg-primary/10'
                       : 'border-border hover:border-primary/50'
                   )}
                 >
-                  <Wallet className="w-6 h-6 text-blue-500" />
-                  <span className="text-sm font-medium">محفظة</span>
+                  <Wallet className="w-5 h-5 sm:w-6 sm:h-6 text-blue-500" />
+                  <span className="text-xs sm:text-sm font-medium">محفظة</span>
                 </button>
                 <button
                   onClick={() => setSelectedMethod('credit')}
                   className={cn(
-                    'flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all',
+                    'flex flex-col items-center gap-1 sm:gap-2 p-2 sm:p-4 rounded-lg sm:rounded-xl border-2 transition-all',
                     selectedMethod === 'credit'
                       ? 'border-primary bg-primary/10'
                       : 'border-border hover:border-primary/50'
                   )}
                 >
-                  <CreditCard className="w-6 h-6 text-orange-500" />
-                  <span className="text-sm font-medium">آجل</span>
+                  <CreditCard className="w-5 h-5 sm:w-6 sm:h-6 text-orange-500" />
+                  <span className="text-xs sm:text-sm font-medium">آجل</span>
                 </button>
               </div>
             </div>
@@ -358,10 +358,10 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
         ) : (
           /* Success Screen with Print/Back Options */
           <div className="space-y-6">
-            <div className="bg-success/10 rounded-xl p-6 text-center">
-              <Check className="w-16 h-16 mx-auto text-success mb-3" />
-              <p className="text-xl font-bold text-success mb-2">تمت العملية بنجاح!</p>
-              <p className="text-3xl font-bold text-foreground">${total.toFixed(2)}</p>
+            <div className="bg-success/10 rounded-xl p-4 sm:p-6 text-center">
+              <Check className="w-12 h-12 sm:w-16 sm:h-16 mx-auto text-success mb-2 sm:mb-3" />
+              <p className="text-lg sm:text-xl font-bold text-success mb-2">تمت العملية بنجاح!</p>
+              <p className="text-2xl sm:text-3xl font-bold text-foreground">${total.toFixed(2)}</p>
               {selectedCustomer && (
                 <p className="text-sm text-muted-foreground mt-2">
                   العميل: {selectedCustomer.name}
@@ -370,21 +370,21 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
             </div>
 
             {/* Action Buttons */}
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-2 sm:gap-3">
               <Button
                 size="lg"
-                className="w-full gradient-primary border-0 text-lg"
+                className="w-full gradient-primary border-0 text-base sm:text-lg py-5 sm:py-6"
                 onClick={handleBackToPOS}
               >
                 العودة إلى نقطة البيع
               </Button>
               <Button
-                size="lg"
+                size="default"
                 variant="outline"
                 className="w-full gap-2"
                 onClick={handlePrint}
               >
-                <Printer className="w-5 h-5" />
+                <Printer className="w-4 h-4 sm:w-5 sm:h-5" />
                 طباعة الفاتورة
               </Button>
             </div>
