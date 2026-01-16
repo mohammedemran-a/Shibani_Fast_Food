@@ -162,9 +162,15 @@ const EditProduct: React.FC = () => {
       await updateProduct.mutateAsync({ id: id!, data: submitData as any });
       toast.success('تم تحديث المنتج بنجاح');
       navigate('/products');
-    } catch (error) {
-      // Error is handled by the hook
-      toast.error(t('common.error'));
+    } catch (error: any) {
+      const message = error.response?.data?.message || t('common.error');
+      const errors = error.response?.data?.errors;
+      if (errors) {
+        const firstError = Object.values(errors)[0] as string[];
+        toast.error(`${message}: ${firstError[0]}`);
+      } else {
+        toast.error(message);
+      }
     }
   };
 

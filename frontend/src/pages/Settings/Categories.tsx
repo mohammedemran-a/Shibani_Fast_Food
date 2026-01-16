@@ -13,50 +13,80 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { useCategories, useCreateCategory, useDeleteCategory } from '@/hooks/useCategories';
+import { useCategories, useCreateCategory, useUpdateCategory, useDeleteCategory } from '@/hooks/useCategories';
 
 const Categories: React.FC = () => {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = React.useState(false);
-  const [newCategory, setNewCategory] = React.useState({ name: '', name_ar: '', description: '' });
+  const [isEdit, setIsEdit] = React.useState(false);
+  const [currentId, setCurrentId] = React.useState<number | null>(null);
+  const [formData, setFormData] = React.useState({ name: '', description: '' });
 
   // Fetch categories from API
   const { data: categoriesData, isLoading } = useCategories();
   const createCategory = useCreateCategory();
+  const updateCategory = useUpdateCategory();
   const deleteCategory = useDeleteCategory();
 
   const categories = categoriesData?.data || [];
 
-  const handleAdd = async () => {
-    if (!newCategory.name || !newCategory.name_ar) {
-      toast.error('يرجى إدخال اسم الفئة بالعربية والإنجليزية');
+  const handleOpenAdd = () => {
+    setIsEdit(false);
+    setCurrentId(null);
+    setFormData({ name: '', description: '' });
+    setIsOpen(true);
+  };
+
+  const handleOpenEdit = (category: any) => {
+    setIsEdit(true);
+    setCurrentId(category.id);
+    setFormData({ 
+      name: category.name || '', 
+      description: category.description || '' 
+    });
+    setIsOpen(true);
+  };
+
+  const handleSubmit = async () => {
+    if (!formData.name) {
+      toast.error(t('common.requiredFields'));
       return;
     }
 
     try {
-      await createCategory.mutateAsync({
-        name: newCategory.name,
-        name_ar: newCategory.name_ar,
-        description: newCategory.description,
-      });
-      setNewCategory({ name: '', name_ar: '', description: '' });
+      if (isEdit && currentId) {
+        await updateCategory.mutateAsync({
+          id: currentId,
+          data: formData,
+        });
+        toast.success(t('common.success'));
+      } else {
+        await createCategory.mutateAsync(formData);
+        toast.success(t('common.success'));
+      }
       setIsOpen(false);
-      toast.success('تم إضافة الفئة بنجاح');
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'فشل في إضافة الفئة');
+      const message = error.response?.data?.message || t('common.error');
+      const errors = error.response?.data?.errors;
+      if (errors) {
+        const firstError = Object.values(errors)[0] as string[];
+        toast.error(`${message}: ${firstError[0]}`);
+      } else {
+        toast.error(message);
+      }
     }
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm('هل أنت متأكد من حذف هذه الفئة؟')) {
+    if (!confirm(t('common.deleteUserWarning'))) {
       return;
     }
 
     try {
       await deleteCategory.mutateAsync(id);
-      toast.success('تم حذف الفئة');
+      toast.success(t('common.success'));
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'فشل في حذف الفئة');
+      toast.error(error.response?.data?.message || t('common.error'));
     }
   };
 
@@ -73,58 +103,49 @@ const Categories: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-foreground">{t('nav.categories')}</h1>
-          <p className="text-muted-foreground mt-1">إدارة فئات المنتجات</p>
+          <p className="text-muted-foreground mt-1">{t('expenses.subtitle')}</p>
         </div>
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
           <DialogTrigger asChild>
-            <Button className="gradient-primary border-0 gap-2">
+            <Button className="gradient-primary border-0 gap-2" onClick={handleOpenAdd}>
               <Plus className="w-4 h-4" />
-              إضافة فئة جديدة
+              {t('common.add')}
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>إضافة فئة جديدة</DialogTitle>
+              <DialogTitle>{isEdit ? t('common.edit') : t('common.add')}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 pt-4">
               <div className="space-y-2">
-                <Label>الاسم (بالعربية)</Label>
+                <Label>{t('common.name')} *</Label>
                 <Input
-                  value={newCategory.name_ar}
-                  onChange={(e) => setNewCategory({ ...newCategory, name_ar: e.target.value })}
-                  placeholder="إلكترونيات"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder={t('common.enterCategory')}
                 />
               </div>
 
               <div className="space-y-2">
-                <Label>الاسم (English)</Label>
+                <Label>{t('common.enterDescription')}</Label>
                 <Input
-                  value={newCategory.name}
-                  onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })}
-                  placeholder="Electronics"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>الوصف (اختياري)</Label>
-                <Input
-                  value={newCategory.description}
-                  onChange={(e) => setNewCategory({ ...newCategory, description: e.target.value })}
-                  placeholder="وصف الفئة"
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  placeholder={t('common.enterDescription')}
                 />
               </div>
               <div className="flex gap-3 justify-end pt-4">
                 <Button variant="outline" onClick={() => setIsOpen(false)}>
-                  إلغاء
+                  {t('common.cancel')}
                 </Button>
-                <Button onClick={handleAdd} disabled={createCategory.isPending}>
-                  {createCategory.isPending ? (
+                <Button onClick={handleSubmit} disabled={createCategory.isPending || updateCategory.isPending}>
+                  {(createCategory.isPending || updateCategory.isPending) ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                      جاري الإضافة...
+                      {t('common.saving')}
                     </>
                   ) : (
-                    'إضافة'
+                    t('common.save')
                   )}
                 </Button>
               </div>
@@ -156,7 +177,6 @@ const Categories: React.FC = () => {
                       {category.description}
                     </p>
                   )}
-
                 </div>
               </div>
               <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -164,14 +184,7 @@ const Categories: React.FC = () => {
                   variant="ghost"
                   size="icon"
                   className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10"
-                  onClick={() => {
-                    setNewCategory({
-                      name: category.name || '',
-                      name_ar: category.name_ar || '',
-                      description: category.description || ''
-                    });
-                    setIsOpen(true);
-                  }}
+                  onClick={() => handleOpenEdit(category)}
                 >
                   <Edit2 className="w-4 h-4" />
                 </Button>
@@ -197,10 +210,7 @@ const Categories: React.FC = () => {
       {categories.length === 0 && (
         <div className="text-center py-12">
           <Tags className="w-16 h-16 mx-auto text-muted-foreground/50 mb-4" />
-          <p className="text-muted-foreground">لا توجد فئات بعد</p>
-          <p className="text-sm text-muted-foreground mt-2">
-            ابدأ بإضافة فئة جديدة باستخدام الزر أعلاه
-          </p>
+          <p className="text-muted-foreground">{t('common.noData')}</p>
         </div>
       )}
     </div>

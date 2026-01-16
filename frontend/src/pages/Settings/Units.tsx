@@ -1,7 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
-import { Plus, Edit2, Trash2, Ruler, Loader2, ChevronRight } from 'lucide-react';
+import { Plus, Edit2, Trash2, Ruler, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -36,9 +36,8 @@ const Units: React.FC = () => {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = React.useState(false);
   const [editingId, setEditingId] = React.useState<number | null>(null);
-  const [newUnit, setNewUnit] = React.useState({ 
+  const [formData, setFormData] = React.useState({ 
     name: '', 
-    name_ar: '',
     abbreviation: '',
     parent_unit_id: '',
     conversion_factor: ''
@@ -56,25 +55,20 @@ const Units: React.FC = () => {
   const parentUnits = units.filter((u: Unit) => !u.parent_unit_id);
 
   const handleSubmit = async () => {
-    if (!newUnit.name || !newUnit.name_ar) {
-      toast.error('يرجى إدخال اسم الوحدة بالعربية والإنجليزية');
-      return;
-    }
-    if (!newUnit.abbreviation) {
-      toast.error('يرجى إدخال الاختصار');
+    if (!formData.name || !formData.abbreviation) {
+      toast.error(t('common.requiredFields'));
       return;
     }
 
     const data: any = {
-      name: newUnit.name,
-      name_ar: newUnit.name_ar,
-      abbreviation: newUnit.abbreviation,
+      name: formData.name,
+      abbreviation: formData.abbreviation,
     };
 
     // Add parent unit if selected
-    if (newUnit.parent_unit_id && newUnit.parent_unit_id !== 'none') {
-      data.parent_unit_id = parseInt(newUnit.parent_unit_id);
-      data.conversion_factor = newUnit.conversion_factor ? parseFloat(newUnit.conversion_factor) : 1;
+    if (formData.parent_unit_id && formData.parent_unit_id !== 'none') {
+      data.parent_unit_id = parseInt(formData.parent_unit_id);
+      data.conversion_factor = formData.conversion_factor ? parseFloat(formData.conversion_factor) : 1;
     } else {
       data.parent_unit_id = null;
       data.conversion_factor = null;
@@ -83,28 +77,34 @@ const Units: React.FC = () => {
     try {
       if (editingId) {
         await updateUnit.mutateAsync({ id: editingId, data });
-        toast.success('تم تحديث الوحدة بنجاح');
+        toast.success(t('common.success'));
       } else {
         await createUnit.mutateAsync(data);
-        toast.success('تم إضافة الوحدة بنجاح');
+        toast.success(t('common.success'));
       }
       resetForm();
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'فشل في حفظ الوحدة');
+      const message = error.response?.data?.message || t('common.error');
+      const errors = error.response?.data?.errors;
+      if (errors) {
+        const firstError = Object.values(errors)[0] as string[];
+        toast.error(`${message}: ${firstError[0]}`);
+      } else {
+        toast.error(message);
+      }
     }
   };
 
   const resetForm = () => {
-    setNewUnit({ name: '', name_ar: '', abbreviation: '', parent_unit_id: '', conversion_factor: '' });
+    setFormData({ name: '', abbreviation: '', parent_unit_id: '', conversion_factor: '' });
     setEditingId(null);
     setIsOpen(false);
   };
 
   const handleEdit = (unit: Unit) => {
     setEditingId(unit.id);
-    setNewUnit({
+    setFormData({
       name: unit.name || '',
-      name_ar: unit.name_ar || '',
       abbreviation: unit.abbreviation || '',
       parent_unit_id: unit.parent_unit_id?.toString() || '',
       conversion_factor: unit.conversion_factor?.toString() || ''
@@ -113,15 +113,15 @@ const Units: React.FC = () => {
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm('هل أنت متأكد من حذف هذه الوحدة؟')) {
+    if (!confirm(t('common.deleteUserWarning'))) {
       return;
     }
 
     try {
       await deleteUnit.mutateAsync(id);
-      toast.success('تم حذف الوحدة');
+      toast.success(t('common.success'));
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'فشل في حذف الوحدة');
+      toast.error(error.response?.data?.message || t('common.error'));
     }
   };
 
@@ -192,60 +192,51 @@ const Units: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-foreground">{t('nav.units')}</h1>
-          <p className="text-muted-foreground mt-1">إدارة وحدات القياس والوحدات الفرعية</p>
+          <p className="text-muted-foreground mt-1">{t('nav.units')}</p>
         </div>
         <Dialog open={isOpen} onOpenChange={(open) => { setIsOpen(open); if (!open) resetForm(); }}>
           <DialogTrigger asChild>
             <Button className="gradient-primary border-0 gap-2">
               <Plus className="w-4 h-4" />
-              إضافة وحدة جديدة
+              {t('common.add')}
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>{editingId ? 'تعديل وحدة القياس' : 'إضافة وحدة قياس جديدة'}</DialogTitle>
+              <DialogTitle>{editingId ? t('common.edit') : t('common.add')}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 pt-4">
               <div className="space-y-2">
-                <Label>الاسم (بالعربية)</Label>
+                <Label>{t('common.name')} *</Label>
                 <Input
-                  value={newUnit.name_ar}
-                  onChange={(e) => setNewUnit({ ...newUnit, name_ar: e.target.value })}
-                  placeholder="كيلوجرام"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder={t('common.name')}
                 />
               </div>
 
               <div className="space-y-2">
-                <Label>الاسم (English)</Label>
+                <Label>{t('products.unit')} (Abbr) *</Label>
                 <Input
-                  value={newUnit.name}
-                  onChange={(e) => setNewUnit({ ...newUnit, name: e.target.value })}
-                  placeholder="Kilogram"
+                  value={formData.abbreviation}
+                  onChange={(e) => setFormData({ ...formData, abbreviation: e.target.value })}
+                  placeholder="kg, pc, etc."
                 />
               </div>
 
               <div className="space-y-2">
-                <Label>الاختصار</Label>
-                <Input
-                  value={newUnit.abbreviation}
-                  onChange={(e) => setNewUnit({ ...newUnit, abbreviation: e.target.value })}
-                  placeholder="كجم"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>الوحدة الرئيسية (اختياري)</Label>
+                <Label>{t('products.unit')} (Parent)</Label>
                 <Select 
-                  value={newUnit.parent_unit_id || 'none'} 
-                  onValueChange={(value) => setNewUnit({ ...newUnit, parent_unit_id: value === 'none' ? '' : value })}
+                  value={formData.parent_unit_id || 'none'} 
+                  onValueChange={(value) => setFormData({ ...formData, parent_unit_id: value === 'none' ? '' : value })}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="اختر الوحدة الرئيسية" />
+                    <SelectValue placeholder={t('products.selectUnit')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">بدون وحدة رئيسية</SelectItem>
+                    <SelectItem value="none">{t('common.notSpecified')}</SelectItem>
                     {parentUnits
-                      .filter((u: Unit) => u.id !== editingId) // Prevent self-reference
+                      .filter((u: Unit) => u.id !== editingId)
                       .map((unit: Unit) => (
                         <SelectItem key={unit.id} value={unit.id.toString()}>
                           {unit.name} ({unit.abbreviation})
@@ -255,34 +246,31 @@ const Units: React.FC = () => {
                 </Select>
               </div>
 
-              {newUnit.parent_unit_id && newUnit.parent_unit_id !== 'none' && (
+              {formData.parent_unit_id && formData.parent_unit_id !== 'none' && (
                 <div className="space-y-2">
-                  <Label>معامل التحويل</Label>
+                  <Label>Conversion Factor</Label>
                   <Input
                     type="number"
                     step="0.01"
-                    value={newUnit.conversion_factor}
-                    onChange={(e) => setNewUnit({ ...newUnit, conversion_factor: e.target.value })}
+                    value={formData.conversion_factor}
+                    onChange={(e) => setFormData({ ...formData, conversion_factor: e.target.value })}
                     placeholder="1"
                   />
-                  <p className="text-xs text-muted-foreground">
-                    كم وحدة فرعية تساوي وحدة رئيسية واحدة؟ (مثال: 1000 جرام = 1 كيلو)
-                  </p>
                 </div>
               )}
 
               <div className="flex gap-3 justify-end pt-4">
                 <Button variant="outline" onClick={resetForm}>
-                  إلغاء
+                  {t('common.cancel')}
                 </Button>
                 <Button onClick={handleSubmit} disabled={createUnit.isPending || updateUnit.isPending}>
                   {(createUnit.isPending || updateUnit.isPending) ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                      {editingId ? 'جاري التحديث...' : 'جاري الإضافة...'}
+                      {t('common.saving')}
                     </>
                   ) : (
-                    editingId ? 'تحديث' : 'إضافة'
+                    t('common.save')
                   )}
                 </Button>
               </div>
@@ -295,7 +283,6 @@ const Units: React.FC = () => {
         {parentUnits.map((unit: Unit, index: number) => (
           <React.Fragment key={unit.id}>
             {renderUnit(unit, index)}
-            {/* Render sub-units */}
             {unit.sub_units && unit.sub_units.length > 0 && (
               <div className="col-span-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {unit.sub_units.map((subUnit: Unit, subIndex: number) => 
@@ -310,10 +297,7 @@ const Units: React.FC = () => {
       {units.length === 0 && (
         <div className="text-center py-12">
           <Ruler className="w-16 h-16 mx-auto text-muted-foreground/50 mb-4" />
-          <p className="text-muted-foreground">لا توجد وحدات قياس بعد</p>
-          <p className="text-sm text-muted-foreground mt-2">
-            ابدأ بإضافة وحدة قياس جديدة باستخدام الزر أعلاه
-          </p>
+          <p className="text-muted-foreground">{t('common.noData')}</p>
         </div>
       )}
     </div>

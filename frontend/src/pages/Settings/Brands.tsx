@@ -13,50 +13,80 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { useBrands, useCreateBrand, useDeleteBrand } from '@/hooks/useBrands';
+import { useBrands, useCreateBrand, useUpdateBrand, useDeleteBrand } from '@/hooks/useBrands';
 
 const Brands: React.FC = () => {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = React.useState(false);
-  const [newBrand, setNewBrand] = React.useState({ name: '', name_ar: '', description: '' });
+  const [isEdit, setIsEdit] = React.useState(false);
+  const [currentId, setCurrentId] = React.useState<number | null>(null);
+  const [formData, setFormData] = React.useState({ name: '', description: '' });
 
   // Fetch brands from API
   const { data: brandsData, isLoading } = useBrands();
   const createBrand = useCreateBrand();
+  const updateBrand = useUpdateBrand();
   const deleteBrand = useDeleteBrand();
 
   const brands = brandsData?.data || [];
 
-  const handleAdd = async () => {
-    if (!newBrand.name || !newBrand.name_ar) {
-      toast.error('يرجى إدخال اسم العلامة التجارية بالعربية والإنجليزية');
+  const handleOpenAdd = () => {
+    setIsEdit(false);
+    setCurrentId(null);
+    setFormData({ name: '', description: '' });
+    setIsOpen(true);
+  };
+
+  const handleOpenEdit = (brand: any) => {
+    setIsEdit(true);
+    setCurrentId(brand.id);
+    setFormData({ 
+      name: brand.name || '', 
+      description: brand.description || '' 
+    });
+    setIsOpen(true);
+  };
+
+  const handleSubmit = async () => {
+    if (!formData.name) {
+      toast.error(t('common.requiredFields'));
       return;
     }
 
     try {
-      await createBrand.mutateAsync({
-        name: newBrand.name,
-        name_ar: newBrand.name_ar,
-        description: newBrand.description,
-      });
-      setNewBrand({ name: '', name_ar: '', description: '' });
+      if (isEdit && currentId) {
+        await updateBrand.mutateAsync({
+          id: currentId,
+          data: formData,
+        });
+        toast.success(t('common.success'));
+      } else {
+        await createBrand.mutateAsync(formData);
+        toast.success(t('common.success'));
+      }
       setIsOpen(false);
-      toast.success('تم إضافة العلامة التجارية بنجاح');
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'فشل في إضافة العلامة التجارية');
+      const message = error.response?.data?.message || t('common.error');
+      const errors = error.response?.data?.errors;
+      if (errors) {
+        const firstError = Object.values(errors)[0] as string[];
+        toast.error(`${message}: ${firstError[0]}`);
+      } else {
+        toast.error(message);
+      }
     }
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm('هل أنت متأكد من حذف هذه العلامة التجارية؟')) {
+    if (!confirm(t('common.deleteUserWarning'))) {
       return;
     }
 
     try {
       await deleteBrand.mutateAsync(id);
-      toast.success('تم حذف العلامة التجارية');
+      toast.success(t('common.success'));
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'فشل في حذف العلامة التجارية');
+      toast.error(error.response?.data?.message || t('common.error'));
     }
   };
 
@@ -73,58 +103,49 @@ const Brands: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-foreground">{t('nav.brands')}</h1>
-          <p className="text-muted-foreground mt-1">إدارة العلامات التجارية</p>
+          <p className="text-muted-foreground mt-1">{t('suppliers.subtitle')}</p>
         </div>
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
           <DialogTrigger asChild>
-            <Button className="gradient-primary border-0 gap-2">
+            <Button className="gradient-primary border-0 gap-2" onClick={handleOpenAdd}>
               <Plus className="w-4 h-4" />
-              إضافة علامة تجارية
+              {t('common.add')}
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>إضافة علامة تجارية جديدة</DialogTitle>
+              <DialogTitle>{isEdit ? t('common.edit') : t('common.add')}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 pt-4">
               <div className="space-y-2">
-                <Label>الاسم (بالعربية)</Label>
+                <Label>{t('common.name')} *</Label>
                 <Input
-                  value={newBrand.name_ar}
-                  onChange={(e) => setNewBrand({ ...newBrand, name_ar: e.target.value })}
-                  placeholder="سامسونج"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder={t('products.selectBrand')}
                 />
               </div>
 
               <div className="space-y-2">
-                <Label>الاسم (English)</Label>
+                <Label>{t('common.enterDescription')}</Label>
                 <Input
-                  value={newBrand.name}
-                  onChange={(e) => setNewBrand({ ...newBrand, name: e.target.value })}
-                  placeholder="Samsung"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>الوصف (اختياري)</Label>
-                <Input
-                  value={newBrand.description}
-                  onChange={(e) => setNewBrand({ ...newBrand, description: e.target.value })}
-                  placeholder="وصف العلامة التجارية"
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  placeholder={t('common.enterDescription')}
                 />
               </div>
               <div className="flex gap-3 justify-end pt-4">
                 <Button variant="outline" onClick={() => setIsOpen(false)}>
-                  إلغاء
+                  {t('common.cancel')}
                 </Button>
-                <Button onClick={handleAdd} disabled={createBrand.isPending}>
-                  {createBrand.isPending ? (
+                <Button onClick={handleSubmit} disabled={createBrand.isPending || updateBrand.isPending}>
+                  {(createBrand.isPending || updateBrand.isPending) ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                      جاري الإضافة...
+                      {t('common.saving')}
                     </>
                   ) : (
-                    'إضافة'
+                    t('common.save')
                   )}
                 </Button>
               </div>
@@ -156,7 +177,6 @@ const Brands: React.FC = () => {
                       {brand.description}
                     </p>
                   )}
-
                 </div>
               </div>
               <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -164,14 +184,7 @@ const Brands: React.FC = () => {
                   variant="ghost"
                   size="icon"
                   className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10"
-                  onClick={() => {
-                    setNewBrand({
-                      name: brand.name || '',
-                      name_ar: brand.name_ar || '',
-                      description: brand.description || ''
-                    });
-                    setIsOpen(true);
-                  }}
+                  onClick={() => handleOpenEdit(brand)}
                 >
                   <Edit2 className="w-4 h-4" />
                 </Button>
@@ -197,10 +210,7 @@ const Brands: React.FC = () => {
       {brands.length === 0 && (
         <div className="text-center py-12">
           <Award className="w-16 h-16 mx-auto text-muted-foreground/50 mb-4" />
-          <p className="text-muted-foreground">لا توجد علامات تجارية بعد</p>
-          <p className="text-sm text-muted-foreground mt-2">
-            ابدأ بإضافة علامة تجارية جديدة باستخدام الزر أعلاه
-          </p>
+          <p className="text-muted-foreground">{t('common.noData')}</p>
         </div>
       )}
     </div>
