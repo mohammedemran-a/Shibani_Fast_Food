@@ -23,25 +23,39 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const initializeAuth = async () => {
       const token = authService.getToken();
+      const storedUser = authService.getUser();
+      
       if (token) {
+        // Set initial state from localStorage to prevent immediate redirect
+        if (storedUser) {
+          setUser(storedUser);
+          setIsAuthenticated(true);
+        }
+        
         try {
           const response = await authService.getCurrentUser();
-          if (response.success && response.data?.user) {
-            setUser(response.data.user);
+          // The response structure from me() is { success: true, data: { id, name, ... } }
+          // NOT { success: true, data: { user: { ... } } }
+          if (response.success && response.data) {
+            const userData = response.data as unknown as User;
+            setUser(userData);
             setIsAuthenticated(true);
+            authService.updateUserInLocalStorage(userData);
           } else {
-            // Token exists but user data couldn't be fetched (e.g., token expired/invalid)
             authService.removeAuthData();
             setIsAuthenticated(false);
             setUser(null);
             navigate('/login');
           }
-        } catch (error) {
+        } catch (error: any) {
           console.error('Failed to fetch current user:', error);
-          authService.removeAuthData();
-          setIsAuthenticated(false);
-          setUser(null);
-          navigate('/login');
+          // Only redirect if it's an authentication error (401)
+          if (error.response?.status === 401) {
+            authService.removeAuthData();
+            setIsAuthenticated(false);
+            setUser(null);
+            navigate('/login');
+          }
         }
       } else {
         setIsAuthenticated(false);

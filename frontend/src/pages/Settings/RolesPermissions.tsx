@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { Plus, Edit2, Trash2, Shield, Save, Check } from 'lucide-react';
+import { Plus, Trash2, Shield, Save, Check, Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -15,135 +16,115 @@ import {
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-
-const allPermissions = [
-  { id: 'dashboard_view', name: 'عرض لوحة التحكم', category: 'لوحة التحكم' },
-  { id: 'pos_access', name: 'الوصول لنقطة البيع', category: 'نقطة البيع' },
-  { id: 'pos_discount', name: 'تطبيق الخصومات', category: 'نقطة البيع' },
-  { id: 'pos_refund', name: 'إجراء المرتجعات', category: 'نقطة البيع' },
-  { id: 'products_view', name: 'عرض المنتجات', category: 'المنتجات' },
-  { id: 'products_add', name: 'إضافة منتجات', category: 'المنتجات' },
-  { id: 'products_edit', name: 'تعديل المنتجات', category: 'المنتجات' },
-  { id: 'products_delete', name: 'حذف المنتجات', category: 'المنتجات' },
-  { id: 'sales_view', name: 'عرض المبيعات', category: 'المبيعات' },
-  { id: 'sales_add', name: 'إضافة مبيعات', category: 'المبيعات' },
-  { id: 'purchases_view', name: 'عرض المشتريات', category: 'المشتريات' },
-  { id: 'purchases_add', name: 'إضافة مشتريات', category: 'المشتريات' },
-  { id: 'reports_view', name: 'عرض التقارير', category: 'التقارير' },
-  { id: 'reports_export', name: 'تصدير التقارير', category: 'التقارير' },
-  { id: 'customers_view', name: 'عرض العملاء', category: 'الأشخاص' },
-  { id: 'customers_manage', name: 'إدارة العملاء', category: 'الأشخاص' },
-  { id: 'suppliers_view', name: 'عرض الموردين', category: 'الأشخاص' },
-  { id: 'suppliers_manage', name: 'إدارة الموردين', category: 'الأشخاص' },
-  { id: 'users_view', name: 'عرض المستخدمين', category: 'المستخدمين' },
-  { id: 'users_manage', name: 'إدارة المستخدمين', category: 'المستخدمين' },
-  { id: 'settings_view', name: 'عرض الإعدادات', category: 'الإعدادات' },
-  { id: 'settings_manage', name: 'تعديل الإعدادات', category: 'الإعدادات' },
-  { id: 'roles_manage', name: 'إدارة الأدوار', category: 'الإعدادات' },
-];
-
-const initialRoles = [
-  { 
-    id: 1, 
-    name: 'مدير', 
-    description: 'صلاحيات كاملة للنظام',
-    color: '#3b82f6',
-    permissions: allPermissions.map(p => p.id)
-  },
-  { 
-    id: 2, 
-    name: 'كاشير', 
-    description: 'صلاحيات نقطة البيع فقط',
-    color: '#10b981',
-    permissions: ['dashboard_view', 'pos_access', 'products_view', 'customers_view']
-  },
-  { 
-    id: 3, 
-    name: 'محاسب', 
-    description: 'صلاحيات المالية والتقارير',
-    color: '#f59e0b',
-    permissions: ['dashboard_view', 'sales_view', 'purchases_view', 'reports_view', 'reports_export']
-  },
-  { 
-    id: 4, 
-    name: 'مدير المخزون', 
-    description: 'إدارة المنتجات والمخزون',
-    color: '#8b5cf6',
-    permissions: ['dashboard_view', 'products_view', 'products_add', 'products_edit', 'purchases_view', 'purchases_add', 'suppliers_view']
-  },
-];
+import { roleService, type Role, type Permission } from '@/api/roleService';
 
 const RolesPermissions: React.FC = () => {
   const { t } = useTranslation();
-  const [roles, setRoles] = React.useState(initialRoles);
-  const [selectedRole, setSelectedRole] = React.useState<typeof initialRoles[0] | null>(null);
-  const [isAddOpen, setIsAddOpen] = React.useState(false);
-  const [newRole, setNewRole] = React.useState({ name: '', description: '', color: '#3b82f6' });
-  const [editedPermissions, setEditedPermissions] = React.useState<string[]>([]);
+  const queryClient = useQueryClient();
+  
+  const [selectedRole, setSelectedRole] = useState<Role | null>(null);
+  const [isAddOpen, setIsAddOpen] = useState(false);
+  const [newRole, setNewRole] = useState({ name: '', name_ar: '', description: '' });
+  const [editedPermissions, setEditedPermissions] = useState<number[]>([]);
 
-  React.useEffect(() => {
+  // Fetch roles
+  const { data: rolesResponse, isLoading: isLoadingRoles } = useQuery({
+    queryKey: ['roles'],
+    queryFn: () => roleService.getAll(),
+  });
+
+  // Fetch permissions
+  const { data: permissionsResponse, isLoading: isLoadingPermissions } = useQuery({
+    queryKey: ['permissions'],
+    queryFn: () => roleService.getAllPermissions(),
+  });
+
+  useEffect(() => {
     if (selectedRole) {
-      setEditedPermissions(selectedRole.permissions);
+      setEditedPermissions(selectedRole.permissions.map(p => p.id));
     }
   }, [selectedRole]);
 
-  const handleSelectRole = (role: typeof initialRoles[0]) => {
-    setSelectedRole(role);
-    setEditedPermissions(role.permissions);
-  };
+  const createRoleMutation = useMutation({
+    mutationFn: (data: any) => roleService.create(data),
+    onSuccess: () => {
+      toast.success(t('common.success'));
+      queryClient.invalidateQueries({ queryKey: ['roles'] });
+      setIsAddOpen(false);
+      setNewRole({ name: '', name_ar: '', description: '' });
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || t('common.error'));
+    }
+  });
 
-  const handleTogglePermission = (permissionId: string) => {
+  const updatePermissionsMutation = useMutation({
+    mutationFn: ({ id, permissions }: { id: number, permissions: number[] }) => 
+      roleService.updatePermissions(id, permissions),
+    onSuccess: () => {
+      toast.success(t('common.success'));
+      queryClient.invalidateQueries({ queryKey: ['roles'] });
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || t('common.error'));
+    }
+  });
+
+  const deleteRoleMutation = useMutation({
+    mutationFn: (id: number) => roleService.delete(id),
+    onSuccess: () => {
+      toast.success(t('common.success'));
+      queryClient.invalidateQueries({ queryKey: ['roles'] });
+      setSelectedRole(null);
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || t('common.error'));
+    }
+  });
+
+  const handleTogglePermission = (permissionId: number) => {
     setEditedPermissions(prev => 
       prev.includes(permissionId) 
-        ? prev.filter(p => p !== permissionId)
+        ? prev.filter(id => id !== permissionId)
         : [...prev, permissionId]
     );
   };
 
   const handleSavePermissions = () => {
     if (!selectedRole) return;
-    setRoles(roles.map(r => 
-      r.id === selectedRole.id 
-        ? { ...r, permissions: editedPermissions }
-        : r
-    ));
-    toast.success('تم حفظ التغييرات بنجاح');
+    updatePermissionsMutation.mutate({ 
+      id: selectedRole.id, 
+      permissions: editedPermissions 
+    });
   };
 
   const handleAddRole = () => {
-    if (!newRole.name) {
-      toast.error('يرجى إدخال اسم الدور');
+    if (!newRole.name || !newRole.name_ar) {
+      toast.error(t('common.requiredFields'));
       return;
     }
-    const role = {
-      id: Date.now(),
-      ...newRole,
-      permissions: []
-    };
-    setRoles([...roles, role]);
-    setNewRole({ name: '', description: '', color: '#3b82f6' });
-    setIsAddOpen(false);
-    setSelectedRole(role);
-    toast.success('تم إضافة الدور بنجاح');
+    createRoleMutation.mutate(newRole);
   };
 
-  const handleDeleteRole = (id: number) => {
-    if (id === 1) {
-      toast.error('لا يمكن حذف دور المدير');
-      return;
-    }
-    setRoles(roles.filter(r => r.id !== id));
-    if (selectedRole?.id === id) setSelectedRole(null);
-    toast.success('تم حذف الدور');
-  };
+  const roles = rolesResponse?.data || [];
+  const permissions = permissionsResponse?.data || [];
 
-  const groupedPermissions = allPermissions.reduce((acc, permission) => {
-    if (!acc[permission.category]) {
-      acc[permission.category] = [];
+  // Group permissions by module
+  const groupedPermissions = permissions.reduce((acc, permission) => {
+    if (!acc[permission.module]) {
+      acc[permission.module] = [];
     }
-    acc[permission.category].push(permission);
+    acc[permission.module].push(permission);
     return acc;
-  }, {} as Record<string, typeof allPermissions>);
+  }, {} as Record<string, Permission[]>);
+
+  if (isLoadingRoles || isLoadingPermissions) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -165,11 +146,19 @@ const RolesPermissions: React.FC = () => {
             </DialogHeader>
             <div className="space-y-4 pt-4">
               <div className="space-y-2">
-                <Label>اسم الدور</Label>
+                <Label>اسم الدور (EN)</Label>
                 <Input
                   value={newRole.name}
                   onChange={(e) => setNewRole({ ...newRole, name: e.target.value })}
-                  placeholder="مثال: مشرف"
+                  placeholder="مثال: Admin"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>اسم الدور (AR)</Label>
+                <Input
+                  value={newRole.name_ar}
+                  onChange={(e) => setNewRole({ ...newRole, name_ar: e.target.value })}
+                  placeholder="مثال: مدير"
                 />
               </div>
               <div className="space-y-2">
@@ -180,28 +169,16 @@ const RolesPermissions: React.FC = () => {
                   placeholder="وصف مختصر للدور"
                 />
               </div>
-              <div className="space-y-2">
-                <Label>اللون</Label>
-                <div className="flex gap-2">
-                  <Input
-                    type="color"
-                    value={newRole.color}
-                    onChange={(e) => setNewRole({ ...newRole, color: e.target.value })}
-                    className="w-16 h-10 p-1 cursor-pointer"
-                  />
-                  <Input
-                    value={newRole.color}
-                    onChange={(e) => setNewRole({ ...newRole, color: e.target.value })}
-                    className="flex-1"
-                  />
-                </div>
-              </div>
               <div className="flex justify-end gap-2 pt-4">
                 <Button variant="outline" onClick={() => setIsAddOpen(false)}>
                   {t('common.cancel')}
                 </Button>
-                <Button onClick={handleAddRole} className="gradient-primary border-0">
-                  {t('common.add')}
+                <Button 
+                  onClick={handleAddRole} 
+                  className="gradient-primary border-0"
+                  disabled={createRoleMutation.isPending}
+                >
+                  {createRoleMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : t('common.add')}
                 </Button>
               </div>
             </div>
@@ -226,18 +203,15 @@ const RolesPermissions: React.FC = () => {
                       ? 'border-primary bg-primary/5' 
                       : 'border-transparent hover:bg-muted/50'
                   )}
-                  onClick={() => handleSelectRole(role)}
+                  onClick={() => setSelectedRole(role)}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div 
-                        className="w-10 h-10 rounded-lg flex items-center justify-center"
-                        style={{ backgroundColor: role.color + '20' }}
-                      >
-                        <Shield className="w-5 h-5" style={{ color: role.color }} />
+                      <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-primary/10">
+                        <Shield className="w-5 h-5 text-primary" />
                       </div>
                       <div>
-                        <p className="font-medium text-foreground">{role.name}</p>
+                        <p className="font-medium text-foreground">{role.name_ar || role.name}</p>
                         <p className="text-xs text-muted-foreground">{role.permissions.length} صلاحية</p>
                       </div>
                     </div>
@@ -246,7 +220,10 @@ const RolesPermissions: React.FC = () => {
                         variant="ghost" 
                         size="icon" 
                         className="h-8 w-8 text-destructive hover:text-destructive"
-                        onClick={(e) => { e.stopPropagation(); handleDeleteRole(role.id); }}
+                        onClick={(e) => { 
+                          e.stopPropagation(); 
+                          if(confirm('هل أنت متأكد من حذف هذا الدور؟')) deleteRoleMutation.mutate(role.id); 
+                        }}
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
@@ -266,25 +243,29 @@ const RolesPermissions: React.FC = () => {
                 <div className="flex items-center justify-between mb-6">
                   <div>
                     <h3 className="font-semibold text-foreground text-lg">
-                      صلاحيات: {selectedRole.name}
+                      صلاحيات: {selectedRole.name_ar || selectedRole.name}
                     </h3>
                     <p className="text-sm text-muted-foreground">{selectedRole.description}</p>
                   </div>
-                  <Button onClick={handleSavePermissions} className="gradient-primary border-0 gap-2">
-                    <Save className="w-4 h-4" />
+                  <Button 
+                    onClick={handleSavePermissions} 
+                    className="gradient-primary border-0 gap-2"
+                    disabled={updatePermissionsMutation.isPending}
+                  >
+                    {updatePermissionsMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                     حفظ التغييرات
                   </Button>
                 </div>
 
                 <div className="space-y-6">
-                  {Object.entries(groupedPermissions).map(([category, permissions]) => (
-                    <div key={category}>
+                  {Object.entries(groupedPermissions).map(([module, modulePermissions]) => (
+                    <div key={module}>
                       <h4 className="font-medium text-foreground mb-3 flex items-center gap-2">
                         <div className="w-2 h-2 rounded-full bg-primary" />
-                        {category}
+                        {module}
                       </h4>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {permissions.map((permission) => (
+                        {modulePermissions.map((permission) => (
                           <label
                             key={permission.id}
                             className={cn(
@@ -298,7 +279,7 @@ const RolesPermissions: React.FC = () => {
                               checked={editedPermissions.includes(permission.id)}
                               onCheckedChange={() => handleTogglePermission(permission.id)}
                             />
-                            <span className="text-sm text-foreground">{permission.name}</span>
+                            <span className="text-sm text-foreground">{permission.name_ar || permission.name}</span>
                             {editedPermissions.includes(permission.id) && (
                               <Check className="w-4 h-4 text-primary ms-auto" />
                             )}

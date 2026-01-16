@@ -62,9 +62,20 @@ interface NavItem {
   children?: NavItem[];
 }
 
+import { useAuth } from '@/contexts/AuthContext';
+
+interface NavItem {
+  label: string;
+  icon: React.ElementType;
+  path?: string;
+  permission?: string;
+  children?: NavItem[];
+}
+
 export const AppSidebar: React.FC<AppSidebarProps> = ({ isOpen, onToggle }) => {
   const { t } = useTranslation();
   const { isRTL } = useTheme();
+  const { user } = useAuth();
   const location = useLocation();
   const [expandedItems, setExpandedItems] = React.useState<string[]>(['products', 'reports', 'people', 'settings', 'analytics', 'employees']);
 
@@ -74,72 +85,92 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ isOpen, onToggle }) => {
     queryFn: () => settingsService.getSettings(),
   });
 
+  const hasPermission = (permission?: string) => {
+    if (!permission) return true;
+    if (user?.role === 'Admin') return true;
+    return user?.permissions?.includes(permission);
+  };
+
   const navItems: NavItem[] = [
-    { label: t('nav.dashboard'), icon: LayoutDashboard, path: '/' },
-    { label: t('nav.pos'), icon: ShoppingCart, path: '/pos' },
+    { label: t('nav.dashboard'), icon: LayoutDashboard, path: '/', permission: 'dashboard_view' },
+    { label: t('nav.pos'), icon: ShoppingCart, path: '/pos', permission: 'pos_access' },
     {
       label: t('nav.products'),
       icon: Package,
+      permission: 'products_view',
       children: [
-        { label: t('nav.productsList'), icon: List, path: '/products' },
-        { label: t('nav.addProduct'), icon: Plus, path: '/products/add' },
-        { label: t('nav.importProducts'), icon: Upload, path: '/products/import' },
+        { label: t('nav.productsList'), icon: List, path: '/products', permission: 'products_view' },
+        { label: t('nav.addProduct'), icon: Plus, path: '/products/add', permission: 'products_add' },
+        { label: t('nav.importProducts'), icon: Upload, path: '/products/import', permission: 'products_add' },
       ],
     },
-    { label: t('nav.sales'), icon: TrendingUp, path: '/sales' },
-    { label: t('nav.purchases'), icon: ShoppingBag, path: '/purchases' },
-    { label: t('nav.expenses'), icon: Receipt, path: '/expenses' },
-    { label: t('nav.debts'), icon: Wallet, path: '/debts' },
-    { label: t('nav.returns'), icon: RotateCcw, path: '/returns' },
+    { label: t('nav.sales'), icon: TrendingUp, path: '/sales', permission: 'sales_view' },
+    { label: t('nav.purchases'), icon: ShoppingBag, path: '/purchases', permission: 'purchases_view' },
+    { label: t('nav.expenses'), icon: Receipt, path: '/expenses', permission: 'expenses_view' },
+    { label: t('nav.debts'), icon: Wallet, path: '/debts', permission: 'debts_view' },
+    { label: t('nav.returns'), icon: RotateCcw, path: '/returns', permission: 'returns_view' },
     {
       label: t('nav.analytics'),
       icon: Lightbulb,
+      permission: 'analytics_view',
       children: [
-        { label: t('nav.basketAnalysis'), icon: ShoppingBasket, path: '/analytics/basket' },
-        { label: t('nav.productPerformance'), icon: Award, path: '/analytics/products' },
+        { label: t('nav.basketAnalysis'), icon: ShoppingBasket, path: '/analytics/basket', permission: 'analytics_view' },
+        { label: t('nav.productPerformance'), icon: Award, path: '/analytics/products', permission: 'analytics_view' },
       ],
     },
     {
       label: t('nav.reports'),
       icon: BarChart3,
+      permission: 'reports_view',
       children: [
-        { label: t('nav.profitReport'), icon: DollarSign, path: '/reports/profit' },
-        { label: t('nav.salesReport'), icon: FileText, path: '/reports/sales' },
-        { label: t('nav.summaryReport'), icon: PieChart, path: '/reports/summary' },
+        { label: t('nav.profitReport'), icon: DollarSign, path: '/reports/profit', permission: 'reports_view' },
+        { label: t('nav.salesReport'), icon: FileText, path: '/reports/sales', permission: 'reports_view' },
+        { label: t('nav.summaryReport'), icon: PieChart, path: '/reports/summary', permission: 'reports_view' },
       ],
     },
     {
       label: t('nav.people'),
       icon: Users,
+      permission: 'people_view',
       children: [
-        { label: t('nav.customers'), icon: UserCircle, path: '/people/customers' },
-        { label: t('nav.suppliers'), icon: Truck, path: '/people/suppliers' },
-        { label: t('nav.users'), icon: UserCog, path: '/people/users' },
+        { label: t('nav.customers'), icon: UserCircle, path: '/people/customers', permission: 'customers_view' },
+        { label: t('nav.suppliers'), icon: Truck, path: '/people/suppliers', permission: 'suppliers_view' },
+        { label: t('nav.users'), icon: UserCog, path: '/people/users', permission: 'users_view' },
       ],
     },
     {
       label: t('nav.employees'),
       icon: UsersRound,
+      permission: 'employees_view',
       children: [
-        { label: t('nav.attendance'), icon: Clock, path: '/employees/attendance' },
-        { label: t('nav.salesPerformance'), icon: Award, path: '/employees/performance' },
+        { label: t('nav.attendance'), icon: Clock, path: '/employees/attendance', permission: 'attendance_view' },
+        { label: t('nav.salesPerformance'), icon: Award, path: '/employees/performance', permission: 'sales_performance_view' },
       ],
     },
     {
       label: t('nav.settings'),
       icon: Settings,
+      permission: 'settings_view',
       children: [
-        { label: t('nav.generalSettings'), icon: Sliders, path: '/settings/general' },
-        { label: t('nav.loyaltySettings'), icon: Gift, path: '/settings/loyalty' },
-        { label: t('nav.wallets'), icon: Wallet, path: '/settings/wallets' },
-        { label: t('nav.units'), icon: Scale, path: '/settings/units' },
-        { label: t('nav.currencies'), icon: Coins, path: '/settings/currencies' },
-        { label: t('nav.categories'), icon: Tags, path: '/settings/categories' },
-        { label: t('nav.brands'), icon: Bookmark, path: '/settings/brands' },
-        { label: t('nav.roles'), icon: Shield, path: '/settings/roles' },
+        { label: t('nav.generalSettings'), icon: Sliders, path: '/settings/general', permission: 'settings_manage' },
+        { label: t('nav.loyaltySettings'), icon: Gift, path: '/settings/loyalty', permission: 'settings_manage' },
+        { label: t('nav.wallets'), icon: Wallet, path: '/settings/wallets', permission: 'settings_manage' },
+        { label: t('nav.units'), icon: Scale, path: '/settings/units', permission: 'settings_manage' },
+        { label: t('nav.currencies'), icon: Coins, path: '/settings/currencies', permission: 'settings_manage' },
+        { label: t('nav.categories'), icon: Tags, path: '/settings/categories', permission: 'settings_manage' },
+        { label: t('nav.brands'), icon: Bookmark, path: '/settings/brands', permission: 'settings_manage' },
+        { label: t('nav.roles'), icon: Shield, path: '/settings/roles', permission: 'roles_manage' },
       ],
     },
   ];
+
+  const filteredNavItems = navItems.filter(item => {
+    if (item.children) {
+      item.children = item.children.filter(child => hasPermission(child.permission));
+      return item.children.length > 0;
+    }
+    return hasPermission(item.permission);
+  });
 
   const toggleExpand = (label: string) => {
     setExpandedItems(prev =>
@@ -272,7 +303,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ isOpen, onToggle }) => {
         {/* Navigation */}
         <nav className="flex-1 py-4 overflow-y-auto">
           <ul className="space-y-1 px-3">
-            {navItems.map((item) => (
+            {filteredNavItems.map((item) => (
               <li key={item.label}>
                 {isOpen ? (
                   // Expanded sidebar - normal behavior
