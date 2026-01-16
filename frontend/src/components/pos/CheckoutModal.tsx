@@ -95,12 +95,21 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
           per_page: 50,
         },
       });
-      return response.data.data || [];
+      // التأكد من أن البيانات مصفوفة
+      const data = response.data?.data;
+      if (Array.isArray(data)) {
+        return data;
+      }
+      // إذا كانت البيانات كائن مع خاصية data (pagination)
+      if (data && Array.isArray(data.data)) {
+        return data.data;
+      }
+      return [];
     },
     enabled: isOpen,
   });
 
-  const customers: Customer[] = customersData || [];
+  const customers: Customer[] = Array.isArray(customersData) ? customersData : [];
 
   const handleConfirm = () => {
     if (!selectedMethod) return;
