@@ -87,7 +87,16 @@ const EditProduct: React.FC = () => {
   const unitPrice = formData.innerUnits > 0 ? formData.totalPurchasePrice / formData.innerUnits : 0;
 
   const generateBarcode = () => {
-    return Math.random().toString().slice(2, 15);
+    // Generate a 13-digit barcode (EAN-13 format)
+    const timestamp = Date.now().toString();
+    const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+    return (timestamp.slice(-10) + random).slice(0, 13);
+  };
+
+  const handleGenerateBarcode = () => {
+    const newBarcode = generateBarcode();
+    setFormData({ ...formData, barcode: newBarcode });
+    toast.success(`تم توليد الباركود: ${newBarcode}`);
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -271,7 +280,10 @@ const EditProduct: React.FC = () => {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="sku">{t('products.sku')}</Label>
+                <Label htmlFor="sku">
+                  {t('products.sku')}
+                  <span className="text-xs text-muted-foreground mr-2">(اختياري)</span>
+                </Label>
                 <Input
                   id="sku"
                   value={formData.sku}
@@ -286,12 +298,24 @@ const EditProduct: React.FC = () => {
                     {t('products.barcode')}
                   </span>
                 </Label>
-                <Input
-                  id="barcode"
-                  value={formData.barcode}
-                  onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
-                  placeholder="1234567890123"
-                />
+                <div className="flex gap-2">
+                  <Input
+                    id="barcode"
+                    value={formData.barcode}
+                    onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
+                    placeholder="1234567890123"
+                    className="flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={handleGenerateBarcode}
+                    title="توليد باركود تلقائي"
+                  >
+                    <Barcode className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
             </div>
             
