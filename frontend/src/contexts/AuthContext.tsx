@@ -30,6 +30,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           const response = await authService.getCurrentUser();
           if (response.success && response.data) {
             const userData = response.data as unknown as User;
+            // Ensure permissions are always an array
+            userData.permissions = Array.isArray(userData.permissions) ? userData.permissions : [];
             setUser(userData);
             setIsAuthenticated(true);
             authService.updateUserInLocalStorage(userData);
@@ -54,6 +56,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const login = (token: string, userData: User) => {
+    // Ensure permissions are always an array on login
+    userData.permissions = Array.isArray(userData.permissions) ? userData.permissions : [];
     authService.setAuthData(token, userData);
     setUser(userData);
     setIsAuthenticated(true);
@@ -82,6 +86,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const response = await authService.getCurrentUser();
       if (response.success && response.data) {
         const userData = response.data as unknown as User;
+        // Ensure permissions are always an array on refresh
+        userData.permissions = Array.isArray(userData.permissions) ? userData.permissions : [];
         setUser(userData);
         authService.updateUserInLocalStorage(userData);
       }
