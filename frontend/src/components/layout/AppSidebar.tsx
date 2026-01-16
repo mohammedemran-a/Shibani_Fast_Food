@@ -154,15 +154,16 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ isOpen, onToggle }) => {
     if (!user) return false;
 
     const userRole = typeof user.role === 'string' ? user.role : (user.role as any)?.name;
-    const isAdmin = userRole?.toLowerCase() === 'admin' || userRole?.toLowerCase() === 'super admin';
     
-    if (isAdmin) return true;
+    // Only Super Admin has absolute access. Admin role should follow permissions.
+    const isSuperAdmin = userRole?.toLowerCase() === 'super admin';
+    if (isSuperAdmin) return true;
     
     // Ensure permissions is an array and check for the specific permission
     const userPermissions = Array.isArray(user.permissions) ? user.permissions : [];
     
     // Debug log to help identify permission issues
-    console.log(`Checking permission: ${permission}, User has:`, userPermissions);
+    console.log(`Checking permission: ${permission}, User role: ${userRole}, User has:`, userPermissions);
     
     return userPermissions.includes(permission);
   };

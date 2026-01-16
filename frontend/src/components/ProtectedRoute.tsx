@@ -26,10 +26,10 @@ export const ProtectedRoute = ({ children, permission }: ProtectedRouteProps) =>
   // Check permission if required
   if (permission && user) {
     const userRole = typeof user.role === 'string' ? user.role : (user.role as any)?.name;
-    const isAdmin = userRole?.toLowerCase().includes('admin') || userRole?.toLowerCase().includes('super');
+    const isSuperAdmin = userRole?.toLowerCase() === 'super admin';
     
-    // Admin has all permissions, others must have the specific permission
-    if (!isAdmin) {
+    // Super Admin has all permissions, others must have the specific permission
+    if (!isSuperAdmin) {
       const userPermissions = Array.isArray(user.permissions) ? user.permissions : [];
       if (!userPermissions.includes(permission)) {
         return <Navigate to="/" replace />;
