@@ -47,7 +47,7 @@ class AuthController extends Controller
                     'phone' => $user->phone,
                     'avatar' => $user->avatar,
                     'role' => $user->role ? $user->role->name : null,
-                    'permissions' => $user->role ? $user->role->permissions->pluck('name') : [],
+                    'permissions' => $user->role ? $user->role->permissions->pluck('name')->toArray() : [],
                 ],
                 'token' => $token,
             ],
@@ -72,7 +72,7 @@ class AuthController extends Controller
      */
     public function me(Request $request)
     {
-        $user = $request->user()->load('role');
+        $user = $request->user()->load(['role.permissions']);
 
         return response()->json([
             'success' => true,
@@ -83,7 +83,7 @@ class AuthController extends Controller
                 'phone' => $user->phone,
                 'avatar' => $user->avatar,
                 'role' => $user->role ? $user->role->name : null,
-                'permissions' => $user->role ? $user->role->permissions->pluck('name') : [],
+                'permissions' => $user->role ? $user->role->permissions->pluck('name')->toArray() : [],
             ],
         ]);
     }

@@ -154,9 +154,13 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ isOpen, onToggle }) => {
     if (!user) return false;
 
     const userRole = typeof user.role === 'string' ? user.role : (user.role as any)?.name;
-    if (userRole?.toLowerCase().includes('admin')) return true;
+    const isAdmin = userRole?.toLowerCase().includes('admin') || userRole?.toLowerCase().includes('super');
     
-    return user.permissions?.includes(permission) || false;
+    if (isAdmin) return true;
+    
+    // Ensure permissions is an array and check for the specific permission
+    const userPermissions = Array.isArray(user.permissions) ? user.permissions : [];
+    return userPermissions.includes(permission);
   };
 
   const filteredNavItems = navItems.filter(item => {
