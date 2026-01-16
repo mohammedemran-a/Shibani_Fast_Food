@@ -86,11 +86,20 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ isOpen, onToggle }) => {
   });
 
   const hasPermission = (permission?: string) => {
+    // If no permission is required, show the item
     if (!permission) return true;
-    // Check for Admin role (case-insensitive and handle potential object/string)
-    const userRole = typeof user?.role === 'string' ? user.role : (user?.role as any)?.name;
+    
+    // If no user is logged in, hide the item
+    if (!user) return false;
+
+    // Extract role name safely
+    const userRole = typeof user.role === 'string' ? user.role : (user.role as any)?.name;
+    
+    // Admin always has permission
     if (userRole?.toLowerCase() === 'admin') return true;
-    return user?.permissions?.includes(permission);
+    
+    // Check specific permissions
+    return user.permissions?.includes(permission) || false;
   };
 
   const navItems: NavItem[] = [
@@ -168,11 +177,34 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ isOpen, onToggle }) => {
 
   const filteredNavItems = navItems.filter(item => {
     if (item.children) {
-      item.children = item.children.filter(child => hasPermission(child.permission));
-      return item.children.length > 0;
+      const filteredChildren = item.children.filter(child => hasPermission(child.permission));
+      if (filteredChildren.length > 0) {
+        // Create a copy to avoid mutating the original navItems
+        item.children = filteredChildren;
+        return true;
+      }
+      return false;
     }
     return hasPermission(item.permission);
   });
+
+  // Debug logging to help diagnose sidebar issues
+  React.useEffect(() => {
+    if (filteredNavItems.length === 0) {
+      console.warn('Sidebar: No items to display!', {
+        user,
+        role: typeof user?.role === 'string' ? user.role : (user?.role as any)?.name,
+        permissions: user?.permissions,
+        totalNavItems: navItems.length
+      });
+    } else {
+      console.log('Sidebar: Displaying items', {
+        count: filteredNavItems.length,
+        user: user?.name,
+        role: typeof user?.role === 'string' ? user.role : (user?.role as any)?.name
+      });
+    }
+  }, [filteredNavItems, user]);
 
   const toggleExpand = (label: string) => {
     setExpandedItems(prev =>
