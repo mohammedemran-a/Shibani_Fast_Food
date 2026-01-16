@@ -136,7 +136,7 @@ class RoleController extends Controller
     /**
      * Get all permissions
      */
-    public function permissions()
+    public function getAllPermissions()
     {
         $permissions = Permission::all();
         return response()->json([

@@ -138,6 +138,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('sales-performance/compare', [SalesPerformanceController::class, 'compare']);
 
     // Roles routes
+    Route::get('permissions', [RoleController::class, 'getAllPermissions']);
     Route::apiResource('roles', RoleController::class);
     Route::post('roles/{role}/permissions', [RoleController::class, 'updatePermissions']);
 
