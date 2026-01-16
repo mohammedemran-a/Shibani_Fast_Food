@@ -151,15 +151,25 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ isOpen, onToggle }) => {
 
   const hasPermission = (permission?: string) => {
     if (!permission) return true;
-    if (!user) return false;
+    if (!user) {
+      console.log('❌ No user found');
+      return false;
+    }
 
     const userPermissions = Array.isArray(user.permissions) ? user.permissions : [];
     
     // Debug log to help identify permission issues
-    console.log(`Checking permission: ${permission}, User has:`, userPermissions);
+    console.log(`🔍 Checking permission: "${permission}", User has:`, userPermissions);
+    console.log(`✅ Result:`, userPermissions.includes(permission));
     
     return userPermissions.includes(permission);
   };
+
+  // Log user data on component mount
+  React.useEffect(() => {
+    console.log('👤 Current user:', user);
+    console.log('🔐 User permissions:', user?.permissions);
+  }, [user]);
 
   const filteredNavItems = navItems.filter(item => {
     if (item.children) {
