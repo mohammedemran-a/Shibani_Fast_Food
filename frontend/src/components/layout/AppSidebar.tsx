@@ -149,6 +149,11 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ isOpen, onToggle }) => {
     },
   ];
 
+    const logAndNavigate = (path: string) => {
+    console.log(`Navigating to: ${path}`);
+    // This is for debugging, the actual navigation is handled by the NavLink component
+  };
+
   const hasPermission = (permission?: string) => {
     if (!permission) return true;
     if (!user) {
@@ -357,6 +362,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ isOpen, onToggle }) => {
                               <li key={child.path}>
                                 <NavLink
                                   to={child.path!}
+                                  onClick={() => logAndNavigate(child.path!)}
                                   className={cn(
                                     'sidebar-item text-sidebar-foreground/80 text-sm',
                                     isActive(child.path) && 'active'
@@ -374,6 +380,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ isOpen, onToggle }) => {
                   ) : (
                     <NavLink
                       to={item.path!}
+                      onClick={() => logAndNavigate(item.path!)}
                       className={cn(
                         'sidebar-item text-sidebar-foreground',
                         isActive(item.path) && 'active'
