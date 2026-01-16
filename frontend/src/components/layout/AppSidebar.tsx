@@ -177,7 +177,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ isOpen, onToggle }) => {
       if (filteredChildren.length > 0) {
         return true;
       }
-      return false;
+      return hasPermission(item.permission);
     }
     return hasPermission(item.permission);
   }).map(item => {
