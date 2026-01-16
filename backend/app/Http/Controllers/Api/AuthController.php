@@ -76,8 +76,13 @@ class AuthController extends Controller
         
         // Get permissions directly from the role to ensure they are fresh
         $permissions = [];
-        if ($user->role && $user->role->permissions) {
-            $permissions = $user->role->permissions->pluck('name')->toArray();
+        $roleName = null;
+        
+        if ($user->role) {
+            $roleName = $user->role->name;
+            if ($user->role->permissions) {
+                $permissions = $user->role->permissions->pluck('name')->toArray();
+            }
         }
 
         return response()->json([
@@ -88,7 +93,7 @@ class AuthController extends Controller
                 'email' => $user->email,
                 'phone' => $user->phone,
                 'avatar' => $user->avatar,
-                'role' => $user->role ? $user->role->name : null,
+                'role' => $roleName,
                 'permissions' => $permissions,
             ],
         ]);
