@@ -43,6 +43,7 @@ const EditProduct: React.FC = () => {
   const [formData, setFormData] = React.useState({
     name: '',
     sku: '',
+    barcode: '',
     category: '',
     brand: '',
     unit: '',
@@ -61,6 +62,7 @@ const EditProduct: React.FC = () => {
       setFormData({
         name: product.name || '',
         sku: product.sku || '',
+        barcode: product.barcode || '',
         category: product.category_id?.toString() || '',
         brand: product.brand_id?.toString() || '',
         unit: product.unit_id?.toString() || '',
@@ -140,7 +142,10 @@ const EditProduct: React.FC = () => {
         // Add all form fields
         submitData.append('name', formData.name);
       submitData.append('sku', formData.sku || `PRD-${Date.now()}`);
-      submitData.append('barcode', formData.sku || `${Date.now()}`);
+      // Add barcode if provided
+      if (formData.barcode) {
+        submitData.append('barcode', formData.barcode);
+      }
       submitData.append('category_id', formData.category);
       submitData.append('brand_id', formData.brand || '');
       submitData.append('unit_id', formData.unit);
@@ -275,14 +280,29 @@ const EditProduct: React.FC = () => {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="expiryDate">{t('products.expiryDate')}</Label>
+                <Label htmlFor="barcode">
+                  <span className="flex items-center gap-2">
+                    <Barcode className="w-4 h-4" />
+                    {t('products.barcode')}
+                  </span>
+                </Label>
                 <Input
-                  id="expiryDate"
-                  type="date"
-                  value={formData.expiryDate}
-                  onChange={(e) => setFormData({ ...formData, expiryDate: e.target.value })}
+                  id="barcode"
+                  value={formData.barcode}
+                  onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
+                  placeholder="1234567890123"
                 />
               </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="expiryDate">{t('products.expiryDate')}</Label>
+              <Input
+                id="expiryDate"
+                type="date"
+                value={formData.expiryDate}
+                onChange={(e) => setFormData({ ...formData, expiryDate: e.target.value })}
+              />
             </div>
 
             <div className="grid grid-cols-2 gap-4">

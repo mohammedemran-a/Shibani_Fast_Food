@@ -68,19 +68,9 @@ export const ProductsGrid: React.FC<ProductsGridProps> = ({ onAddToCart }) => {
     if (value.length >= 8) {
       // Debounce to wait for complete barcode
       const timer = setTimeout(() => {
-        console.log('🔍 البحث عن الباركود:', value);
-        console.log('📦 عدد المنتجات المتاحة:', products.length);
-        console.log('📋 أول 3 منتجات مع الباركود:', products.slice(0, 3).map(p => ({
-          name: p.name,
-          barcode: p.barcode,
-          barcodeType: typeof p.barcode
-        })));
-        
         const product = products.find((p: Product) => 
           p.barcode && p.barcode.toString().trim() === value.trim()
         );
-        
-        console.log('✅ المنتج الموجود:', product ? product.name : 'غير موجود');
         
         if (product) {
           const cartProduct = {
@@ -144,8 +134,7 @@ export const ProductsGrid: React.FC<ProductsGridProps> = ({ onAddToCart }) => {
     return matchesCategory && matchesSearch;
   });
 
-  // Debug: Log products count
-  console.log('POS Products:', products.length, 'Filtered:', filteredProducts.length);
+
 
   return (
     <div className="flex flex-col h-full">
