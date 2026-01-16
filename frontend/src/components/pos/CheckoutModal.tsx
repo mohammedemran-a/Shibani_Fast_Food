@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useQuery } from '@tantml:parameter>
+import apiClient from '@/api/apiClient';
 import { 
   X, Banknote, Wallet, CreditCard, Check, User, 
-  MessageCircle, Mail, Printer
+  MessageCircle, Mail, Printer, Search
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,6 +24,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+} from '@/components/ui/command';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -31,7 +45,7 @@ export interface PaymentDetails {
   method: PaymentMethod;
   walletType?: string;
   transactionCode?: string;
-  customerId?: string;
+  customerId?: number | null;
   customerName?: string;
 }
 
@@ -42,18 +56,18 @@ interface CheckoutModalProps {
   onConfirmPayment: (details: PaymentDetails) => void;
 }
 
+interface Customer {
+  id: number;
+  name: string;
+  phone?: string;
+  email?: string;
+}
+
 const walletOptions = [
   { value: 'stc_pay', label: 'STC Pay' },
   { value: 'urpay', label: 'UrPay' },
   { value: 'apple_pay', label: 'Apple Pay' },
   { value: 'bank_transfer', label: 'تحويل بنكي' },
-];
-
-const mockCustomers = [
-  { id: '1', name: 'أحمد محمد' },
-  { id: '2', name: 'خالد العبدالله' },
-  { id: '3', name: 'سعد السعود' },
-  { id: '4', name: 'فهد الفهد' },
 ];
 
 export const CheckoutModal: React.FC<CheckoutModalProps> = ({
@@ -66,16 +80,35 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod | null>(null);
   const [walletType, setWalletType] = useState('');
   const [transactionCode, setTransactionCode] = useState('');
-  const [selectedCustomer, setSelectedCustomer] = useState('');
-  const [showReceiptOptions, setShowReceiptOptions] = useState(false);
-  const [customerPhone, setCustomerPhone] = useState('');
-  const [customerEmail, setCustomerEmail] = useState('');
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [customerSearch, setCustomerSearch] = useState('');
+  const [openCustomerSelect, setOpenCustomerSelect] = useState(false);
+  const [showSuccessScreen, setShowSuccessScreen] = useState(false);
+
+  // جلب العملاء من قاعدة البيانات
+  const { data: customersData, isLoading: isLoadingCustomers } = useQuery({
+    queryKey: ['customers', customerSearch],
+    queryFn: async () => {
+      const response = await apiClient.get('/customers', {
+        params: {
+          search: customerSearch,
+          per_page: 50,
+        },
+      });
+      return response.data.data || [];
+    },
+    enabled: isOpen,
+  });
+
+  const customers: Customer[] = customersData || [];
 
   const handleConfirm = () => {
     if (!selectedMethod) return;
 
     const details: PaymentDetails = {
       method: selectedMethod,
+      customerId: selectedCustomer?.id || null,
+      customerName: selectedCustomer?.name || 'عميل عابر',
     };
 
     if (selectedMethod === 'wallet') {
@@ -83,42 +116,21 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
       details.transactionCode = transactionCode;
     }
 
-    if (selectedMethod === 'credit') {
-      const customer = mockCustomers.find(c => c.id === selectedCustomer);
-      details.customerId = selectedCustomer;
-      details.customerName = customer?.name;
+    if (selectedMethod === 'credit' && !selectedCustomer) {
+      toast.error('يجب اختيار عميل للدفع الآجل');
+      return;
     }
 
-    // Show receipt options after successful payment
-    setShowReceiptOptions(true);
     onConfirmPayment(details);
-  };
-
-  const handleSendWhatsApp = () => {
-    if (!customerPhone) {
-      toast.error(t('receipt.enterPhone'));
-      return;
-    }
-    // Format phone number and create WhatsApp link
-    const phone = customerPhone.replace(/[^0-9]/g, '');
-    const message = encodeURIComponent(t('receipt.whatsappMessage', { total: total.toFixed(2) }));
-    window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
-    toast.success(t('receipt.whatsappSent'));
-    handleClose();
-  };
-
-  const handleSendEmail = () => {
-    if (!customerEmail) {
-      toast.error(t('receipt.enterEmail'));
-      return;
-    }
-    // Simulate email sending
-    toast.success(t('receipt.emailSent'));
-    handleClose();
+    setShowSuccessScreen(true);
   };
 
   const handlePrint = () => {
-    toast.success(t('receipt.printing'));
+    toast.success('جاري الطباعة...');
+    handleClose();
+  };
+
+  const handleBackToPOS = () => {
     handleClose();
   };
 
@@ -126,10 +138,9 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     setSelectedMethod(null);
     setWalletType('');
     setTransactionCode('');
-    setSelectedCustomer('');
-    setShowReceiptOptions(false);
-    setCustomerPhone('');
-    setCustomerEmail('');
+    setSelectedCustomer(null);
+    setCustomerSearch('');
+    setShowSuccessScreen(false);
   };
 
   const handleClose = () => {
@@ -149,24 +160,94 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold text-center">
-            {showReceiptOptions ? t('receipt.title') : t('payment.title')}
+            {showSuccessScreen ? 'تمت العملية بنجاح' : 'إتمام عملية البيع'}
           </DialogTitle>
           <DialogDescription className="text-center">
-            {showReceiptOptions ? t('receipt.description') || 'اختر طريقة استلام الفاتورة' : t('payment.description') || 'اختر طريقة الدفع وأكمل العملية'}
+            {showSuccessScreen ? 'اختر الإجراء التالي' : 'اختر العميل وطريقة الدفع'}
           </DialogDescription>
         </DialogHeader>
 
-        {!showReceiptOptions ? (
+        {!showSuccessScreen ? (
           <div className="space-y-6">
             {/* Total Amount Display */}
             <div className="bg-primary/10 rounded-xl p-4 text-center">
-              <p className="text-sm text-muted-foreground mb-1">{t('payment.totalAmount')}</p>
+              <p className="text-sm text-muted-foreground mb-1">المبلغ الإجمالي</p>
               <p className="text-3xl font-bold text-primary">${total.toFixed(2)}</p>
+            </div>
+
+            {/* Customer Selection */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">العميل</Label>
+              <Popover open={openCustomerSelect} onOpenChange={setOpenCustomerSelect}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={openCustomerSelect}
+                    className="w-full justify-between"
+                  >
+                    {selectedCustomer ? (
+                      <div className="flex items-center gap-2">
+                        <User className="w-4 h-4" />
+                        {selectedCustomer.name}
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground">عميل عابر (افتراضي)</span>
+                    )}
+                    <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-full p-0" align="start">
+                  <Command>
+                    <CommandInput 
+                      placeholder="ابحث عن عميل..." 
+                      value={customerSearch}
+                      onValueChange={setCustomerSearch}
+                    />
+                    <CommandEmpty>
+                      {isLoadingCustomers ? 'جاري التحميل...' : 'لا يوجد عملاء'}
+                    </CommandEmpty>
+                    <CommandGroup className="max-h-64 overflow-auto">
+                      <CommandItem
+                        onSelect={() => {
+                          setSelectedCustomer(null);
+                          setOpenCustomerSelect(false);
+                        }}
+                      >
+                        <User className="mr-2 h-4 w-4" />
+                        <span>عميل عابر</span>
+                      </CommandItem>
+                      {customers.map((customer) => (
+                        <CommandItem
+                          key={customer.id}
+                          onSelect={() => {
+                            setSelectedCustomer(customer);
+                            setOpenCustomerSelect(false);
+                          }}
+                        >
+                          <User className="mr-2 h-4 w-4" />
+                          <div className="flex flex-col">
+                            <span>{customer.name}</span>
+                            {customer.phone && (
+                              <span className="text-xs text-muted-foreground">{customer.phone}</span>
+                            )}
+                          </div>
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+              {selectedCustomer && (
+                <p className="text-xs text-muted-foreground">
+                  سيتم حساب نقاط الولاء لهذا العميل
+                </p>
+              )}
             </div>
 
             {/* Payment Method Selection */}
             <div className="space-y-3">
-              <Label className="text-sm font-medium">{t('payment.selectMethod')}</Label>
+              <Label className="text-sm font-medium">طريقة الدفع</Label>
               <div className="grid grid-cols-3 gap-3">
                 <button
                   onClick={() => setSelectedMethod('cash')}
@@ -178,7 +259,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   )}
                 >
                   <Banknote className="w-6 h-6 text-green-500" />
-                  <span className="text-sm font-medium">{t('payment.cash')}</span>
+                  <span className="text-sm font-medium">نقدي</span>
                 </button>
                 <button
                   onClick={() => setSelectedMethod('wallet')}
@@ -190,7 +271,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   )}
                 >
                   <Wallet className="w-6 h-6 text-blue-500" />
-                  <span className="text-sm font-medium">{t('payment.wallet')}</span>
+                  <span className="text-sm font-medium">محفظة</span>
                 </button>
                 <button
                   onClick={() => setSelectedMethod('credit')}
@@ -202,7 +283,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   )}
                 >
                   <CreditCard className="w-6 h-6 text-orange-500" />
-                  <span className="text-sm font-medium">{t('payment.credit')}</span>
+                  <span className="text-sm font-medium">آجل</span>
                 </button>
               </div>
             </div>
@@ -217,10 +298,10 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   className="space-y-4 overflow-hidden"
                 >
                   <div className="space-y-2">
-                    <Label>{t('payment.walletType')}</Label>
+                    <Label>نوع المحفظة</Label>
                     <Select value={walletType} onValueChange={setWalletType}>
                       <SelectTrigger>
-                        <SelectValue placeholder={t('payment.selectWallet')} />
+                        <SelectValue placeholder="اختر المحفظة" />
                       </SelectTrigger>
                       <SelectContent>
                         {walletOptions.map((option) => (
@@ -232,11 +313,11 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label>{t('payment.transactionCode')}</Label>
+                    <Label>رمز العملية</Label>
                     <Input
                       value={transactionCode}
                       onChange={(e) => setTransactionCode(e.target.value)}
-                      placeholder={t('payment.enterTransactionCode')}
+                      placeholder="أدخل رمز العملية"
                     />
                   </div>
                 </motion.div>
@@ -252,26 +333,8 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   exit={{ opacity: 0, height: 0 }}
                   className="space-y-4 overflow-hidden"
                 >
-                  <div className="space-y-2">
-                    <Label>{t('payment.selectCustomer')}</Label>
-                    <Select value={selectedCustomer} onValueChange={setSelectedCustomer}>
-                      <SelectTrigger>
-                        <SelectValue placeholder={t('payment.chooseCustomer')} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {mockCustomers.map((customer) => (
-                          <SelectItem key={customer.id} value={customer.id}>
-                            <div className="flex items-center gap-2">
-                              <User className="w-4 h-4" />
-                              {customer.name}
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
                   <p className="text-sm text-muted-foreground bg-muted p-3 rounded-lg">
-                    {t('payment.creditNote')}
+                    يجب اختيار عميل محدد للدفع الآجل. سيتم تسجيل المبلغ كدين على العميل.
                   </p>
                 </motion.div>
               )}
@@ -280,7 +343,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
             {/* Action Buttons */}
             <div className="flex gap-3">
               <Button variant="outline" className="flex-1" onClick={handleClose}>
-                {t('common.cancel')}
+                إلغاء
               </Button>
               <Button
                 className="flex-1 gradient-primary border-0"
@@ -288,74 +351,42 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                 disabled={!isValid()}
               >
                 <Check className="w-4 h-4 me-2" />
-                {t('payment.confirm')}
+                تأكيد الدفع
               </Button>
             </div>
           </div>
         ) : (
-          /* Receipt Options */
+          /* Success Screen with Print/Back Options */
           <div className="space-y-6">
-            <div className="bg-success/10 rounded-xl p-4 text-center">
-              <Check className="w-12 h-12 mx-auto text-success mb-2" />
-              <p className="text-lg font-bold text-success">{t('receipt.paymentSuccess')}</p>
-              <p className="text-2xl font-bold text-foreground mt-2">${total.toFixed(2)}</p>
+            <div className="bg-success/10 rounded-xl p-6 text-center">
+              <Check className="w-16 h-16 mx-auto text-success mb-3" />
+              <p className="text-xl font-bold text-success mb-2">تمت العملية بنجاح!</p>
+              <p className="text-3xl font-bold text-foreground">${total.toFixed(2)}</p>
+              {selectedCustomer && (
+                <p className="text-sm text-muted-foreground mt-2">
+                  العميل: {selectedCustomer.name}
+                </p>
+              )}
             </div>
 
-            <div className="space-y-4">
-              <p className="text-sm font-medium text-muted-foreground text-center">
-                {t('receipt.sendReceipt')}
-              </p>
-
-              {/* WhatsApp Option */}
-              <div className="space-y-2">
-                <div className="flex gap-2">
-                  <Input
-                    placeholder={t('receipt.phonePlaceholder')}
-                    value={customerPhone}
-                    onChange={(e) => setCustomerPhone(e.target.value)}
-                    className="flex-1"
-                  />
-                  <Button 
-                    onClick={handleSendWhatsApp}
-                    className="bg-green-500 hover:bg-green-600 text-white gap-2"
-                  >
-                    <MessageCircle className="w-4 h-4" />
-                    {t('receipt.whatsapp')}
-                  </Button>
-                </div>
-              </div>
-
-              {/* Email Option */}
-              <div className="space-y-2">
-                <div className="flex gap-2">
-                  <Input
-                    type="email"
-                    placeholder={t('receipt.emailPlaceholder')}
-                    value={customerEmail}
-                    onChange={(e) => setCustomerEmail(e.target.value)}
-                    className="flex-1"
-                  />
-                  <Button 
-                    onClick={handleSendEmail}
-                    variant="outline"
-                    className="gap-2"
-                  >
-                    <Mail className="w-4 h-4" />
-                    {t('receipt.email')}
-                  </Button>
-                </div>
-              </div>
-
-              {/* Print and Close */}
-              <div className="flex gap-3 pt-4">
-                <Button variant="outline" className="flex-1 gap-2" onClick={handlePrint}>
-                  <Printer className="w-4 h-4" />
-                  {t('receipt.print')}
-                </Button>
-                <Button className="flex-1 gradient-primary border-0" onClick={handleClose}>
-                  {t('receipt.done')}
-                </Button>
-              </div>
+            {/* Action Buttons */}
+            <div className="flex flex-col gap-3">
+              <Button
+                size="lg"
+                className="w-full gradient-primary border-0 text-lg"
+                onClick={handleBackToPOS}
+              >
+                العودة إلى نقطة البيع
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                className="w-full gap-2"
+                onClick={handlePrint}
+              >
+                <Printer className="w-5 h-5" />
+                طباعة الفاتورة
+              </Button>
             </div>
           </div>
         )}

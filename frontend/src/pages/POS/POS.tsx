@@ -6,7 +6,7 @@ import { ProductsGrid } from '@/components/pos/ProductsGrid';
 import { CartSection, CartItem } from '@/components/pos/CartSection';
 import { CheckoutModal, PaymentDetails } from '@/components/pos/CheckoutModal';
 import { toast } from 'sonner';
-import { printInvoice } from '@/utils/printService';
+
 
 const POS: React.FC = () => {
   const { t } = useTranslation();
@@ -58,6 +58,7 @@ const POS: React.FC = () => {
     try {
       // Create sales invoice using apiClient for better error handling and environment compatibility
       const response = await apiClient.post('/sales-invoices', {
+        customer_id: details.customerId,
         items: cartItems.map(item => ({
           product_id: item.id,
           quantity: item.quantity,
@@ -68,58 +69,34 @@ const POS: React.FC = () => {
         discount: 0,
         total,
         payment_method: details.method === 'wallet' ? 'card' : details.method,
-        notes: details.method === 'credit' ? `العميل: ${details.customerName}` : null,
+        notes: details.method === 'credit' ? `الدفع الآجل - العميل: ${details.customerName}` : null,
       });
 
       if (!response.data.success) {
         throw new Error(response.data.message || 'فشل في إتمام عملية البيع');
       }
 
-      // الحصول على بيانات الفاتورة من الاستجابة
-      const invoiceData = response.data.data;
-
       let message = '';
       switch (details.method) {
         case 'cash':
-          message = `${t('payment.cashSuccess')} - $${total.toFixed(2)}`;
+          message = `تم الدفع نقداً بنجاح - $${total.toFixed(2)}`;
           break;
         case 'wallet':
-          message = `${t('payment.walletSuccess')} ${details.walletType} - $${total.toFixed(2)}`;
+          message = `تم الدفع عبر ${details.walletType} بنجاح - $${total.toFixed(2)}`;
           break;
         case 'credit':
-          message = `${t('payment.creditSuccess')} ${details.customerName}`;
+          message = `تم تسجيل الدين على ${details.customerName} بنجاح`;
           break;
       }
 
       toast.success(message);
       
-      // طباعة الفاتورة تلقائياً
-      if (invoiceData) {
-        printInvoice({
-          invoice_number: invoiceData.invoice_number,
-          invoice_date: invoiceData.invoice_date || new Date().toISOString(),
-          customer_name: invoiceData.customer?.name,
-          items: invoiceData.items.map((item: any) => ({
-            product_name: item.product?.name || 'منتج',
-            quantity: item.quantity,
-            unit_price: parseFloat(item.unit_price),
-            total_price: parseFloat(item.total_price),
-          })),
-          subtotal: parseFloat(invoiceData.subtotal),
-          tax_amount: parseFloat(invoiceData.tax_amount),
-          discount_amount: parseFloat(invoiceData.discount_amount),
-          total_amount: parseFloat(invoiceData.total_amount),
-          payment_method: invoiceData.payment_method,
-          notes: invoiceData.notes,
-        });
-      }
-      
       setCartItems([]);
-      setIsCheckoutOpen(false);
       // Refresh products to update stock
       queryClient.invalidateQueries({ queryKey: ['products'] });
     } catch (error: any) {
-      toast.error(error.message || 'Failed to complete sale');
+      toast.error(error.message || 'فشل في إتمام عملية البيع');
+      throw error;
     }
   };
 
