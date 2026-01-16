@@ -18,7 +18,6 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  Store,
   List,
   Plus,
   Upload,
@@ -49,20 +48,12 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface AppSidebarProps {
   isOpen: boolean;
   onToggle: () => void;
 }
-
-interface NavItem {
-  label: string;
-  icon: React.ElementType;
-  path?: string;
-  children?: NavItem[];
-}
-
-import { useAuth } from '@/contexts/AuthContext';
 
 interface NavItem {
   label: string;
@@ -95,8 +86,8 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ isOpen, onToggle }) => {
     // Extract role name safely
     const userRole = typeof user.role === 'string' ? user.role : (user.role as any)?.name;
     
-    // Admin always has permission
-    if (userRole?.toLowerCase() === 'admin') return true;
+    // Admin always has permission - using a very loose check to be safe
+    if (userRole?.toLowerCase().includes('admin')) return true;
     
     // Check specific permissions
     return user.permissions?.includes(permission) || false;
@@ -175,36 +166,28 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ isOpen, onToggle }) => {
     },
   ];
 
-  const filteredNavItems = navItems.filter(item => {
+  // For Admin, we show EVERYTHING. For others, we filter.
+  const userRole = typeof user?.role === 'string' ? user.role : (user?.role as any)?.name;
+  const isAdmin = userRole?.toLowerCase().includes('admin');
+
+  const filteredNavItems = isAdmin ? navItems : navItems.filter(item => {
     if (item.children) {
       const filteredChildren = item.children.filter(child => hasPermission(child.permission));
       if (filteredChildren.length > 0) {
-        // Create a copy to avoid mutating the original navItems
-        item.children = filteredChildren;
         return true;
       }
       return false;
     }
     return hasPermission(item.permission);
-  });
-
-  // Debug logging to help diagnose sidebar issues
-  React.useEffect(() => {
-    if (filteredNavItems.length === 0) {
-      console.warn('Sidebar: No items to display!', {
-        user,
-        role: typeof user?.role === 'string' ? user.role : (user?.role as any)?.name,
-        permissions: user?.permissions,
-        totalNavItems: navItems.length
-      });
-    } else {
-      console.log('Sidebar: Displaying items', {
-        count: filteredNavItems.length,
-        user: user?.name,
-        role: typeof user?.role === 'string' ? user.role : (user?.role as any)?.name
-      });
+  }).map(item => {
+    if (item.children) {
+      return {
+        ...item,
+        children: item.children.filter(child => hasPermission(child.permission))
+      };
     }
-  }, [filteredNavItems, user]);
+    return item;
+  });
 
   const toggleExpand = (label: string) => {
     setExpandedItems(prev =>
@@ -221,7 +204,9 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ isOpen, onToggle }) => {
 
   // Collapsed menu item with popover for children
   const CollapsedMenuItem: React.FC<{ item: NavItem }> = ({ item }) => {
-    if (!item.children) {
+    const displayChildren = isAdmin ? item.children : item.children?.filter(child => hasPermission(child.permission));
+    
+    if (!displayChildren) {
       return (
         <NavLink
           to={item.path!}
@@ -242,7 +227,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ isOpen, onToggle }) => {
           <button
             className={cn(
               'sidebar-item w-full text-sidebar-foreground justify-center',
-              hasActiveChild(item.children) && 'bg-sidebar-accent'
+              hasActiveChild(displayChildren) && 'bg-sidebar-accent'
             )}
             title={item.label}
           >
@@ -259,7 +244,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ isOpen, onToggle }) => {
             <p className="px-2 py-1.5 text-xs font-semibold text-sidebar-foreground/70 uppercase">
               {item.label}
             </p>
-            {item.children.map((child) => (
+            {displayChildren.map((child) => (
               <NavLink
                 key={child.path}
                 to={child.path!}
