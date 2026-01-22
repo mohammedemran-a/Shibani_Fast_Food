@@ -107,6 +107,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('debts', DebtController::class);
     Route::post('debts/{debt}/payment', [DebtController::class, 'recordPayment']);
     Route::get('debts/summary/pending', [DebtController::class, 'pendingSummary']);
+// ** إضافة: مسارات الديون الجديدة **
+    Route::get('/customer-debts-summary', [App\Http\Controllers\Api\DebtController::class, 'getDebtsSummary']);
+    Route::post('/debts/pay', [App\Http\Controllers\Api\DebtController::class, 'storePayment']);
+    Route::get('/customers/{customer}/debts', [App\Http\Controllers\Api\CustomerController::class, 'getDebtDetails']);
 
     // Expenses routes
     Route::get('expenses/summary', [ExpenseController::class, 'getSummary']);

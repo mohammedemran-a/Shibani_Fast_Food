@@ -1,5 +1,7 @@
 <?php
 
+// backend/app/Http/Controllers/Api/CustomerController.php
+
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
@@ -46,7 +48,6 @@ class CustomerController extends Controller
         $query->orderBy($sortBy, $sortOrder);
 
         // إضافة إحصائيات لكل عميل
-        // ملاحظة: المبلغ المتبقي = amount - paid_amount
         $query->withCount('salesInvoices')
               ->withSum('salesInvoices', 'total_amount')
               ->addSelect([
@@ -89,21 +90,11 @@ class CustomerController extends Controller
         ]);
 
         try {
-            $customer = Customer::create([
-                'name' => $validated['name'],
-                'email' => $validated['email'] ?? null,
-                'phone' => $validated['phone'],
-                'address' => $validated['address'] ?? null,
-                'city' => $validated['city'] ?? null,
-                'country' => $validated['country'] ?? null,
-                'notes' => $validated['notes'] ?? null,
-                'loyalty_points' => 0,
-                'is_active' => true,
-            ]);
+            $customer = Customer::create($validated);
 
             return response()->json([
                 'success' => true,
-                'message' => 'تم إضافة العميل بنجاح',
+                'message_key' => 'customers.created_success',
                 'data' => $customer,
             ], 201);
 
@@ -127,8 +118,7 @@ class CustomerController extends Controller
         $customer = Customer::with(['salesInvoices' => function($query) {
             $query->latest()->take(10);
         }, 'debts' => function($query) {
-            // الديون غير المسددة بالكامل
-            $query->whereRaw('amount > paid_amount');
+            $query->where('status', '!=', 'paid');
         }])
         ->withCount('salesInvoices')
         ->withSum('salesInvoices', 'total_amount')
@@ -140,16 +130,10 @@ class CustomerController extends Controller
         ->find($id);
 
         if (!$customer) {
-            return response()->json([
-                'success' => false,
-                'message' => 'العميل غير موجود',
-            ], 404);
+            return response()->json(['success' => false, 'message_key' => 'customers.not_found'], 404);
         }
 
-        return response()->json([
-            'success' => true,
-            'data' => $customer,
-        ]);
+        return response()->json(['success' => true, 'data' => $customer]);
     }
 
     /**
@@ -164,10 +148,7 @@ class CustomerController extends Controller
         $customer = Customer::find($id);
 
         if (!$customer) {
-            return response()->json([
-                'success' => false,
-                'message' => 'العميل غير موجود',
-            ], 404);
+            return response()->json(['success' => false, 'message_key' => 'customers.not_found'], 404);
         }
 
         $validated = $request->validate([
@@ -182,7 +163,6 @@ class CustomerController extends Controller
             'loyalty_points' => 'sometimes|numeric|min:0',
         ], [
             'name.required' => 'اسم العميل مطلوب',
-            'name.max' => 'اسم العميل يجب أن لا يتجاوز 255 حرف',
             'email.email' => 'البريد الإلكتروني غير صحيح',
             'email.unique' => 'البريد الإلكتروني مستخدم من قبل',
             'phone.required' => 'رقم الهاتف مطلوب',
@@ -193,7 +173,7 @@ class CustomerController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'تم تحديث بيانات العميل بنجاح',
+                'message_key' => 'customers.updated_success',
                 'data' => $customer->fresh(),
             ]);
 
@@ -217,42 +197,18 @@ class CustomerController extends Controller
         $customer = Customer::find($id);
 
         if (!$customer) {
-            return response()->json([
-                'success' => false,
-                'message' => 'العميل غير موجود',
-            ], 404);
+            return response()->json(['success' => false, 'message_key' => 'customers.not_found'], 404);
         }
 
-        // التحقق من وجود فواتير مرتبطة
-        if ($customer->salesInvoices()->count() > 0) {
-            return response()->json([
-                'success' => false,
-                'message' => 'لا يمكن حذف العميل لوجود فواتير مرتبطة به',
-            ], 422);
-        }
-
-        // التحقق من وجود ديون مرتبطة (المبلغ المتبقي = amount - paid_amount)
-        if ($customer->debts()->whereRaw('amount > paid_amount')->count() > 0) {
-            return response()->json([
-                'success' => false,
-                'message' => 'لا يمكن حذف العميل لوجود ديون غير مسددة',
-            ], 422);
+        if ($customer->debts()->where('status', '!=', 'paid')->exists()) {
+            return response()->json(['success' => false, 'message_key' => 'customers.delete_has_debt'], 422);
         }
 
         try {
             $customer->delete();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'تم حذف العميل بنجاح',
-            ]);
-
+            return response()->json(['success' => true, 'message_key' => 'customers.deleted_success']);
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'فشل حذف العميل',
-                'error' => $e->getMessage(),
-            ], 500);
+            return response()->json(['success' => false, 'message' => 'فشل حذف العميل', 'error' => $e->getMessage()], 500);
         }
     }
 
@@ -266,23 +222,77 @@ class CustomerController extends Controller
         $stats = [
             'total_customers' => Customer::count(),
             'active_customers' => Customer::where('is_active', true)->count(),
-            'inactive_customers' => Customer::where('is_active', false)->count(),
-            'total_sales' => DB::table('sales_invoices')
-                ->whereNotNull('customer_id')
-                ->sum('total_amount'),
-            'total_debts' => DB::table('debts')
-                ->whereNotNull('customer_id')
-                ->selectRaw('COALESCE(SUM(amount - paid_amount), 0) as total')
-                ->value('total'),
+            'total_debts' => DB::table('debts')->sum(DB::raw('amount - paid_amount')),
             'top_customers' => Customer::withSum('salesInvoices', 'total_amount')
                 ->orderByDesc('sales_invoices_sum_total_amount')
                 ->take(5)
                 ->get(['id', 'name', 'phone']),
         ];
 
-        return response()->json([
-            'success' => true,
-            'data' => $stats,
-        ]);
+        return response()->json(['success' => true, 'data' => $stats]);
+    }
+
+    /**
+     * // ** إضافة: جلب التفاصيل الكاملة لديون عميل محدد **
+     * // هذا الـ Endpoint يخدم صفحة تفاصيل ديون العميل
+     *
+     * @param Customer $customer
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getDebtDetails(Customer $customer)
+    {
+        // جلب الفواتير المرتبطة بالديون غير المسددة بالكامل
+        $invoices = $customer->debts()
+            ->where('status', '!=', 'paid')
+            ->with('salesInvoice') // تحميل علاقة الفاتورة
+            ->get()
+            ->map(function ($debt) {
+                return [
+                    'id' => $debt->sales_invoice_id, // استخدام معرف الفاتورة
+                    'debt_id' => $debt->id, // إضافة معرف الدين
+                    'invoice_number' => $debt->salesInvoice->invoice_number,
+                    'sale_date' => $debt->salesInvoice->invoice_date->format('Y-m-d'),
+                    'total_amount' => (float) $debt->amount,
+                    'paid_amount' => (float) $debt->paid_amount,
+                    'remaining_amount' => (float) ($debt->amount - $debt->paid_amount),
+                ];
+            });
+
+        // جلب سجل الدفعات المرتبطة بديون هذا العميل
+        $payments = \App\Models\DebtPayment::whereIn('debt_id', $customer->debts()->pluck('id'))
+            ->latest()
+            ->with('debt.salesInvoice:id,invoice_number') // جلب رقم الفاتورة من خلال الدين
+            ->get()
+            ->map(function ($payment) {
+                return [
+                    'id' => $payment->id,
+                    'payment_date' => $payment->payment_date->format('Y-m-d'),
+                    'amount' => (float) $payment->amount,
+                    'invoice_number' => $payment->debt->salesInvoice->invoice_number ?? null,
+                ];
+            });
+
+        // حساب ملخص الديون
+        $total_debt = $customer->debts()->sum(DB::raw('amount - paid_amount'));
+        $total_paid = $customer->debts()->sum('paid_amount');
+
+        // تجميع البيانات النهائية
+        $data = [
+            'customer' => [
+                'id' => $customer->id,
+                'name' => $customer->name,
+                'phone' => $customer->phone,
+                'email' => $customer->email,
+                'address' => $customer->address,
+            ],
+            'invoices' => $invoices,
+            'payments' => $payments,
+            'summary' => [
+                'total_debt' => (float) $total_debt,
+                'total_paid' => (float) $total_paid,
+            ]
+        ];
+
+        return response()->json($data);
     }
 }

@@ -70,11 +70,28 @@ class SalesInvoiceController extends Controller
      * @param Request $request
      * @return \Illuminate\Http\JsonResponse
      */
+        /**
+     * إنشاء فاتورة بيع جديدة
+     * 
+     * العملية:
+     * 1. توليد رقم فاتورة تلقائي (INV-YYYYMMDD-XXXX)
+     * 2. إنشاء الفاتورة الرئيسية
+     * 3. إنشاء عناصر الفاتورة (المنتجات)
+     * 4. التحقق من توفر المخزون
+     * 5. خصم الكميات من المخزون
+     * 6. **تعديل:** إذا كانت طريقة الدفع "دين"، يتم إنشاء سجل دين مرتبط.
+     * 7. إرجاع الفاتورة الكاملة مع العلاقات
+     * 
+     * ملاحظة: جميع العمليات تتم داخل transaction لضمان سلامة البيانات
+     * 
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function store(Request $request)
     {
-        // التحقق من صحة البيانات
+        // ** تعديل: إضافة 'debt' لطرق الدفع والتحقق من وجود العميل **
         $validated = $request->validate([
-            'customer_id' => 'nullable|exists:customers,id',
+            'customer_id' => 'required_if:payment_method,debt|nullable|exists:customers,id',
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
             'items.*.quantity' => 'required|integer|min:1',
@@ -83,8 +100,10 @@ class SalesInvoiceController extends Controller
             'tax' => 'nullable|numeric|min:0',
             'discount' => 'nullable|numeric|min:0',
             'total' => 'required|numeric|min:0',
-            'payment_method' => 'required|in:cash,card,transfer',
+            'payment_method' => 'required|in:cash,card,transfer,debt', // ** تعديل **
             'notes' => 'nullable|string',
+        ], [
+            'customer_id.required_if' => 'يجب اختيار عميل عند تحديد طريقة الدفع "دين".'
         ]);
 
         // بدء معاملة قاعدة البيانات
@@ -92,7 +111,6 @@ class SalesInvoiceController extends Controller
         
         try {
             // توليد رقم الفاتورة التلقائي
-            // الصيغة: INV-YYYYMMDD-XXXX (مثال: INV-20231220-0001)
             $lastInvoice = \App\Models\SalesInvoice::orderBy('id', 'desc')->first();
             $invoiceNumber = 'INV-' . date('Ymd') . '-' . str_pad(
                 ($lastInvoice ? $lastInvoice->id + 1 : 1), 
@@ -118,15 +136,12 @@ class SalesInvoiceController extends Controller
 
             // معالجة عناصر الفاتورة (المنتجات)
             foreach ($validated['items'] as $item) {
-                // جلب المنتج
                 $product = \App\Models\Product::findOrFail($item['product_id']);
                 
-                // التحقق من توفر المخزون
                 if ($product->quantity < $item['quantity']) {
                     throw new \Exception("المخزون غير كافٍ للمنتج: {$product->name}");
                 }
                 
-                // إنشاء عنصر الفاتورة
                 \App\Models\SalesInvoiceItem::create([
                     'sales_invoice_id' => $invoice->id,
                     'product_id' => $item['product_id'],
@@ -135,8 +150,18 @@ class SalesInvoiceController extends Controller
                     'total_price' => $item['quantity'] * $item['price'],
                 ]);
                 
-                // خصم الكمية من المخزون
                 $product->decrement('quantity', $item['quantity']);
+            }
+
+            // ** تعديل: إضافة منطق إنشاء الدين **
+            if ($validated['payment_method'] === 'debt') {
+                \App\Models\Debt::create([
+                    'customer_id' => $invoice->customer_id,
+                    'sales_invoice_id' => $invoice->id,
+                    'amount' => $invoice->total_amount,
+                    'paid_amount' => 0,
+                    'notes' => 'دين ناتج عن الفاتورة رقم ' . $invoice->invoice_number,
+                ]);
             }
 
             // تأكيد المعاملة
@@ -145,7 +170,7 @@ class SalesInvoiceController extends Controller
             // إرجاع الفاتورة الكاملة مع العلاقات
             return response()->json([
                 'success' => true,
-                'message' => 'تمت عملية البيع بنجاح',
+                'message_key' => 'sales.invoice_created_success', // ** تعديل: استخدام مفتاح ترجمة **
                 'data' => $invoice->load(['items.product', 'customer']),
             ], 201);
             
@@ -160,113 +185,4 @@ class SalesInvoiceController extends Controller
         }
     }
 
-    /**
-     * عرض تفاصيل فاتورة محددة
-     * 
-     * @param string $id
-     * @return \Illuminate\Http\JsonResponse
-     */
-    public function show(string $id)
-    {
-        $invoice = \App\Models\SalesInvoice::with(['customer', 'items.product', 'cashier'])
-                                           ->find($id);
-
-        if (!$invoice) {
-            return response()->json([
-                'success' => false,
-                'message' => 'الفاتورة غير موجودة',
-            ], 404);
-        }
-
-        return response()->json([
-            'success' => true,
-            'data' => $invoice,
-        ]);
-    }
-
-    /**
-     * إلغاء فاتورة (تغيير الحالة إلى cancelled)
-     * 
-     * ملاحظة: يجب إرجاع الكميات إلى المخزون عند الإلغاء
-     * 
-     * @param string $id
-     * @return \Illuminate\Http\JsonResponse
-     */
-    public function cancel(string $id)
-    {
-        // استخدام with('items.product') لمنع مشكلة N+1 عند إرجاع الكميات للمخزون
-        $invoice = \App\Models\SalesInvoice::with('items.product')->find($id);
-
-        if (!$invoice) {
-            return response()->json([
-                'success' => false,
-                'message' => 'الفاتورة غير موجودة',
-            ], 404);
-        }
-
-        if ($invoice->status === 'cancelled') {
-            return response()->json([
-                'success' => false,
-                'message' => 'الفاتورة ملغاة بالفعل',
-            ], 422);
-        }
-
-        \DB::beginTransaction();
-        
-        try {
-            // إرجاع الكميات إلى المخزون
-            foreach ($invoice->items as $item) {
-                $product = \App\Models\Product::find($item->product_id);
-                if ($product) {
-                    $product->increment('quantity', $item->quantity);
-                }
-            }
-
-            // تحديث حالة الفاتورة
-            $invoice->update(['status' => 'cancelled']);
-
-            \DB::commit();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'تم إلغاء الفاتورة بنجاح',
-                'data' => $invoice,
-            ]);
-            
-        } catch (\Exception $e) {
-            \DB::rollBack();
-            
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage(),
-            ], 422);
-        }
-    }
-
-    /**
-     * حذف فاتورة نهائياً
-     * 
-     * تحذير: هذه العملية غير قابلة للتراجع
-     * 
-     * @param string $id
-     * @return \Illuminate\Http\JsonResponse
-     */
-    public function destroy(string $id)
-    {
-        $invoice = \App\Models\SalesInvoice::find($id);
-
-        if (!$invoice) {
-            return response()->json([
-                'success' => false,
-                'message' => 'الفاتورة غير موجودة',
-            ], 404);
-        }
-
-        $invoice->delete();
-
-        return response()->json([
-            'success' => true,
-            'message' => 'تم حذف الفاتورة بنجاح',
-        ]);
-    }
 }

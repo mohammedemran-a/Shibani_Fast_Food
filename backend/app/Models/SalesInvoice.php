@@ -48,6 +48,15 @@ class SalesInvoice extends Model
         'discount_amount' => 'decimal:2',   // تحويل الخصم إلى رقم عشري بمنزلتين
         'total_amount' => 'decimal:2',      // تحويل المجموع الإجمالي إلى رقم عشري بمنزلتين
     ];
+    /**
+     * // ** إضافة: العلاقة مع الدين **
+     * // الفاتورة قد يكون لها سجل دين واحد مرتبط بها
+     * @return \Illuminate\Database\Eloquent\Relations\HasOne
+     */
+    public function debt()
+    {
+        return $this->hasOne(\App\Models\Debt::class);
+    }
 
     /**
      * العلاقة مع العميل

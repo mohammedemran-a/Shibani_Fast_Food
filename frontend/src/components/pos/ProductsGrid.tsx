@@ -33,15 +33,11 @@ export const ProductsGrid: React.FC<ProductsGridProps> = ({ onAddToCart }) => {
   const [barcodeInput, setBarcodeInput] = React.useState('');
   const barcodeInputRef = useRef<HTMLInputElement>(null);
 
-  // Fetch products and categories from API (only active products)
-  // We fetch a larger number for POS to allow fast local filtering, 
-  // but for very large datasets, we should implement server-side search.
   const { data: productsData, isLoading } = useProducts({ is_active: true, per_page: 200 });
   
   const { data: categoriesData } = useCategories();
   const apiCategories = categoriesData?.data || [];
   
-  // Build categories list with 'all' option
   const categories = [
     { id: 'all', name: t('pos.all') },
     ...apiCategories.map((cat: any) => ({ id: cat.id.toString(), name: cat.name }))
@@ -49,7 +45,18 @@ export const ProductsGrid: React.FC<ProductsGridProps> = ({ onAddToCart }) => {
 
   const products = productsData?.data?.data || [];
 
-  // Auto-focus barcode input on mount only
+  // ** تعديل 1: إنشاء دالة مساعدة لإنشاء كائن السلة **
+  const createCartProduct = (product: Product) => {
+    return {
+      id: product.id,
+      name: product.name,
+      barcode: product.barcode,
+      price: Number(product.selling_price || 0),
+      stock: Number(product.quantity || 0),
+      image: product.image_url || '/no-image.svg',
+    };
+  };
+
   useEffect(() => {
     const timer = setTimeout(() => {
       if (barcodeInputRef.current) {
@@ -59,45 +66,32 @@ export const ProductsGrid: React.FC<ProductsGridProps> = ({ onAddToCart }) => {
     return () => clearTimeout(timer);
   }, []);
 
-  // Handle barcode scanner input - Auto-detect when barcode is complete
   const handleBarcodeChange = (value: string) => {
     setBarcodeInput(value);
     
-    // Auto-search when barcode length is reasonable (typically 8-13 digits)
-    // This simulates real barcode scanner behavior
     if (value.length >= 8) {
-      // Debounce to wait for complete barcode
       const timer = setTimeout(() => {
         const product = products.find((p: Product) => 
           p.barcode && p.barcode.toString().trim() === value.trim()
         );
         
         if (product) {
-          const cartProduct = {
-            id: product.id,
-            name: product.name,
-            barcode: product.barcode,
-            price: Number(product.selling_price || 0),
-            stock: Number(product.quantity || 0),
-            image: product.image_url || '/no-image.svg',
-          };
-          onAddToCart(cartProduct);
+          // ** تعديل 2: استخدام الدالة المساعدة **
+          onAddToCart(createCartProduct(product));
           toast.success(`${t('pos.addedToCart')} ${product.name}`);
           setBarcodeInput('');
           setTimeout(() => barcodeInputRef.current?.focus(), 10);
         } else if (value.length >= 10) {
-          // Only show error for longer barcodes to avoid false negatives
           toast.error(t('pos.productNotFound') + ': ' + value);
           setBarcodeInput('');
           setTimeout(() => barcodeInputRef.current?.focus(), 10);
         }
-      }, 300); // Wait 300ms for complete barcode
+      }, 300);
       
       return () => clearTimeout(timer);
     }
   };
 
-  // Also handle Enter key for manual input
   const handleBarcodeKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && barcodeInput.trim()) {
       e.preventDefault();
@@ -105,15 +99,8 @@ export const ProductsGrid: React.FC<ProductsGridProps> = ({ onAddToCart }) => {
         p.barcode && p.barcode.toString().trim() === barcodeInput.trim()
       );
       if (product) {
-        const cartProduct = {
-          id: product.id,
-          name: product.name,
-          barcode: product.barcode,
-          price: Number(product.selling_price || 0),
-          stock: Number(product.quantity || 0),
-          image: product.image_url || '/no-image.svg',
-        };
-        onAddToCart(cartProduct);
+        // ** تعديل 3: استخدام الدالة المساعدة (هذا يصلح الخطأ) **
+        onAddToCart(createCartProduct(product));
         toast.success(`${t('pos.addedToCart')} ${product.name}`);
       } else {
         toast.error(t('pos.productNotFound') + ': ' + barcodeInput);
@@ -122,8 +109,6 @@ export const ProductsGrid: React.FC<ProductsGridProps> = ({ onAddToCart }) => {
       setTimeout(() => barcodeInputRef.current?.focus(), 10);
     }
   };
-
-  // Removed auto-focus on click to allow search input focus
 
   const filteredProducts = products.filter((product: Product) => {
     const matchesCategory = selectedCategory === 'all' || product.category_id?.toString() === selectedCategory;
@@ -194,17 +179,9 @@ export const ProductsGrid: React.FC<ProductsGridProps> = ({ onAddToCart }) => {
             {t('pos.noProducts')}
           </div>
         ) : (
-          <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 pb-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 pb-4">
             {filteredProducts.map((product: Product, index: number) => {
-              const cartProduct = {
-                id: product.id,
-                name: product.name,
-                barcode: product.barcode,
-                price: Number(product.selling_price || 0),
-                stock: Number(product.quantity || 0),
-                image: product.image_url || '/no-image.svg',
-              };
-
+              // ** تعديل 4: إزالة التعريف المكرر لـ cartProduct **
               return (
                 <motion.button
                   key={product.id}
@@ -216,18 +193,18 @@ export const ProductsGrid: React.FC<ProductsGridProps> = ({ onAddToCart }) => {
                       toast.error(t('pos.outOfStock') || 'Out of stock');
                       return;
                     }
-                    onAddToCart(cartProduct);
+                    // ** تعديل 5: استخدام الدالة المساعدة مباشرة **
+                    onAddToCart(createCartProduct(product));
                     toast.success(`${t('pos.addedToCart')} ${product.name}`);
                   }}
                   disabled={product.quantity <= 0}
                   className={cn(
-                    'glass-card p-3 sm:p-4 text-start hover:scale-105 transition-all',
+                    'glass-card p-2 sm:p-3 text-start hover:scale-105 transition-all flex flex-col',
                     'hover:border-primary/50 hover:shadow-lg hover:shadow-primary/20',
-                    'min-h-[200px] sm:min-h-auto',
                     product.quantity === 0 && 'opacity-50 cursor-not-allowed'
                   )}
                 >
-                  <div className="aspect-square mb-2 sm:mb-3 rounded-lg overflow-hidden bg-muted">
+                  <div className="aspect-square mb-2 rounded-lg overflow-hidden bg-muted">
                     <img 
                       src={product.image_url || '/no-image.svg'} 
                       alt={product.name}
@@ -237,15 +214,15 @@ export const ProductsGrid: React.FC<ProductsGridProps> = ({ onAddToCart }) => {
                       }}
                     />
                   </div>
-                  <h4 className="font-medium text-base sm:text-sm mb-1 sm:mb-2 line-clamp-2 min-h-[2.5rem] sm:min-h-[2.5rem]">
+                  <h4 className="font-medium text-sm sm:text-base mb-1 line-clamp-2 flex-grow min-h-[2.5rem]">
                     {product.name}
                   </h4>
-                  <div className="flex items-center justify-between mt-2 sm:mt-3">
-                    <span className="text-xl sm:text-lg font-bold text-primary">
+                  <div className="flex items-center justify-between mt-auto">
+                    <span className="text-base sm:text-lg font-bold text-primary">
                       ${Number(product.selling_price || 0).toFixed(2)}
                     </span>
                     <span className={cn(
-                      'text-sm sm:text-xs px-2.5 sm:px-2 py-1 sm:py-0.5 rounded-full font-medium',
+                      'text-xs px-2 py-0.5 rounded-full font-medium',
                       product.quantity > 10 ? 'bg-success/20 text-success' : 'bg-warning/20 text-warning'
                     )}>
                       {product.quantity}
