@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Product;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\StreamedResponse; // 1. إضافة الاستيراد اللازم
 
 /**
  * متحكم المنتجات
@@ -332,5 +333,88 @@ class ProductController extends Controller
             'success' => true,
             'message' => 'Product deleted successfully',
         ]);
+    }
+
+    // =================================================================
+    // **2. إضافة الدالة الجديدة هنا**
+    // =================================================================
+    /**
+     * يقوم بتوليد وتنزيل ملف CSV كقالب لاستيراد المنتجات.
+     * يحتوي الملف على الأعمدة المطلوبة وبيانات تجريبية لتوضيح التنسيق.
+     * هذا الحل يضمن أن القالب دائمًا محدث ومتوافق مع الحقول المطلوبة في قاعدة البيانات.
+     *
+     * @return \Symfony\Component\HttpFoundation\StreamedResponse
+     */
+    public function downloadTemplate(): StreamedResponse
+    {
+        $fileName = 'products_template.csv';
+
+        // الأعمدة المطلوبة بناءً على دالة store وقواعد التحقق
+        $headers = [
+            'name',             // (مطلوب) اسم المنتج
+            'sku',              // (اختياري) رمز المنتج
+            'barcode',          // (اختياري) الباركود
+            'category_name',    // (مطلوب) اسم الفئة
+            'brand_name',       // (اختياري) اسم الماركة
+            'unit_name',        // (مطلوب) اسم الوحدة
+            'purchase_price',   // (مطلوب) سعر الشراء
+            'selling_price',    // (مطلوب) سعر البيع
+            'quantity',         // (مطلوب) الكمية الأولية
+            'reorder_level',    // (اختياري) مستوى إعادة الطلب
+            'expiry_date',      // (اختياري) تاريخ الصلاحية (YYYY-MM-DD)
+        ];
+
+        // بيانات تجريبية لتوضيح كيفية ملء الملف
+        $sampleData = [
+            [
+                'name' => 'قهوة أرابيكا فاخرة',
+                'sku' => 'COF-001',
+                'barcode' => '1234567890123',
+                'category_name' => 'مشروبات ساخنة',
+                'brand_name' => 'براند القهوة',
+                'unit_name' => 'كيس',
+                'purchase_price' => 15.50,
+                'selling_price' => 25.00,
+                'quantity' => 100,
+                'reorder_level' => 20,
+                'expiry_date' => '2027-12-31',
+            ],
+            [
+                'name' => 'شاي أخضر عضوي',
+                'sku' => 'TEA-002',
+                'barcode' => '9876543210987',
+                'category_name' => 'مشروبات ساخنة',
+                'brand_name' => 'براند الشاي',
+                'unit_name' => 'علبة',
+                'purchase_price' => 8.00,
+                'selling_price' => 15.00,
+                'quantity' => 150,
+                'reorder_level' => 30,
+                'expiry_date' => '', // يمكن تركه فارغًا
+            ],
+        ];
+
+        // إعداد استجابة لتنزيل الملف مباشرة في المتصفح
+        $response = new StreamedResponse(function () use ($headers, $sampleData) {
+            $handle = fopen('php://output', 'w');
+
+            // إضافة BOM لضمان دعم اللغة العربية في Excel
+            fprintf($handle, chr(0xEF).chr(0xBB).chr(0xBF));
+
+            // كتابة صف العناوين (Headers)
+            fputcsv($handle, $headers);
+
+            // كتابة البيانات التجريبية
+            foreach ($sampleData as $row) {
+                fputcsv($handle, $row);
+            }
+
+            fclose($handle);
+        }, 200, [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
+        ]);
+
+        return $response;
     }
 }

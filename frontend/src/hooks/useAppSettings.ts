@@ -1,38 +1,26 @@
-import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { settingsService } from '@/api/settingsService';
+// 1. استيراد النوع الجديد ودالة الخدمة
+import { settingsService, AppSettings } from '@/api/settingsService';
 
 /**
- * Hook لتحديث إعدادات التطبيق (العنوان والأيقونة)
+ * Hook مخصص لجلب إعدادات التطبيق العامة.
+ * 
+ * هذا الـ Hook مسؤول فقط عن جلب البيانات وتوفيرها للمكونات.
+ * تم نقل منطق تحديث عنوان الصفحة والأيقونة إلى مكون الواجهة الرئيسي
+ * لضمان فصل المسؤوليات (Separation of Concerns).
+ * 
+ * @returns {object} - يحتوي على بيانات الإعدادات وحالات التحميل والخطأ.
  */
 export const useAppSettings = () => {
-  const { data: settings } = useQuery({
+  // 2. استخدام النوع `AppSettings` لضمان سلامة الأنواع
+  const { data, isLoading, isError, error } = useQuery<AppSettings>({
     queryKey: ['settings'],
     queryFn: () => settingsService.getSettings(),
+    // خيارات إضافية لتحسين الأداء
+    staleTime: 1000 * 60 * 5, // 5 دقائق
+    refetchOnWindowFocus: false,
   });
 
-  useEffect(() => {
-    if (settings) {
-      // تحديث عنوان الصفحة
-      if (settings.company_name) {
-        document.title = settings.company_name;
-      }
-
-      // تحديث الأيقونة (favicon)
-      if (settings.company_logo) {
-        // حذف جميع الأيقونات القديمة
-        const existingFavicons = document.querySelectorAll<HTMLLinkElement>("link[rel*='icon']");
-        existingFavicons.forEach(favicon => favicon.remove());
-        
-        // إضافة أيقونة جديدة مع timestamp لإجبار التحديث
-        const newFavicon = document.createElement('link');
-        newFavicon.rel = 'icon';
-        newFavicon.type = 'image/x-icon';
-        newFavicon.href = `${settings.company_logo}?t=${Date.now()}`;
-        document.head.appendChild(newFavicon);
-      }
-    }
-  }, [settings]);
-
-  return settings;
+  // 3. إرجاع كائن React Query بالكامل لتوفير مرونة أكبر للمكونات
+  return { settings: data, isLoading, isError, error };
 };

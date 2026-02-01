@@ -2,7 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowRight, ArrowLeft, Upload, FileSpreadsheet, Download } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Upload, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useTheme } from '@/contexts/ThemeContext';
 import { toast } from 'sonner';
@@ -14,6 +14,7 @@ const ImportProducts: React.FC = () => {
   const navigate = useNavigate();
   const { isRTL } = useTheme();
   const [isDragging, setIsDragging] = React.useState(false);
+  const [isDownloading, setIsDownloading] = React.useState(false); // حالة لمنع النقرات المتعددة
 
   const BackIcon = isRTL ? ArrowRight : ArrowLeft;
 
@@ -49,13 +50,11 @@ const ImportProducts: React.FC = () => {
         if (response.data.success) {
           toast.success(response.data.message || `تم استيراد ${response.data.imported} منتج بنجاح`);
           
-          // Show errors if any
           if (response.data.errors && response.data.errors.length > 0) {
             toast.warning(`تم تخطي ${response.data.errors.length} صف بسبب أخطاء`);
             console.error('Import errors:', response.data.errors);
           }
           
-          // Navigate to products page after 2 seconds
           setTimeout(() => {
             navigate('/products');
           }, 2000);
@@ -70,19 +69,50 @@ const ImportProducts: React.FC = () => {
     }
   };
 
-  const handleDownloadTemplate = () => {
-    const link = document.createElement('a');
-    link.href = '/products-template.csv';
-    link.download = 'products-template.csv';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    toast.success(t('products.downloadTemplate') + ' تم بنجاح');
+  // =================================================================
+  // **التعديل الرئيسي هنا: تحديث دالة تنزيل القالب**
+  // =================================================================
+  /**
+   * دالة جديدة لتنزيل القالب من الـ API.
+   * تقوم بإرسال طلب إلى الواجهة الخلفية وتنزيل الملف الذي تم توليده ديناميكيًا.
+   */
+  const handleDownloadTemplate = async () => {
+    if (isDownloading) return;
+    setIsDownloading(true);
+    toast.loading('جاري تحضير القالب...');
+
+    try {
+      // استدعاء الـ API الجديد الذي قمنا بإنشائه
+      const response = await apiClient.get('/products/import/template', {
+        responseType: 'blob', // مهم جدًا: التعامل مع الاستجابة كملف
+      });
+
+      // إنشاء رابط URL مؤقت للملف الذي تم استلامه من الـ API
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'products_template.csv'); // تحديد اسم الملف عند التنزيل
+      document.body.appendChild(link);
+      link.click();
+
+      // تنظيف الرابط بعد اكتمال التنزيل
+      link.parentNode?.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast.dismiss();
+      toast.success(t('products.downloadTemplate') + ' تم بنجاح');
+
+    } catch (error) {
+      toast.dismiss();
+      toast.error('فشل في تحميل القالب. يرجى المحاولة مرة أخرى.');
+      console.error('Template download error:', error);
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Header */}
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
           <BackIcon className="w-5 h-5" />
@@ -94,7 +124,6 @@ const ImportProducts: React.FC = () => {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Upload Area */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -115,21 +144,20 @@ const ImportProducts: React.FC = () => {
             </div>
             <p className="text-foreground font-medium mb-2">اسحب وأفلت ملف CSV هنا</p>
             <p className="text-muted-foreground text-sm mb-4">أو</p>
-            <label>
-              <input
-                type="file"
-                accept=".csv"
-                className="hidden"
-                onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
-              />
-              <Button variant="outline" className="cursor-pointer" asChild>
-                <span>اختر ملف</span>
-              </Button>
-            </label>
+            <Button asChild variant="outline">
+              <label className="cursor-pointer">
+                اختر ملف
+                <input
+                  type="file"
+                  accept=".csv"
+                  className="hidden"
+                  onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
+                />
+              </label>
+            </Button>
           </div>
         </motion.div>
 
-        {/* Instructions */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -157,9 +185,14 @@ const ImportProducts: React.FC = () => {
             </div>
           </div>
 
-          <Button variant="outline" className="w-full mt-6 gap-2" onClick={handleDownloadTemplate}>
+          <Button 
+            variant="outline" 
+            className="w-full mt-6 gap-2" 
+            onClick={handleDownloadTemplate}
+            disabled={isDownloading}
+          >
             <Download className="w-4 h-4" />
-            {t('products.downloadTemplate')}
+            {isDownloading ? 'جاري التحميل...' : t('products.downloadTemplate')}
           </Button>
         </motion.div>
       </div>

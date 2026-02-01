@@ -10,6 +10,7 @@ use App\Models\Unit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
 
 class ImportController extends Controller
 {
@@ -25,9 +26,19 @@ class ImportController extends Controller
         try {
             $file = $request->file('file');
             $path = $file->getRealPath();
-            $csv = array_map('str_getcsv', file($path));
             
-            // Get headers
+            // =================================================================
+            // **1. التعديل الرئيسي هنا: قراءة الملف وإزالة الـ BOM**
+            // =================================================================
+            $fileContent = file_get_contents($path);
+            // إزالة علامة UTF-8 BOM إذا كانت موجودة في بداية الملف
+            if (substr($fileContent, 0, 3) === "\xEF\xBB\xBF") {
+                $fileContent = substr($fileContent, 3);
+            }
+            // تحويل المحتوى إلى مصفوفة من السطور ثم إلى CSV
+            $csv = array_map('str_getcsv', explode("\n", $fileContent));
+            
+            // الحصول على العناوين من السطر الأول
             $headers = array_shift($csv);
             
             $imported = 0;
@@ -36,43 +47,49 @@ class ImportController extends Controller
             DB::beginTransaction();
             
             foreach ($csv as $index => $row) {
+                $rowNumber = $index + 2;
+
                 try {
-                    // Skip empty rows
-                    if (empty(array_filter($row))) {
+                    // تخطي الصفوف الفارغة تمامًا
+                    if (count($row) === 1 && empty($row[0])) {
                         continue;
                     }
                     
-                    // Map CSV row to array
+                    // التأكد من تطابق عدد الأعمدة
+                    if (count($headers) !== count($row)) {
+                        // تجاهل الصفوف التي لا تتطابق مع عدد الأعمدة (قد تكون سطور فارغة في نهاية الملف)
+                        continue;
+                    }
+
                     $data = array_combine($headers, $row);
                     
-                    // Get or create category (using 'category' field)
-                    $categoryName = $data['category'] ?? null;
+                    $categoryName = $data['category_name'] ?? null;
+                    $brandName = $data['brand_name'] ?? null;
+                    $unitName = $data['unit_name'] ?? null;
+
+                    if (empty($data['name'])) {
+                        throw new \Exception('Product name is required');
+                    }
                     if (empty($categoryName)) {
-                        throw new \Exception('Category is required');
+                        throw new \Exception('Category name is required');
                     }
-                    $category = $this->getOrCreateCategory($categoryName);
-                    
-                    // Get or create brand (optional, using 'brand' field)
-                    $brandName = $data['brand'] ?? null;
-                    $brand = !empty($brandName) ? $this->getOrCreateBrand($brandName) : null;
-                    
-                    // Get or create unit (using 'unit' field)
-                    $unitName = $data['unit'] ?? null;
                     if (empty($unitName)) {
-                        throw new \Exception('Unit is required');
+                        throw new \Exception('Unit name is required');
                     }
+                    
+                    $category = $this->getOrCreateCategory($categoryName);
+                    $brand = !empty($brandName) ? $this->getOrCreateBrand($brandName) : null;
                     $unit = $this->getOrCreateUnit($unitName);
                     
-                    // Create product
                     Product::create([
                         'name' => $data['name'],
-                        'sku' => $data['sku'],
-                        'barcode' => $data['barcode'],
+                        'sku' => $data['sku'] ?? 'PRD-' . time() . rand(100, 999),
+                        'barcode' => $data['barcode'] ?? null,
                         'category_id' => $category->id,
                         'brand_id' => $brand?->id,
                         'unit_id' => $unit->id,
-                        'purchase_price' => $data['purchase_price'],
-                        'selling_price' => $data['selling_price'],
+                        'purchase_price' => $data['purchase_price'] ?? 0,
+                        'selling_price' => $data['selling_price'] ?? 0,
                         'quantity' => $data['quantity'] ?? 0,
                         'reorder_level' => $data['reorder_level'] ?? 10,
                         'description' => $data['description'] ?? null,
@@ -83,8 +100,8 @@ class ImportController extends Controller
                     $imported++;
                     
                 } catch (\Exception $e) {
-                    $errors[] = "Row " . ($index + 2) . ": " . $e->getMessage();
-                    Log::error("Import error on row " . ($index + 2), [
+                    $errors[] = "Row " . $rowNumber . ": " . $e->getMessage();
+                    Log::error("Import error on row " . $rowNumber, [
                         'error' => $e->getMessage(),
                         'data' => $row
                     ]);
@@ -115,18 +132,7 @@ class ImportController extends Controller
      */
     private function getOrCreateCategory(string $name)
     {
-        // Try to find by name (English or Arabic)
-        $category = Category::where('name', $name)
-            ->first();
-        
-        if ($category) {
-            return $category;
-        }
-        
-        // Create new category
-        return Category::create([
-            'name' => $name,
-        ]);
+        return Category::firstOrCreate(['name' => trim($name)]);
     }
     
     /**
@@ -134,18 +140,7 @@ class ImportController extends Controller
      */
     private function getOrCreateBrand(string $name)
     {
-        // Try to find by name (English or Arabic)
-        $brand = Brand::where('name', $name)
-            ->first();
-        
-        if ($brand) {
-            return $brand;
-        }
-        
-        // Create new brand
-        return Brand::create([
-            'name' => $name,
-        ]);
+        return Brand::firstOrCreate(['name' => trim($name)]);
     }
     
     /**
@@ -153,23 +148,22 @@ class ImportController extends Controller
      */
     private function getOrCreateUnit(string $name)
     {
-        // Try to find by name or abbreviation
-        $unit = Unit::where('name', $name)
-            ->orWhere('abbreviation', $name)
+        $trimmedName = trim($name);
+        
+        $unit = Unit::where('name', $trimmedName)
+            ->orWhere('abbreviation', $trimmedName)
             ->first();
         
         if ($unit) {
             return $unit;
         }
         
-        // Create new unit with auto-generated abbreviation
-        // Use first 3 letters or generate from hash to avoid encoding issues
-        $abbr = preg_match('/^[a-zA-Z]/', $name) 
-            ? strtolower(substr($name, 0, 3)) 
-            : 'u' . substr(md5($name), 0, 2);
+        $abbr = preg_match('/^[a-zA-Z]/', $trimmedName) 
+            ? strtolower(substr($trimmedName, 0, 3)) 
+            : 'u' . substr(md5($trimmedName), 0, 2);
         
         return Unit::create([
-            'name' => $name,
+            'name' => $trimmedName,
             'abbreviation' => $abbr,
         ]);
     }

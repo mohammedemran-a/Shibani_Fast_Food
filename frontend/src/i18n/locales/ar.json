@@ -183,6 +183,7 @@
     "thisWeek": "هذا الأسبوع", "thisMonth": "هذا الشهر", "custom": "مخصص", "from": "من", "to": "إلى",
     "generate": "إنشاء التقرير", "profit": "الربح", "revenue": "الإيرادات", "expenses": "المصروفات"
   },
+
   "settings": { 
     "title": "الإعدادات", "companyName": "اسم الشركة", "logo": "الشعار", "taxRate": "نسبة الضريبة", 
     "defaultDiscount": "الخصم الافتراضي", "currency": "العملة", "language": "اللغة", "theme": "المظهر", 
@@ -214,5 +215,32 @@
     "goldenProductsTitle": "المنتجات الأكثر ربحية ومبيعاً", "soldQuantity": "الكمية المباعة", "profitMargin": "هامش الربح",
     "stagnantProductsTitle": "المنتجات الراكدة (تحتاج تصفية)", "lastSold": "آخر بيع", "daysStagnant": "أيام الركود",
     "stockValue": "قيمة المخزون", "quickDiscount": "خصم سريع", "days": "يوم", "discountCreated": "تم إنشاء خصم لمنتج"
+  },
+  "filters": {
+    "allTime": "كل الوقت",
+    "today": "اليوم",
+    "thisWeek": "هذا الأسبوع",
+    "thisMonth": "هذا الشهر",
+    "thisQuarter": "هذا الربع",
+    "thisYear": "هذا العام"
+  },
+ 
+  "analytics": {
+    "subtitle": "اكتشف المنتجات التي يشتريها العملاء معًا",
+    "productPairs": "أزواج المنتجات",
+    "highestCorrelation": "أعلى ارتباط",
+    "totalTransactions": "إجمالي الفواتير",
+    "sortBy": "فرز حسب",
+    "byPercentage": "النسبة المئوية",
+    "byCount": "عدد المرات",
+    "pairsList": "قائمة الأزواج المترابطة",
+    "ifBuys": "المنتج الأول",
+    "alsoBuys": "المنتج الثاني",
+    "probability": "الاحتمالية",
+    "transactions": "عدد الفواتير",
+    "noBasketData": "لا توجد بيانات كافية لتحليل السلة. قم بإجراء المزيد من المبيعات."
   }
+
+
+  
 }

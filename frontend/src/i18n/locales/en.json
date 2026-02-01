@@ -158,5 +158,30 @@
     "goldenProductsTitle": "Most Profitable & Best Selling Products", "soldQuantity": "Sold Quantity", "profitMargin": "Profit Margin",
     "stagnantProductsTitle": "Stagnant Products (Need Clearance)", "lastSold": "Last Sold", "daysStagnant": "Days Stagnant",
     "stockValue": "Stock Value", "quickDiscount": "Quick Discount", "days": "days", "discountCreated": "Discount created for"
+  },
+  "filters": {
+    "allTime": "All Time",
+    "today": "Today",
+    "thisWeek": "This Week",
+    "thisMonth": "This Month",
+    "thisQuarter": "This Quarter",
+    "thisYear": "This Year"
+  },
+ 
+  "analytics": {
+    "subtitle": "Discover which products customers buy together",
+    "productPairs": "Product Pairs",
+    "highestCorrelation": "Highest Correlation",
+    "totalTransactions": "Total Invoices",
+    "sortBy": "Sort by",
+    "byPercentage": "Percentage",
+    "byCount": "Count",
+    "pairsList": "Correlated Pairs List",
+    "ifBuys": "Product 1",
+    "alsoBuys": "Product 2",
+    "probability": "Probability",
+    "transactions": "Invoices Count",
+    "noBasketData": "Not enough data for basket analysis. Make more sales."
   }
+
 }

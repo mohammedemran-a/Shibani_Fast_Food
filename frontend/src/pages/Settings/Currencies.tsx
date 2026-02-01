@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
@@ -6,6 +6,7 @@ import { Plus, Edit2, Trash2, Coins, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import {
   Dialog,
   DialogContent,
@@ -25,34 +26,44 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
-import { settingsService } from '@/api/settingsService';
+// 1. استيراد النوع الجديد من ملف الخدمة
+import { settingsService, CreateCurrencyData } from '@/api/settingsService'; 
 import PageErrorBoundary from '@/components/PageErrorBoundary';
+
+interface Currency {
+  id: number;
+  name: string;
+  code: string;
+  symbol: string;
+  exchange_rate: number;
+  is_default: boolean;
+}
 
 const CurrenciesContent: React.FC = () => {
   const { t } = useTranslation();
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
-  const [editingCurrency, setEditingCurrency] = useState<any | null>(null);
+  const [editingCurrency, setEditingCurrency] = useState<Partial<Currency> | null>(null);
   const [newCurrency, setNewCurrency] = useState({ 
     name: '', 
     code: '', 
     symbol: '', 
-    exchange_rate: '1.00' 
+    exchange_rate: '1.00',
+    is_default: false,
   });
   const queryClient = useQueryClient();
 
-  // جلب العملات من API
-  const { data: currencies = [], isLoading } = useQuery({
+  const { data: currencies = [], isLoading } = useQuery<Currency[]>({
     queryKey: ['currencies'],
     queryFn: () => settingsService.getCurrencies(),
   });
 
-  // إضافة عملة جديدة
+  // 2. تحديث الـ mutation ليستخدم النوع الدقيق `CreateCurrencyData`
   const createMutation = useMutation({
-    mutationFn: (data: any) => settingsService.createCurrency(data),
+    mutationFn: (data: CreateCurrencyData) => settingsService.createCurrency(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['currencies'] });
-      setNewCurrency({ name: '', code: '', symbol: '', exchange_rate: '1.00' });
+      setNewCurrency({ name: '', code: '', symbol: '', exchange_rate: '1.00', is_default: false });
       setIsAddOpen(false);
       toast.success(t('currencies.addSuccess'));
     },
@@ -61,9 +72,8 @@ const CurrenciesContent: React.FC = () => {
     },
   });
 
-  // تحديث عملة
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: any }) => 
+    mutationFn: ({ id, data }: { id: number; data: Partial<Currency> }) => 
       settingsService.updateCurrency(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['currencies'] });
@@ -76,7 +86,6 @@ const CurrenciesContent: React.FC = () => {
     },
   });
 
-  // حذف عملة
   const deleteMutation = useMutation({
     mutationFn: (id: number) => settingsService.deleteCurrency(id),
     onSuccess: () => {
@@ -88,17 +97,30 @@ const CurrenciesContent: React.FC = () => {
     },
   });
 
+  useEffect(() => {
+    if (newCurrency.is_default) {
+      setNewCurrency(prev => ({ ...prev, exchange_rate: '1.00' }));
+    }
+  }, [newCurrency.is_default]);
+
+  useEffect(() => {
+    if (editingCurrency?.is_default) {
+      setEditingCurrency(prev => prev ? { ...prev, exchange_rate: 1.00 } : null);
+    }
+  }, [editingCurrency?.is_default]);
+
   const handleAdd = () => {
     if (!newCurrency.name || !newCurrency.code || !newCurrency.symbol) {
       toast.error(t('currencies.requiredFields'));
       return;
     }
-
+    // 3. الكائن الذي يتم إرساله الآن يطابق النوع `CreateCurrencyData` تمامًا
     createMutation.mutate({
       name: newCurrency.name,
       code: newCurrency.code.toUpperCase(),
       symbol: newCurrency.symbol,
       exchange_rate: parseFloat(newCurrency.exchange_rate) || 1.0,
+      is_default: newCurrency.is_default,
     });
   };
 
@@ -107,23 +129,35 @@ const CurrenciesContent: React.FC = () => {
       toast.error(t('currencies.requiredFields'));
       return;
     }
-
     updateMutation.mutate({
-      id: editingCurrency.id,
+      id: editingCurrency.id!,
       data: {
         name: editingCurrency.name,
         code: editingCurrency.code.toUpperCase(),
         symbol: editingCurrency.symbol,
-        exchange_rate: parseFloat(editingCurrency.exchange_rate) || 1.0,
+        exchange_rate: parseFloat(editingCurrency.exchange_rate!.toString()) || 1.0,
+        is_default: editingCurrency.is_default,
       },
     });
   };
 
-  const openEditDialog = (currency: any) => {
-    setEditingCurrency({ 
-      ...currency,
-      exchange_rate: currency.exchange_rate.toString()
-    });
+  const handleSetDefault = (currency: Currency) => {
+    if (currency.is_default) return;
+    toast.promise(
+      updateMutation.mutateAsync({
+        id: currency.id,
+        data: { is_default: true },
+      }),
+      {
+        loading: t('common.saving'),
+        success: `تم تعيين "${currency.name}" كعملة افتراضية.`,
+        error: (err: any) => err.response?.data?.message || t('common.error'),
+      }
+    );
+  };
+
+  const openEditDialog = (currency: Currency) => {
+    setEditingCurrency(currency);
     setIsEditOpen(true);
   };
 
@@ -140,7 +174,7 @@ const CurrenciesContent: React.FC = () => {
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">جاري التحميل...</p>
+          <p className="text-muted-foreground">{t('common.loading')}</p>
         </div>
       </div>
     );
@@ -167,53 +201,36 @@ const CurrenciesContent: React.FC = () => {
             <div className="space-y-4 pt-4">
               <div className="space-y-2">
                 <Label>{t('currencies.name')} *</Label>
-                <Input
-                  value={newCurrency.name}
-                  onChange={(e) => setNewCurrency({ ...newCurrency, name: e.target.value })}
-                  placeholder="مثال: يورو"
-                />
+                <Input value={newCurrency.name} onChange={(e) => setNewCurrency({ ...newCurrency, name: e.target.value })} placeholder="مثال: يورو" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>{t('currencies.code')} *</Label>
-                  <Input
-                    value={newCurrency.code}
-                    onChange={(e) => setNewCurrency({ ...newCurrency, code: e.target.value.toUpperCase() })}
-                    placeholder="EUR"
-                    maxLength={3}
-                  />
+                  <Input value={newCurrency.code} onChange={(e) => setNewCurrency({ ...newCurrency, code: e.target.value.toUpperCase() })} placeholder="EUR" maxLength={3} />
                 </div>
                 <div className="space-y-2">
                   <Label>{t('currencies.symbol')} *</Label>
-                  <Input
-                    value={newCurrency.symbol}
-                    onChange={(e) => setNewCurrency({ ...newCurrency, symbol: e.target.value })}
-                    placeholder="€"
-                  />
+                  <Input value={newCurrency.symbol} onChange={(e) => setNewCurrency({ ...newCurrency, symbol: e.target.value })} placeholder="€" />
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label>{t('currencies.exchangeRate')} *</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={newCurrency.exchange_rate}
-                  onChange={(e) => setNewCurrency({ ...newCurrency, exchange_rate: e.target.value })}
-                  placeholder="1.00"
+              <div className="flex items-center justify-between rounded-lg border p-3">
+                <Label htmlFor="is-default-add">{t('currencies.isDefault')}</Label>
+                <Switch
+                  id="is-default-add"
+                  checked={newCurrency.is_default}
+                  onCheckedChange={(checked) => setNewCurrency({ ...newCurrency, is_default: checked })}
                 />
-                <p className="text-xs text-muted-foreground">
-                  {t('currencies.exchangeRateHelp')}
-                </p>
               </div>
+              {!newCurrency.is_default && (
+                <div className="space-y-2">
+                  <Label>{t('currencies.exchangeRate')} *</Label>
+                  <Input type="number" step="0.01" value={newCurrency.exchange_rate} onChange={(e) => setNewCurrency({ ...newCurrency, exchange_rate: e.target.value })} placeholder="1.00" />
+                  <p className="text-xs text-muted-foreground">{t('currencies.exchangeRateHelp')}</p>
+                </div>
+              )}
               <div className="flex justify-end gap-2 pt-4">
-                <Button variant="outline" onClick={() => setIsAddOpen(false)}>
-                  {t('common.cancel')}
-                </Button>
-                <Button 
-                  onClick={handleAdd} 
-                  className="gradient-primary border-0"
-                  disabled={createMutation.isPending}
-                >
+                <Button variant="outline" onClick={() => setIsAddOpen(false)}>{t('common.cancel')}</Button>
+                <Button onClick={handleAdd} className="gradient-primary border-0" disabled={createMutation.isPending}>
                   {createMutation.isPending ? t('common.adding') : t('common.add')}
                 </Button>
               </div>
@@ -222,7 +239,6 @@ const CurrenciesContent: React.FC = () => {
         </Dialog>
       </div>
 
-      {/* Edit Dialog */}
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
         <DialogContent>
           <DialogHeader>
@@ -232,50 +248,35 @@ const CurrenciesContent: React.FC = () => {
             <div className="space-y-4 pt-4">
               <div className="space-y-2">
                 <Label>{t('currencies.name')} *</Label>
-                <Input
-                  value={editingCurrency.name}
-                  onChange={(e) => setEditingCurrency({ ...editingCurrency, name: e.target.value })}
-                  placeholder={t('currencies.name')}
-                />
+                <Input value={editingCurrency.name} onChange={(e) => setEditingCurrency({ ...editingCurrency, name: e.target.value })} placeholder={t('currencies.name')} />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>{t('currencies.code')} *</Label>
-                  <Input
-                    value={editingCurrency.code}
-                    onChange={(e) => setEditingCurrency({ ...editingCurrency, code: e.target.value.toUpperCase() })}
-                    placeholder="USD"
-                    maxLength={3}
-                  />
+                  <Input value={editingCurrency.code} onChange={(e) => setEditingCurrency({ ...editingCurrency, code: e.target.value.toUpperCase() })} placeholder="USD" maxLength={3} />
                 </div>
                 <div className="space-y-2">
                   <Label>{t('currencies.symbol')} *</Label>
-                  <Input
-                    value={editingCurrency.symbol}
-                    onChange={(e) => setEditingCurrency({ ...editingCurrency, symbol: e.target.value })}
-                    placeholder="$"
-                  />
+                  <Input value={editingCurrency.symbol} onChange={(e) => setEditingCurrency({ ...editingCurrency, symbol: e.target.value })} placeholder="$" />
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label>{t('currencies.exchangeRate')} *</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={editingCurrency.exchange_rate}
-                  onChange={(e) => setEditingCurrency({ ...editingCurrency, exchange_rate: e.target.value })}
-                  placeholder="1.00"
+              <div className="flex items-center justify-between rounded-lg border p-3">
+                <Label htmlFor="is-default-edit">{t('currencies.isDefault')}</Label>
+                <Switch
+                  id="is-default-edit"
+                  checked={editingCurrency.is_default}
+                  onCheckedChange={(checked) => setEditingCurrency({ ...editingCurrency, is_default: checked })}
                 />
               </div>
+              {!editingCurrency.is_default && (
+                <div className="space-y-2">
+                  <Label>{t('currencies.exchangeRate')} *</Label>
+                  <Input type="number" step="0.01" value={editingCurrency.exchange_rate} onChange={(e) => setEditingCurrency({ ...editingCurrency, exchange_rate: Number(e.target.value) })} placeholder="1.00" />
+                </div>
+              )}
               <div className="flex justify-end gap-2 pt-4">
-                <Button variant="outline" onClick={() => setIsEditOpen(false)}>
-                  {t('common.cancel')}
-                </Button>
-                <Button 
-                  onClick={handleEdit} 
-                  className="gradient-primary border-0"
-                  disabled={updateMutation.isPending}
-                >
+                <Button variant="outline" onClick={() => setIsEditOpen(false)}>{t('common.cancel')}</Button>
+                <Button onClick={handleEdit} className="gradient-primary border-0" disabled={updateMutation.isPending}>
                   {updateMutation.isPending ? t('common.saving') : t('common.save')}
                 </Button>
               </div>
@@ -284,77 +285,65 @@ const CurrenciesContent: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Currencies Grid */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {currencies.map((currency: any, index: number) => (
-          <motion.div
-            key={currency.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.05 }}
-            className="glass-card p-5"
-          >
+        {currencies.map((currency, index) => (
+          <motion.div key={currency.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05 }} className="glass-card p-5 flex flex-col">
             <div className="flex items-start justify-between mb-4">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-xl font-bold">
-                  {currency.symbol}
-                </div>
+                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-xl font-bold">{currency.symbol}</div>
                 <div>
                   <div className="flex items-center gap-2">
                     <h4 className="font-semibold text-foreground">{currency.name}</h4>
-                    {currency.is_default && (
-                      <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
-                    )}
+                    {currency.is_default && <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />}
                   </div>
                   <p className="text-sm text-muted-foreground">{currency.code}</p>
                 </div>
               </div>
               <div className="flex gap-1">
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditDialog(currency)}>
-                  <Edit2 className="w-4 h-4" />
-                </Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditDialog(currency)}><Edit2 className="w-4 h-4" /></Button>
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-8 w-8 text-destructive"
-                      disabled={currency.is_default}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" disabled={currency.is_default}><Trash2 className="w-4 h-4" /></Button>
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
-                      <AlertDialogTitle>تأكيد الحذف</AlertDialogTitle>
+                      <AlertDialogTitle>{t('common.confirmDelete')}</AlertDialogTitle>
                       <AlertDialogDescription>
-                        هل أنت متأكد من حذف العملة "{currency.name}"؟
-                        لا يمكن التراجع عن هذا الإجراء.
+                        {t('common.deleteUserWarning', { item: currency.name })}
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                      <AlertDialogCancel>إلغاء</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={() => handleDelete(currency.id, currency.is_default)}
-                        className="bg-destructive hover:bg-destructive/90"
-                      >
-                        حذف
-                      </AlertDialogAction>
+                      <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+                      <AlertDialogAction onClick={() => handleDelete(currency.id, currency.is_default)} className="bg-destructive hover:bg-destructive/90">{t('common.delete')}</AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>
               </div>
             </div>
-
-            <div className="space-y-2 pt-3 border-t border-border">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">سعر الصرف:</span>
-                <span className="font-semibold text-foreground">{currency.exchange_rate}</span>
-              </div>
-              {currency.is_default && (
-                <div className="text-xs text-yellow-600 bg-yellow-50 dark:bg-yellow-900/20 px-2 py-1 rounded">
-                  العملة الافتراضية
+            <div className="space-y-2 pt-3 border-t border-border flex-grow">
+              {!currency.is_default && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">{t('currencies.exchangeRate')}:</span>
+                  <span className="font-semibold text-foreground">{currency.exchange_rate}</span>
                 </div>
+              )}
+            </div>
+            <div className="mt-4">
+              {currency.is_default ? (
+                <div className="text-xs text-center font-medium text-yellow-600 bg-yellow-50 dark:bg-yellow-900/20 px-2 py-2 rounded-md">
+                  {t('currencies.isDefault')}
+                </div>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full gap-2"
+                  onClick={() => handleSetDefault(currency)}
+                  disabled={updateMutation.isPending}
+                >
+                  <Star className="w-4 h-4" />
+                  {t('currencies.setDefault', { defaultValue: 'Set as Default' })}
+                </Button>
               )}
             </div>
           </motion.div>
@@ -364,8 +353,8 @@ const CurrenciesContent: React.FC = () => {
       {currencies.length === 0 && (
         <div className="text-center py-12">
           <Coins className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
-          <h3 className="text-lg font-semibold text-foreground mb-2">لا توجد عملات</h3>
-          <p className="text-muted-foreground mb-4">ابدأ بإضافة عملة جديدة</p>
+          <h3 className="text-lg font-semibold text-foreground mb-2">{t('currencies.noCurrencies', { defaultValue: 'No Currencies Found' })}</h3>
+          <p className="text-muted-foreground mb-4">{t('currencies.startByAdding', { defaultValue: 'Start by adding a new currency.' })}</p>
         </div>
       )}
     </div>
@@ -374,7 +363,7 @@ const CurrenciesContent: React.FC = () => {
 
 const Currencies: React.FC = () => {
   return (
-    <PageErrorBoundary pageName="العملات">
+    <PageErrorBoundary pageName={useTranslation().t('currencies.title')}>
       <CurrenciesContent />
     </PageErrorBoundary>
   );

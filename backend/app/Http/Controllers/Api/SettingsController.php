@@ -16,7 +16,6 @@ class SettingsController extends Controller
     {
         $settings = SystemSetting::getAll();
         
-        // تحويل مسار الشعار إلى URL كامل
         if (isset($settings['company_logo']) && $settings['company_logo']) {
             $settings['company_logo'] = url(Storage::url($settings['company_logo']));
         }
@@ -32,7 +31,17 @@ class SettingsController extends Controller
      */
     public function update(Request $request)
     {
+        // =================================================================
+        // **التعديل الرئيسي هنا: إضافة قواعد التحقق لإعدادات الولاء**
+        // =================================================================
+        /**
+         * قمنا بتوسيع قواعد التحقق لتشمل جميع مفاتيح إعدادات الولاء.
+         * هذا يجعل المتحكم مرنًا وقادرًا على حفظ أي مجموعة من الإعدادات
+         * يتم إرسالها من الواجهة الأمامية في طلب واحد.
+         * استخدمنا 'nullable' للسماح بتحديث إعداد واحد دون الحاجة لإرسال جميع الإعدادات الأخرى.
+         */
         $validated = $request->validate([
+            // الإعدادات العامة (موجودة سابقًا)
             'company_name' => 'nullable|string|max:255',
             'company_email' => 'nullable|email|max:255',
             'company_phone' => 'nullable|string|max:20',
@@ -40,27 +49,38 @@ class SettingsController extends Controller
             'tax_rate' => 'nullable|numeric|min:0|max:100',
             'default_discount' => 'nullable|numeric|min:0|max:100',
             'default_currency_id' => 'nullable|exists:currencies,id',
-            'enable_loyalty' => 'nullable|boolean',
-            'loyalty_points_ratio' => 'nullable|numeric|min:0',
+            
+            // إعدادات الولاء الجديدة
+            'loyalty_enabled' => 'nullable|boolean',
+            'loyalty_points_per_currency' => 'nullable|numeric|min:0',
+            'loyalty_currency_per_point' => 'nullable|numeric|min:0',
+            'loyalty_minimum_redemption' => 'nullable|integer|min:0',
+            'loyalty_welcome_bonus' => 'nullable|integer|min:0',
+            'loyalty_birthday_bonus' => 'nullable|integer|min:0',
+            'loyalty_expiry_days' => 'nullable|integer|min:0',
+
+            // إعدادات أخرى (مثال)
             'enable_wallet' => 'nullable|boolean',
         ], [
+            // رسائل الخطأ (يمكن إضافة المزيد لإعدادات الولاء إذا لزم الأمر)
             'company_name.string' => 'اسم الشركة يجب أن يكون نصاً',
             'company_email.email' => 'البريد الإلكتروني غير صحيح',
             'tax_rate.numeric' => 'نسبة الضريبة يجب أن تكون رقماً',
-            'tax_rate.min' => 'نسبة الضريبة يجب أن تكون 0 على الأقل',
-            'tax_rate.max' => 'نسبة الضريبة يجب ألا تتجاوز 100',
-            'default_discount.numeric' => 'الخصم الافتراضي يجب أن يكون رقماً',
             'default_currency_id.exists' => 'العملة المحددة غير موجودة',
         ]);
 
         try {
+            // لا حاجة لتغيير هذا الجزء، فهو مرن بما يكفي
+            // سيقوم بالمرور على جميع البيانات التي تم التحقق منها وحفظها
             foreach ($validated as $key => $value) {
-                SystemSetting::set($key, $value);
+                // التأكد من عدم حفظ القيم الفارغة التي لم يتم إرسالها
+                if ($request->has($key)) {
+                    SystemSetting::set($key, $value);
+                }
             }
 
             $settings = SystemSetting::getAll();
             
-            // تحويل مسار الشعار إلى URL كامل
             if (isset($settings['company_logo']) && $settings['company_logo']) {
                 $settings['company_logo'] = url(Storage::url($settings['company_logo']));
             }
@@ -95,13 +115,11 @@ class SettingsController extends Controller
         ]);
 
         try {
-            // حذف الشعار القديم إذا كان موجوداً
             $oldLogo = SystemSetting::get('company_logo');
             if ($oldLogo && Storage::disk('public')->exists($oldLogo)) {
                 Storage::disk('public')->delete($oldLogo);
             }
 
-            // رفع الشعار الجديد
             $path = $request->file('logo')->store('logos', 'public');
             SystemSetting::set('company_logo', $path);
 

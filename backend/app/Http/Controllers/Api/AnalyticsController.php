@@ -8,97 +8,183 @@ use App\Services\PurchaseAnalyticsService;
 use App\Services\ProductAnalyticsService;
 use App\Services\DashboardService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
+// =================================================================
+// **1. إضافة استيراد الخدمة الجديدة**
+// =================================================================
+use App\Services\BasketAnalyticsService;
+
+/**
+ * API Controller for handling analytics requests.
+ * This controller acts as a bridge between HTTP requests and the dedicated analytics services.
+ */
 class AnalyticsController extends Controller
 {
     /**
-     * Get sales analytics
-     * 
+     * Get sales analytics.
+     *
      * @param Request $request
      * @return \Illuminate\Http\JsonResponse
      */
     public function sales(Request $request)
     {
         try {
-            $startDate = $request->input('start_date');
-            $endDate = $request->input('end_date');
+            $options = $request->validate([
+                'start_date' => 'nullable|date',
+                'end_date' => 'nullable|date|after_or_equal:start_date',
+            ]);
             
-            $analytics = SalesAnalyticsService::getAnalytics($startDate, $endDate);
+            $analytics = SalesAnalyticsService::getAnalytics($options['start_date'] ?? null, $options['end_date'] ?? null);
             
             return response()->json([
                 'success' => true,
                 'data' => $analytics,
                 'message' => 'Sales analytics retrieved successfully'
             ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid input provided.',
+                'errors' => $e->errors(),
+            ], 422);
         } catch (\Exception $e) {
-            \Log::error('Sales Analytics Error: ' . $e->getMessage());
+            Log::error('Sales Analytics Error: ' . $e->getMessage());
             
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to retrieve sales analytics',
-                'error' => $e->getMessage()
             ], 500);
         }
     }
 
     /**
-     * Get purchase analytics
-     * 
+     * Get purchase analytics.
+     *
      * @param Request $request
      * @return \Illuminate\Http\JsonResponse
      */
     public function purchases(Request $request)
     {
         try {
-            $startDate = $request->input('start_date');
-            $endDate = $request->input('end_date');
-            
-            $analytics = PurchaseAnalyticsService::getAnalytics($startDate, $endDate);
+            $options = $request->validate([
+                'start_date' => 'nullable|date',
+                'end_date' => 'nullable|date|after_or_equal:start_date',
+            ]);
+
+            $analytics = PurchaseAnalyticsService::getAnalytics($options['start_date'] ?? null, $options['end_date'] ?? null);
             
             return response()->json([
                 'success' => true,
                 'data' => $analytics,
                 'message' => 'Purchase analytics retrieved successfully'
             ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid input provided.',
+                'errors' => $e->errors(),
+            ], 422);
         } catch (\Exception $e) {
-            \Log::error('Purchase Analytics Error: ' . $e->getMessage());
+            Log::error('Purchase Analytics Error: ' . $e->getMessage());
             
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to retrieve purchase analytics',
-                'error' => $e->getMessage()
             ], 500);
         }
     }
 
     /**
-     * Get product analytics
-     * 
+     * Get advanced product performance analytics.
+     *
+     * @param Request $request
      * @return \Illuminate\Http\JsonResponse
      */
-    public function products()
+    public function products(Request $request)
     {
         try {
-            $analytics = ProductAnalyticsService::getAnalytics();
+            $validatedOptions = $request->validate([
+                'startDate' => 'nullable|date',
+                'endDate' => 'nullable|date|after_or_equal:startDate',
+                'limit' => 'nullable|integer|min:1|max:100',
+                'categoryId' => 'nullable|integer|exists:categories,id',
+                'brandId' => 'nullable|integer|exists:brands,id',
+            ]);
+
+            $analytics = ProductAnalyticsService::getAnalytics($validatedOptions);
             
             return response()->json([
                 'success' => true,
                 'data' => $analytics,
-                'message' => 'Product analytics retrieved successfully'
+                'message' => 'Product performance analytics retrieved successfully.'
             ]);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid filter options provided.',
+                'errors' => $e->errors(),
+            ], 422);
+
         } catch (\Exception $e) {
-            \Log::error('Product Analytics Error: ' . $e->getMessage());
+            Log::error('Product Analytics Error: ' . $e->getMessage());
             
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to retrieve product analytics',
-                'error' => $e->getMessage()
+                'message' => 'An unexpected error occurred while retrieving product analytics.'
+            ], 500);
+        }
+    }
+
+    // =================================================================
+    // **2. إضافة الدالة الجديدة هنا**
+    // =================================================================
+    /**
+     * Get basket analysis data to find product associations.
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function basketAnalysis(Request $request)
+    {
+        try {
+            // التحقق من صحة معاملات الطلب
+            $validatedOptions = $request->validate([
+                'startDate' => 'nullable|date',
+                'endDate' => 'nullable|date|after_or_equal:startDate',
+                'limit' => 'nullable|integer|min:1|max:100',
+                'minSupport' => 'nullable|integer|min:1',
+            ]);
+
+            // استدعاء الخدمة مع الخيارات التي تم التحقق منها
+            $pairs = BasketAnalyticsService::findProductPairs($validatedOptions);
+            
+            return response()->json([
+                'success' => true,
+                'data' => $pairs,
+                'message' => 'Basket analysis retrieved successfully'
+            ]);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid filter options provided.',
+                'errors' => $e->errors(),
+            ], 422);
+
+        } catch (\Exception $e) {
+            Log::error('Basket Analysis Error: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'An unexpected error occurred while retrieving basket analysis.'
             ], 500);
         }
     }
 
     /**
-     * Get top customers
+     * Get top customers.
      * 
      * @param Request $request
      * @return \Illuminate\Http\JsonResponse
@@ -115,18 +201,17 @@ class AnalyticsController extends Controller
                 'message' => 'Top customers retrieved successfully'
             ]);
         } catch (\Exception $e) {
-            \Log::error('Top Customers Error: ' . $e->getMessage());
+            Log::error('Top Customers Error: ' . $e->getMessage());
             
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to retrieve top customers',
-                'error' => $e->getMessage()
             ], 500);
         }
     }
 
     /**
-     * Get top suppliers
+     * Get top suppliers.
      * 
      * @param Request $request
      * @return \Illuminate\Http\JsonResponse
@@ -143,18 +228,17 @@ class AnalyticsController extends Controller
                 'message' => 'Top suppliers retrieved successfully'
             ]);
         } catch (\Exception $e) {
-            \Log::error('Top Suppliers Error: ' . $e->getMessage());
+            Log::error('Top Suppliers Error: ' . $e->getMessage());
             
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to retrieve top suppliers',
-                'error' => $e->getMessage()
             ], 500);
         }
     }
 
     /**
-     * Get product movement report
+     * Get product movement report.
      * 
      * @param int $productId
      * @return \Illuminate\Http\JsonResponse
@@ -169,19 +253,23 @@ class AnalyticsController extends Controller
                 'data' => $movement,
                 'message' => 'Product movement retrieved successfully'
             ]);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+             return response()->json([
+                'success' => false,
+                'message' => 'Product not found.',
+            ], 404);
         } catch (\Exception $e) {
-            \Log::error('Product Movement Error: ' . $e->getMessage());
+            Log::error('Product Movement Error: ' . $e->getMessage());
             
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to retrieve product movement',
-                'error' => $e->getMessage()
             ], 500);
         }
     }
 
     /**
-     * Clear all analytics cache
+     * Clear all analytics cache.
      * 
      * @return \Illuminate\Http\JsonResponse
      */
@@ -198,18 +286,17 @@ class AnalyticsController extends Controller
                 'message' => 'Analytics cache cleared successfully'
             ]);
         } catch (\Exception $e) {
-            \Log::error('Clear Cache Error: ' . $e->getMessage());
+            Log::error('Clear Cache Error: ' . $e->getMessage());
             
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to clear cache',
-                'error' => $e->getMessage()
             ], 500);
         }
     }
 
     /**
-     * Refresh dashboard cache
+     * Refresh dashboard cache.
      * 
      * @return \Illuminate\Http\JsonResponse
      */
@@ -224,12 +311,11 @@ class AnalyticsController extends Controller
                 'message' => 'Cache refreshed successfully'
             ]);
         } catch (\Exception $e) {
-            \Log::error('Refresh Cache Error: ' . $e->getMessage());
+            Log::error('Refresh Cache Error: ' . $e->getMessage());
             
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to refresh cache',
-                'error' => $e->getMessage()
             ], 500);
         }
     }

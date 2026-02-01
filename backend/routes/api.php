@@ -41,6 +41,8 @@ use App\Http\Controllers\Api\ProfileController;
 
 // Public routes
 Route::post('/auth/login', [AuthController::class, 'login']);
+Route::get('/products/import/template', [ProductController::class, 'downloadTemplate']);
+
 
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {
@@ -159,6 +161,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('product-movement/{productId}', [AnalyticsController::class, 'productMovement']);
         Route::post('clear-cache', [AnalyticsController::class, 'clearCache']);
         Route::post('refresh-cache', [AnalyticsController::class, 'refreshCache']);
+        Route::get('basket', [AnalyticsController::class, 'basketAnalysis']); 
+
     });
 
     // Payment Methods routes

@@ -5,221 +5,259 @@ namespace App\Services;
 use App\Models\Product;
 use App\Models\Category;
 use App\Models\Brand;
+use App\Models\SalesInvoiceItem;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 
+/**
+ * Service Class for Product Analytics.
+ * 
+ * Handles all business logic related to calculating and caching
+ * product performance metrics. Designed to be scalable and maintainable.
+ */
 class ProductAnalyticsService
 {
-    const CACHE_DURATION = 300; // 5 minutes
+    /**
+     * Cache duration in seconds (5 minutes).
+     * @const int
+     */
+    private const CACHE_DURATION = 300;
 
     /**
-     * تحليلات المنتجات الشاملة
+     * Retrieves comprehensive product analytics.
+     * This is the main entry point for product performance analysis.
+     *
+     * @param array $options An array of options for filtering the analytics.
+     *   - 'startDate' (string|Carbon): The start date for the analysis period.
+     *   - 'endDate' (string|Carbon): The end date for the analysis period.
+     *   - 'limit' (int): The number of records to return for top/least lists. Default is 10.
+     *   - 'categoryId' (int): Filter analytics by a specific category.
+     *   - 'brandId' (int): Filter analytics by a specific brand.
+     * @return array The analytics data.
      */
-    public static function getAnalytics()
+    public static function getAnalytics(array $options = []): array
     {
-        return Cache::remember('product_analytics', self::CACHE_DURATION, function () {
+        $cacheKey = 'product_analytics_' . md5(json_encode($options));
+
+        return Cache::remember($cacheKey, self::CACHE_DURATION, function () use ($options) {
+            
+            $startDate = $options['startDate'] ?? null;
+            $endDate = $options['endDate'] ?? null;
+            $limit = $options['limit'] ?? 10;
+
             return [
                 'summary' => self::getProductsSummary(),
+                'top_selling_by_quantity' => self::getTopSellingProducts($startDate, $endDate, $limit, 'total_quantity'),
+                'top_selling_by_revenue' => self::getTopSellingProducts($startDate, $endDate, $limit, 'total_revenue'),
+                'most_profitable' => self::getMostProfitableProducts($startDate, $endDate, $limit),
+                'inventory_value' => self::getInventoryValue(),
+                'low_stock' => self::getLowStockProducts($limit),
+                'out_of_stock' => self::getOutOfStockProducts($limit),
                 'by_category' => self::getProductsByCategory(),
                 'by_brand' => self::getProductsByBrand(),
-                'low_stock' => self::getLowStockProducts(),
-                'out_of_stock' => self::getOutOfStockProducts(),
-                'top_selling' => self::getTopSellingProducts(),
-                'inventory_value' => self::getInventoryValue(),
             ];
         });
     }
 
     /**
-     * ملخص المنتجات
+     * Provides a high-level summary of all products.
+     *
+     * @return array
      */
-    private static function getProductsSummary()
+    private static function getProductsSummary(): array
     {
+        $summary = Product::select(
+            DB::raw('COUNT(*) as total_products'),
+            DB::raw('SUM(CASE WHEN is_active = 1 THEN 1 ELSE 0 END) as active_products'),
+            DB::raw('SUM(CASE WHEN quantity <= reorder_level THEN 1 ELSE 0 END) as low_stock_count'),
+            DB::raw('SUM(CASE WHEN quantity = 0 THEN 1 ELSE 0 END) as out_of_stock_count'),
+            DB::raw('SUM(quantity) as total_quantity')
+        )->first();
+
         return [
-            'total_products' => Product::count(),
-            'active_products' => Product::where('is_active', true)->count(),
-            'inactive_products' => Product::where('is_active', false)->count(),
-            'low_stock_count' => Product::whereRaw('quantity <= min_quantity')->count(),
-            'out_of_stock_count' => Product::where('quantity', 0)->count(),
-            'total_quantity' => (int) Product::sum('quantity'),
-            'total_purchase_value' => (float) Product::selectRaw('SUM(quantity * purchase_price)')->value('SUM(quantity * purchase_price)'),
-            'total_sale_value' => (float) Product::selectRaw('SUM(quantity * sale_price)')->value('SUM(quantity * sale_price)'),
+            'total_products' => (int) $summary->total_products,
+            'active_products' => (int) $summary->active_products,
+            'inactive_products' => (int) ($summary->total_products - $summary->active_products),
+            'low_stock_count' => (int) $summary->low_stock_count,
+            'out_of_stock_count' => (int) $summary->out_of_stock_count,
+            'total_quantity' => (int) $summary->total_quantity,
         ];
     }
 
     /**
-     * المنتجات حسب الفئة
+     * Retrieves the top-selling products, sortable by quantity or revenue.
+     *
+     * @param string|null $startDate
+     * @param string|null $endDate
+     * @param int $limit
+     * @param string $orderBy 'total_quantity' or 'total_revenue'
+     * @return \Illuminate\Support\Collection
      */
-    private static function getProductsByCategory()
+    private static function getTopSellingProducts(?string $startDate, ?string $endDate, int $limit, string $orderBy): \Illuminate\Support\Collection
     {
-        return Category::withCount('products')
-            ->with(['products' => function ($query) {
-                $query->select('category_id', DB::raw('SUM(quantity) as total_quantity'));
-            }])
-            ->get()
-            ->map(function ($category) {
-                $totalQuantity = Product::where('category_id', $category->id)->sum('quantity');
-                $totalValue = Product::where('category_id', $category->id)
-                    ->selectRaw('SUM(quantity * purchase_price) as total')
-                    ->value('total');
-                
-                return [
-                    'id' => $category->id,
-                    'name' => $category->name,
-                    'name_ar' => $category->name_ar,
-                    'products_count' => $category->products_count,
-                    'total_quantity' => (int) $totalQuantity,
-                    'total_value' => (float) $totalValue,
-                ];
-            });
-    }
-
-    /**
-     * المنتجات حسب العلامة التجارية
-     */
-    private static function getProductsByBrand()
-    {
-        return Brand::withCount('products')
-            ->get()
-            ->map(function ($brand) {
-                $totalQuantity = Product::where('brand_id', $brand->id)->sum('quantity');
-                $totalValue = Product::where('brand_id', $brand->id)
-                    ->selectRaw('SUM(quantity * purchase_price) as total')
-                    ->value('total');
-                
-                return [
-                    'id' => $brand->id,
-                    'name' => $brand->name,
-                    'name_ar' => $brand->name_ar,
-                    'products_count' => $brand->products_count,
-                    'total_quantity' => (int) $totalQuantity,
-                    'total_value' => (float) $totalValue,
-                ];
-            });
-    }
-
-    /**
-     * المنتجات منخفضة المخزون
-     */
-    private static function getLowStockProducts()
-    {
-        return Product::whereRaw('quantity <= min_quantity')
-            ->where('quantity', '>', 0)
-            ->select('id', 'name', 'sku', 'quantity', 'min_quantity', 'purchase_price', 'sale_price')
-            ->orderBy('quantity', 'asc')
-            ->limit(20)
-            ->get();
-    }
-
-    /**
-     * المنتجات نفذت من المخزون
-     */
-    private static function getOutOfStockProducts()
-    {
-        return Product::where('quantity', 0)
-            ->select('id', 'name', 'sku', 'min_quantity', 'purchase_price', 'sale_price')
-            ->limit(20)
-            ->get();
-    }
-
-    /**
-     * أفضل المنتجات مبيعاً
-     */
-    private static function getTopSellingProducts()
-    {
-        return DB::table('sales_invoice_items')
-            ->join('products', 'sales_invoice_items.product_id', '=', 'products.id')
+        $query = SalesInvoiceItem::join('products', 'sales_invoice_items.product_id', '=', 'products.id')
             ->select(
                 'products.id',
                 'products.name',
-                'products.name_ar',
                 'products.sku',
                 'products.quantity as current_stock',
-                DB::raw('SUM(sales_invoice_items.quantity) as total_sold'),
+                DB::raw('SUM(sales_invoice_items.quantity) as total_quantity'),
                 DB::raw('SUM(sales_invoice_items.total_price) as total_revenue')
             )
-            ->groupBy('products.id', 'products.name', 'products.sku', 'products.quantity')
-            ->orderByDesc('total_sold')
-            ->limit(20)
-            ->get()
-            ->map(function ($item) {
-                return [
-                    'id' => $item->id,
-                    'name' => $item->name,
-                    
-                    'sku' => $item->sku,
-                    'current_stock' => (int) $item->current_stock,
-                    'total_sold' => (int) $item->total_sold,
-                    'total_revenue' => (float) $item->total_revenue,
-                ];
-            });
+            ->groupBy('products.id', 'products.name', 'products.sku', 'products.quantity');
+
+        if ($startDate && $endDate) {
+            $query->join('sales_invoices', 'sales_invoice_items.sales_invoice_id', '=', 'sales_invoices.id')
+                  ->whereBetween('sales_invoices.invoice_date', [Carbon::parse($startDate)->startOfDay(), Carbon::parse($endDate)->endOfDay()]);
+        }
+
+        return $query->orderByDesc($orderBy)
+            ->limit($limit)
+            ->get();
     }
 
     /**
-     * قيمة المخزون
+     * Retrieves the most profitable products within a given period.
+     * Profit is calculated as (Selling Price - Purchase Price) * Quantity Sold.
+     *
+     * @param string|null $startDate
+     * @param string|null $endDate
+     * @param int $limit
+     * @return \Illuminate\Support\Collection
      */
-    private static function getInventoryValue()
+    private static function getMostProfitableProducts(?string $startDate, ?string $endDate, int $limit): \Illuminate\Support\Collection
     {
+        $query = SalesInvoiceItem::join('products', 'sales_invoice_items.product_id', '=', 'products.id')
+            ->select(
+                'products.id',
+                'products.name',
+                'products.sku',
+                DB::raw('SUM(sales_invoice_items.quantity) as total_quantity'),
+                DB::raw('SUM(sales_invoice_items.total_price) as total_revenue'),
+                
+                // =================================================================
+                // **التعديل الرئيسي هنا: استخدام سعر الشراء من جدول sales_invoice_items**
+                // =================================================================
+                /**
+                 * هذا هو الحساب الدقيق والمستدام للربح.
+                 * نستخدم 'sales_invoice_items.purchase_price' الذي يسجل تكلفة المنتج
+                 * في لحظة البيع الفعلية، مما يضمن دقة التقارير المالية.
+                 */
+                DB::raw('SUM(sales_invoice_items.quantity * (sales_invoice_items.unit_price - sales_invoice_items.purchase_price)) as total_profit')
+            )
+            ->groupBy('products.id', 'products.name', 'products.sku');
+
+        if ($startDate && $endDate) {
+            $query->join('sales_invoices', 'sales_invoice_items.sales_invoice_id', '=', 'sales_invoices.id')
+                  ->whereBetween('sales_invoices.invoice_date', [Carbon::parse($startDate)->startOfDay(), Carbon::parse($endDate)->endOfDay()]);
+        }
+
+        return $query->orderByDesc('total_profit')
+            ->limit($limit)
+            ->get();
+    }
+
+    /**
+     * Retrieves products that are currently low in stock.
+     *
+     * @param int $limit
+     * @return \Illuminate\Support\Collection
+     */
+    private static function getLowStockProducts(int $limit): \Illuminate\Support\Collection
+    {
+        return Product::whereColumn('quantity', '<=', 'reorder_level')
+            ->where('quantity', '>', 0)
+            ->select('id', 'name', 'sku', 'quantity', 'reorder_level')
+            ->orderBy('quantity', 'asc')
+            ->limit($limit)
+            ->get();
+    }
+
+    /**
+     * Retrieves products that are out of stock.
+     *
+     * @param int $limit
+     * @return \Illuminate\Support\Collection
+     */
+    private static function getOutOfStockProducts(int $limit): \Illuminate\Support\Collection
+    {
+        return Product::where('quantity', 0)
+            ->select('id', 'name', 'sku', 'reorder_level')
+            ->limit($limit)
+            ->get();
+    }
+
+    /**
+     * Calculates the total value of the current inventory.
+     *
+     * @return array
+     */
+    private static function getInventoryValue(): array
+    {
+        $result = Product::selectRaw('
+            SUM(quantity * purchase_price) as value_by_purchase_price,
+            SUM(quantity * selling_price) as value_by_selling_price,
+            SUM(quantity * (selling_price - purchase_price)) as potential_profit
+        ')->first();
+
         return [
-            'by_purchase_price' => (float) Product::selectRaw('SUM(quantity * purchase_price)')->value('SUM(quantity * purchase_price)'),
-            'by_sale_price' => (float) Product::selectRaw('SUM(quantity * sale_price)')->value('SUM(quantity * sale_price)'),
-            'potential_profit' => (float) Product::selectRaw('SUM(quantity * (sale_price - purchase_price))')->value('SUM(quantity * (sale_price - purchase_price))'),
+            'by_purchase_price' => (float) $result->value_by_purchase_price,
+            'by_selling_price' => (float) $result->value_by_selling_price,
+            'potential_profit' => (float) $result->potential_profit,
         ];
     }
 
     /**
-     * تقرير حركة المنتج
+     * Aggregates product counts and quantities by category.
+     *
+     * @return \Illuminate\Support\Collection
      */
-    public static function getProductMovement($productId)
+    private static function getProductsByCategory(): \Illuminate\Support\Collection
     {
-        $cacheKey = 'product_movement_' . $productId;
-        
-        return Cache::remember($cacheKey, self::CACHE_DURATION, function () use ($productId) {
-            $product = Product::findOrFail($productId);
-            
-            // المبيعات
-            $sales = DB::table('sales_invoice_items')
-                ->where('product_id', $productId)
-                ->select(
-                    DB::raw('SUM(quantity) as total_sold'),
-                    DB::raw('SUM(total) as total_revenue')
-                )
-                ->first();
-            
-            // المشتريات
-            $purchases = DB::table('purchase_invoice_items')
-                ->where('product_id', $productId)
-                ->select(
-                    DB::raw('SUM(quantity) as total_purchased'),
-                    DB::raw('SUM(total) as total_cost')
-                )
-                ->first();
-            
-            return [
-                'product' => [
-                    'id' => $product->id,
-                    'name' => $product->name,
-                    'name_ar' => $product->name_ar,
-                    'sku' => $product->sku,
-                    'current_quantity' => $product->quantity,
-                    'min_quantity' => $product->min_quantity,
-                ],
-                'sales' => [
-                    'total_sold' => (int) ($sales->total_sold ?? 0),
-                    'total_revenue' => (float) ($sales->total_revenue ?? 0),
-                ],
-                'purchases' => [
-                    'total_purchased' => (int) ($purchases->total_purchased ?? 0),
-                    'total_cost' => (float) ($purchases->total_cost ?? 0),
-                ],
-            ];
-        });
+        return Category::withCount('products')
+            ->select('id', 'name')
+            ->get()
+            ->map(function ($category) {
+                $stats = Product::where('category_id', $category->id)
+                    ->selectRaw('SUM(quantity) as total_quantity, SUM(quantity * purchase_price) as total_value')
+                    ->first();
+                
+                $category->products_count = (int) $category->products_count;
+                $category->total_quantity = (int) $stats->total_quantity;
+                $category->total_value = (float) $stats->total_value;
+                return $category;
+            });
     }
 
     /**
-     * مسح الـ Cache
+     * Aggregates product counts and quantities by brand.
+     *
+     * @return \Illuminate\Support\Collection
      */
-    public static function clearCache()
+    private static function getProductsByBrand(): \Illuminate\Support\Collection
+    {
+        return Brand::withCount('products')
+            ->select('id', 'name')
+            ->get()
+            ->map(function ($brand) {
+                $stats = Product::where('brand_id', $brand->id)
+                    ->selectRaw('SUM(quantity) as total_quantity, SUM(quantity * purchase_price) as total_value')
+                    ->first();
+
+                $brand->products_count = (int) $brand->products_count;
+                $brand->total_quantity = (int) $stats->total_quantity;
+                $brand->total_value = (float) $stats->total_value;
+                return $brand;
+            });
+    }
+
+    /**
+     * Clears all caches related to this service.
+     *
+     * @return void
+     */
+    public static function clearCache(): void
     {
         Cache::flush();
     }

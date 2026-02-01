@@ -4,6 +4,12 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+// 1. إضافة استيرادات النماذج لتحسين قراءة الكود
+use App\Models\SalesInvoice;
+use App\Models\SalesInvoiceItem;
+use App\Models\Product;
+use App\Models\Debt;
+use Illuminate\Support\Facades\DB;
 
 /**
  * متحكم فواتير المبيعات
@@ -27,7 +33,7 @@ class SalesInvoiceController extends Controller
     public function index(Request $request)
     {
         // استعلام أساسي مع تحميل العلاقات
-        $query = \App\Models\SalesInvoice::with(['customer', 'items.product']);
+        $query = SalesInvoice::with(['customer', 'items.product']);
 
         // الفلترة حسب تاريخ البداية
         if ($request->has('from_date') && $request->from_date) {
@@ -60,26 +66,10 @@ class SalesInvoiceController extends Controller
      * العملية:
      * 1. توليد رقم فاتورة تلقائي (INV-YYYYMMDD-XXXX)
      * 2. إنشاء الفاتورة الرئيسية
-     * 3. إنشاء عناصر الفاتورة (المنتجات)
+     * 3. إنشاء عناصر الفاتورة (المنتجات) مع تسجيل سعر الشراء
      * 4. التحقق من توفر المخزون
      * 5. خصم الكميات من المخزون
-     * 6. إرجاع الفاتورة الكاملة مع العلاقات
-     * 
-     * ملاحظة: جميع العمليات تتم داخل transaction لضمان سلامة البيانات
-     * 
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
-     */
-        /**
-     * إنشاء فاتورة بيع جديدة
-     * 
-     * العملية:
-     * 1. توليد رقم فاتورة تلقائي (INV-YYYYMMDD-XXXX)
-     * 2. إنشاء الفاتورة الرئيسية
-     * 3. إنشاء عناصر الفاتورة (المنتجات)
-     * 4. التحقق من توفر المخزون
-     * 5. خصم الكميات من المخزون
-     * 6. **تعديل:** إذا كانت طريقة الدفع "دين"، يتم إنشاء سجل دين مرتبط.
+     * 6. إذا كانت طريقة الدفع "دين"، يتم إنشاء سجل دين مرتبط.
      * 7. إرجاع الفاتورة الكاملة مع العلاقات
      * 
      * ملاحظة: جميع العمليات تتم داخل transaction لضمان سلامة البيانات
@@ -89,29 +79,28 @@ class SalesInvoiceController extends Controller
      */
     public function store(Request $request)
     {
-        // ** تعديل: إضافة 'debt' لطرق الدفع والتحقق من وجود العميل **
         $validated = $request->validate([
             'customer_id' => 'required_if:payment_method,debt|nullable|exists:customers,id',
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
             'items.*.quantity' => 'required|integer|min:1',
-            'items.*.price' => 'required|numeric|min:0',
+            'items.*.price' => 'required|numeric|min:0', // هذا هو سعر البيع
             'subtotal' => 'required|numeric|min:0',
             'tax' => 'nullable|numeric|min:0',
             'discount' => 'nullable|numeric|min:0',
             'total' => 'required|numeric|min:0',
-            'payment_method' => 'required|in:cash,card,transfer,debt', // ** تعديل **
+            'payment_method' => 'required|in:cash,card,transfer,debt',
             'notes' => 'nullable|string',
         ], [
             'customer_id.required_if' => 'يجب اختيار عميل عند تحديد طريقة الدفع "دين".'
         ]);
 
         // بدء معاملة قاعدة البيانات
-        \DB::beginTransaction();
+        DB::beginTransaction();
         
         try {
             // توليد رقم الفاتورة التلقائي
-            $lastInvoice = \App\Models\SalesInvoice::orderBy('id', 'desc')->first();
+            $lastInvoice = SalesInvoice::orderBy('id', 'desc')->first();
             $invoiceNumber = 'INV-' . date('Ymd') . '-' . str_pad(
                 ($lastInvoice ? $lastInvoice->id + 1 : 1), 
                 4, 
@@ -120,7 +109,7 @@ class SalesInvoiceController extends Controller
             );
 
             // إنشاء الفاتورة الرئيسية
-            $invoice = \App\Models\SalesInvoice::create([
+            $invoice = SalesInvoice::create([
                 'invoice_number' => $invoiceNumber,
                 'customer_id' => $validated['customer_id'] ?? null,
                 'cashier_id' => auth()->id(),
@@ -136,16 +125,20 @@ class SalesInvoiceController extends Controller
 
             // معالجة عناصر الفاتورة (المنتجات)
             foreach ($validated['items'] as $item) {
-                $product = \App\Models\Product::findOrFail($item['product_id']);
+                $product = Product::findOrFail($item['product_id']);
                 
                 if ($product->quantity < $item['quantity']) {
                     throw new \Exception("المخزون غير كافٍ للمنتج: {$product->name}");
                 }
                 
-                \App\Models\SalesInvoiceItem::create([
+                // =================================================================
+                // **2. التعديل الرئيسي هنا: إضافة 'purchase_price'**
+                // =================================================================
+                SalesInvoiceItem::create([
                     'sales_invoice_id' => $invoice->id,
                     'product_id' => $item['product_id'],
                     'quantity' => $item['quantity'],
+                    'purchase_price' => $product->purchase_price, // <-- الحل هنا
                     'unit_price' => $item['price'],
                     'total_price' => $item['quantity'] * $item['price'],
                 ]);
@@ -153,9 +146,9 @@ class SalesInvoiceController extends Controller
                 $product->decrement('quantity', $item['quantity']);
             }
 
-            // ** تعديل: إضافة منطق إنشاء الدين **
+            // إضافة منطق إنشاء الدين
             if ($validated['payment_method'] === 'debt') {
-                \App\Models\Debt::create([
+                Debt::create([
                     'customer_id' => $invoice->customer_id,
                     'sales_invoice_id' => $invoice->id,
                     'amount' => $invoice->total_amount,
@@ -165,18 +158,18 @@ class SalesInvoiceController extends Controller
             }
 
             // تأكيد المعاملة
-            \DB::commit();
+            DB::commit();
 
             // إرجاع الفاتورة الكاملة مع العلاقات
             return response()->json([
                 'success' => true,
-                'message_key' => 'sales.invoice_created_success', // ** تعديل: استخدام مفتاح ترجمة **
+                'message_key' => 'sales.invoice_created_success',
                 'data' => $invoice->load(['items.product', 'customer']),
             ], 201);
             
         } catch (\Exception $e) {
             // التراجع عن جميع التغييرات في حالة الخطأ
-            \DB::rollBack();
+            DB::rollBack();
             
             return response()->json([
                 'success' => false,
@@ -184,5 +177,4 @@ class SalesInvoiceController extends Controller
             ], 422);
         }
     }
-
 }
