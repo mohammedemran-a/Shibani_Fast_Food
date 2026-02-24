@@ -3,9 +3,13 @@
     "dashboard": "Dashboard",
     "pos": "POS",
     "products": "Products",
+    "productsList": "Products List",
+    "addProduct": "Add Product",
+    "importProducts": "Import Products",
     "categories": "Categories",
     "brands": "Brands",
     "units": "Units",
+    "currencies": "Currencies",
     "purchases": "Purchases",
     "sales": "Sales",
     "returns": "Returns",
@@ -13,11 +17,19 @@
     "customers": "Customers",
     "suppliers": "Suppliers",
     "reports": "Reports",
+    "profitReport": "Profit Report",
+    "salesReport": "Sales Report",
+    "summaryReport": "Summary Report",
+    "basketAnalysis": "Basket Analysis",
     "users": "Users",
     "settings": "Settings",
     "generalSettings": "General Settings",
     "profileSettings": "Profile Settings",
+    "profile": "Profile",
     "walletSettings": "Wallet Settings",
+    "wallets": "Wallets",
+    "loyaltySettings": "Loyalty Settings",
+    "roles": "Roles",
     "attendance": "Attendance",
     "salesPerformance": "Sales Performance",
     "productPerformance": "Product Performance",
@@ -39,7 +51,29 @@
     "transactions": "Transactions",
     "lowStock": "Low Stock",
     "active": "Active",
-    "margin": "Margin"
+    "margin": "Margin",
+    "totalExpenses": "Total Expenses",
+    "netProfit": "Net Profit",
+    "afterExpenses": "After Expenses",
+    "recentSales": "Recent Sales",
+    "topProducts": "Top Products"
+  },
+  "forecast": {
+    "title": "Sales Forecast",
+    "subtitle": "Current week's sales with next week's forecast",
+    "actualSales": "Actual Sales",
+    "expectedSales": "Expected Sales"
+  },
+  "insights": {
+    "title": "Smart Insights",
+    "topSelling": "Top selling product this month",
+    "topSellingDesc": "'Arabic Coffee' is performing excellently. Consider a special offer.",
+    "lowStock": "Low Stock Alert",
+    "lowStockDesc": "You have 3 products about to run out. Restock soon.",
+    "salesTrend": "Positive Sales Trend",
+    "salesTrendDesc": "This week's sales are 15% higher than last week. Great job!",
+    "peakHours": "Peak Hours",
+    "peakHoursDesc": "Most sales occur between 4 PM and 8 PM."
   },
   "common": {
     "enterCategory": "Enter Category Name",
@@ -52,6 +86,7 @@
     "of": "of",
     "previous": "Previous",
     "next": "Next",
+    "update": "Update",
     "add": "Add", "edit": "Edit", "delete": "Delete", "save": "Save", "cancel": "Cancel", "search": "Search",
     "actions": "Actions", "status": "Status", "active": "Active", "inactive": "Inactive", "all": "All",
     "date": "Date", "name": "Name", "phone": "Phone", "email": "Email", "address": "Address",
@@ -59,16 +94,59 @@
     "confirm": "Confirm", "confirmDelete": "Confirm Delete", "noData": "No Data", "employee": "Employee",
     "selectEmployee": "Select Employee", "allEmployees": "All Employees", "errorLoading": "Failed to load data",
     "adding": "Adding...", "saving": "Saving...", "deleteUserWarning": "Are you sure you want to delete this item? This action cannot be undone.",
-    "notSpecified": "Not Specified", "requiredFields": "Please fill required fields", "filter": "Filter", "viewAll": "View All"
+    "notSpecified": "Not Specified", "requiredFields": "Please fill required fields", "filter": "Filter", "viewAll": "View All",
+    "fileTooLarge": "File size is too large",
+    "invalidFileType": "Invalid file type",
+    "fullName": "Full Name",
+    "fullNamePlaceholder": "Enter full name",
+    "role": "Role",
+    "selectRole": "Select a role",
+    "searchUsers": "Search for a user...",
+    "editUser": "Edit User",
+    "leaveEmptyToKeep": "Leave empty to keep current",
+    "deleting": "Deleting...",
+    "deactivate": "Deactivate",
+    "activate": "Activate",
+    "guest": "Guest"
+  },
+  "people": {
+    "addUser": "Add User",
+    "usersSubtitle": "Manage system users, roles, and permissions",
+    "customersSubtitle": "Manage customer data",
+    "addCustomer": "Add Customer",
+    "visits": "visits",
+    "totalPurchases": "Total Purchases",
+    "suppliersSubtitle": "Manage supplier data"
   },
   "roles": {
     "admin": "Admin", "cashier": "Cashier", "accountant": "Accountant", "stockManager": "Stock Manager"
   },
-  "auth": { 
-    "login": "Login", "logout": "Logout", "email": "Email", "password": "Password", 
-    "signingIn": "Signing in...", "welcomeBack": "Welcome Back", "invalidCredentials": "Invalid credentials",
-    "logoutSuccess": "Logged out successfully", "logoutError": "Error logging out",
-    "logoutConfirmTitle": "Confirm Logout", "logoutConfirmDescription": "Are you sure you want to logout?"
+  "auth": {
+    "password": "Password",
+    "passwordPlaceholder": "Enter your password",
+    "login": {
+      "title": "Login",
+      "welcomeBack": "Welcome Back",
+      "signInToContinue": "Sign in to continue",
+      "emailAddress": "Email Address",
+      "password": "Password",
+      "signIn": "Sign In",
+      "signingIn": "Signing in...",
+      "demoCredentials": "Demo Credentials",
+      "admin": "Admin",
+      "cashier": "Cashier",
+      "manager": "Manager",
+      "copyright": "All rights reserved © 2024",
+      "invalidCredentials": "Invalid email or password",
+      "error": "Login Error"
+    },
+    "logout": "Logout",
+    "logoutSuccess": "Logged out successfully",
+    "logoutError": "Error logging out",
+    "logoutConfirmTitle": "Confirm Logout",
+    "logoutConfirmDescription": "Are you sure you want to logout?",
+    "passwordMismatch": "Passwords do not match",
+    "passwordTooShort": "Password is too short"
   },
   "pos": { "title": "POS", "searchProducts": "Search products...", "scanBarcode": "Scan barcode or type number...", "productNotFound": "Product not found", "available": "Available", "cart": "Cart", "emptyCart": "Cart is empty", "subtotal": "Subtotal", "tax": "Tax", "discount": "Discount", "total": "Total", "pay": "Pay", "clear": "Clear", "hold": "Hold", "quantity": "Quantity", "price": "Price", "all": "All", "customer": "Customer", "walkInCustomer": "Walk-in Customer", "addedToCart": "Added", "cartCleared": "Cart cleared" },
   "categories": { "drinks": "Drinks", "snacks": "Snacks", "dairy": "Dairy", "bakery": "Bakery", "spices": "Spices" },
@@ -87,16 +165,18 @@
     "categories": {
       "rent": "Rent", "utilities": "Utilities", "salaries": "Salaries", "supplies": "Supplies", 
       "maintenance": "Maintenance", "marketing": "Marketing", "other": "Other"
-    }
+    },
+    "amount": "Amount",
+    "description": "Description",
+    "notes": "Notes"
   },
-  "payment": { "title": "Complete Payment", "totalAmount": "Total Amount", "selectMethod": "Select Payment Method", "cash": "Cash", "wallet": "Wallet", "credit": "Credit", "walletType": "Wallet Type", "selectWallet": "Select Wallet", "transactionCode": "Transaction Code", "enterTransactionCode": "Enter transaction code", "selectCustomer": "Select Customer", "chooseCustomer": "Choose customer", "creditNote": "This invoice will be recorded as debt for the selected customer", "confirm": "Confirm Payment", "cashSuccess": "Cash payment successful", "walletSuccess": "Payment via", "creditSuccess": "Invoice recorded as debt for" },
+  "payment": { "title": "Complete Payment", "totalAmount": "Total Amount", "selectMethod": "Select Payment Method", "cash": "Cash", "wallet": "Wallet", "credit": "Credit", "walletType": "Wallet Type", "selectWallet": "Select Wallet", "transactionCode": "Transaction Code", "enterTransactionCode": "Enter transaction code", "selectCustomer": "Select Customer", "chooseCustomer": "Choose customer", "creditNote": "This invoice will be recorded as debt for the selected customer", "confirm": "Confirm Payment", "cashSuccess": "Cash payment successful", "walletSuccess": "Payment via", "creditSuccess": "Invoice recorded as debt for", "walletPayment": "Wallet Payment" },
   "debts": { "title": "Debt Management", "subtitle": "Track and collect customer debts", "totalDebts": "Total Debts", "debtorsCount": "Debtors Count", "unpaidInvoices": "Unpaid Invoices", "customersList": "Debtor Customers List", "searchCustomer": "Search customer...", "customerName": "Customer Name", "phone": "Phone", "totalDebt": "Total Debt", "invoices": "invoices", "lastPurchase": "Last Purchase", "viewDetails": "View Details", "customerDetails": "Customer Debt Details", "manageCustomerDebt": "Manage and collect customer debt", "customerInfo": "Customer Information", "email": "Email", "address": "Address", "remainingDebt": "Remaining Debt", "collectPayment": "Collect Payment", "invoiceNumber": "Invoice Number", "date": "Date", "invoiceAmount": "Invoice Amount", "paidAmount": "Paid Amount", "remainingAmount": "Remaining Amount", "pay": "Pay", "noUnpaidInvoices": "No unpaid invoices", "paymentHistory": "Payment History", "amount": "Amount", "forInvoice": "For Invoice", "noPayments": "No payments recorded", "recordPayment": "Record Payment", "payingFor": "Paying for", "remaining": "Remaining", "paymentAmount": "Payment Amount", "confirmPayment": "Confirm Payment", "invalidAmount": "Invalid amount", "amountExceedsDebt": "Amount exceeds remaining debt", "paymentSuccess": "Payment recorded successfully" },
   "products": { "title": "Products", "subtitle": "Manage your store products", "name": "Product Name", "sku": "SKU", "category": "Category", "brand": "Brand", "unit": "Unit", "purchasePrice": "Purchase Price", "salePrice": "Sale Price", "quantity": "Quantity", "expiryDate": "Expiry Date", "addProduct": "Add Product", "addProductDesc": "Enter new product details", "editProduct": "Edit Product", "deleteProduct": "Delete Product", "deleteAll": "Delete All", "deleteAllConfirm": "Are you sure you want to delete all products?", "deleteAllSuccess": "All products deleted", "basicInfo": "Basic Info", "pricingUnits": "Pricing & Units", "selectCategory": "Select Category", "selectBrand": "Select Brand", "selectUnit": "Select Unit", "innerUnits": "Inner Units", "totalPurchasePrice": "Total Purchase Price", "unitPrice": "Unit Price", "initialQuantity": "Initial Quantity", "expectedProfit": "Expected Profit", "multipleBarcodes": "Multiple Barcodes", "multipleBarcodesDesc": "Add different barcodes for different weights", "addVariant": "Add Barcode", "weight": "Weight", "weightUnit": "Weight Unit", "barcode": "Barcode", "stockDeduction": "Stock Deduction", "noBarcodeVariants": "No barcodes added yet", "productAdded": "Product added successfully", "import": "Import", "export": "Export", "uploadCSV": "Upload CSV File", "downloadTemplate": "Download Template", "filter": "Filter", "available": "Available", "lowStock": "Low Stock", "outOfStock": "Out of Stock", "status": "Product Status", "statusDescription": "Enable or disable product", "image": "Product Image", "imageHint": "PNG or JPG up to 2MB" },
   "purchases": { "title": "Purchases", "subtitle": "Manage purchase invoices", "manageInvoices": "Manage purchase invoices", "addPurchase": "Add Purchase Invoice", "addInvoice": "Add Purchase Invoice", "invoiceNumber": "Invoice Number", "supplier": "Supplier", "date": "Date", "items": "Items", "itemsCount": "Items Count", "total": "Total", "deleteAll": "Delete All", "deleteAllConfirm": "Are you sure you want to delete all purchase invoices?", "deleteAllWarning": "All purchase invoices will be deleted and inventory will be updated", "deleteAllSuccess": "All purchase invoices deleted", "allDeleted": "All purchase invoices deleted", "deleted": "Invoice deleted" },
   "sales": { "title": "Sales", "subtitle": "Manage sales invoices", "newInvoice": "New Invoice", "invoiceNumber": "Invoice Number", "customer": "Customer", "date": "Date", "items": "Items", "total": "Total", "status": "Status", "completed": "Completed", "pending": "Pending", "cancelled": "Cancelled", "deleteAll": "Delete All", "deleteAllConfirm": "Are you sure you want to delete all sales invoices?", "deleteAllSuccess": "All sales invoices deleted" },
   "returns": { "title": "Returns", "subtitle": "Manage product returns", "addReturn": "Add Return", "supplier": "Supplier", "product": "Product", "originalDate": "Original Purchase Date", "returnedQuantity": "Returned Quantity", "originalInvoice": "Original Invoice Number", "amount": "Amount", "reason": "Reason" },
   "suppliers": { "title": "Suppliers", "subtitle": "Manage supplier data", "addSupplier": "Add New Supplier", "editSupplier": "Edit Supplier", "name": "Supplier Name", "phone": "Phone Number", "email": "Email", "address": "Address", "totalPurchases": "Total Purchases", "requiredFields": "Please fill required fields", "addSuccess": "Supplier added successfully", "editSuccess": "Supplier updated successfully", "deleteSuccess": "Supplier deleted" },
-  "people": { "customersSubtitle": "Manage customer data", "addCustomer": "Add Customer", "visits": "visits", "totalPurchases": "Total Purchases", "suppliersSubtitle": "Manage supplier data", "usersSubtitle": "Manage system users", "addUser": "Add User" },
   "wallets": { 
     "title": "E-Wallets", "subtitle": "Manage electronic payment methods", "addWallet": "Add New Wallet", 
     "editWallet": "Edit Wallet", "name": "Wallet Name", "icon": "Icon", "status": "Status", 
@@ -167,7 +247,6 @@
     "thisQuarter": "This Quarter",
     "thisYear": "This Year"
   },
- 
   "analytics": {
     "subtitle": "Discover which products customers buy together",
     "productPairs": "Product Pairs",
@@ -183,5 +262,4 @@
     "transactions": "Invoices Count",
     "noBasketData": "Not enough data for basket analysis. Make more sales."
   }
-
 }

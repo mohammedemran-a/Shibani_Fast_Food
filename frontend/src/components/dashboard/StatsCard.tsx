@@ -2,7 +2,9 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Skeleton } from '@/components/ui/skeleton'; // 1. استيراد مكون Skeleton
 
+// 2. إضافة `isLoading` إلى الواجهة
 interface StatsCardProps {
   title: string;
   value: string | number;
@@ -10,6 +12,7 @@ interface StatsCardProps {
   changeType?: 'positive' | 'negative' | 'neutral';
   icon: LucideIcon;
   variant?: 'primary' | 'accent' | 'success' | 'warning';
+  isLoading?: boolean; // <-- الخاصية الجديدة
 }
 
 const variantStyles = {
@@ -26,7 +29,25 @@ export const StatsCard: React.FC<StatsCardProps> = ({
   changeType = 'neutral',
   icon: Icon,
   variant = 'primary',
+  isLoading = false, // <-- القيمة الافتراضية
 }) => {
+  // 3. عرض نسخة هيكلية من البطاقة في حالة التحميل
+  if (isLoading) {
+    return (
+      <div className="stat-card bg-card p-5">
+        <div className="flex items-start justify-between">
+          <div className="flex-1">
+            <Skeleton className="h-4 w-2/3 mb-2" />
+            <Skeleton className="h-8 w-1/2 mb-3" />
+            <Skeleton className="h-4 w-1/3" />
+          </div>
+          <Skeleton className="w-12 h-12 rounded-xl shrink-0" />
+        </div>
+      </div>
+    );
+  }
+
+  // عرض البطاقة الحقيقية في حالة عدم التحميل
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}

@@ -1,64 +1,58 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
-import { Lightbulb, TrendingUp, AlertTriangle, Award, Clock } from 'lucide-react';
+import { Lightbulb, TrendingUp, AlertTriangle, Award, CheckCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 
-interface Insight {
-  id: number;
+// 1. تعريف واجهة للبيانات القادمة من الـ API
+interface InsightData {
+  id: string;
   type: 'success' | 'warning' | 'info';
-  icon: React.ElementType;
   title: string;
   description: string;
 }
 
-const SmartInsights: React.FC = () => {
+// 2. تعريف واجهة للـ Props التي سيستقبلها المكون
+interface SmartInsightsProps {
+  data: InsightData[];
+  isLoading: boolean;
+}
+
+// 3. المكون الآن يستقبل `data` و `isLoading` كـ props
+const SmartInsights: React.FC<SmartInsightsProps> = ({ data, isLoading }) => {
   const { t } = useTranslation();
 
-  const insights: Insight[] = [
-    {
-      id: 1,
-      type: 'success',
-      icon: Award,
-      title: t('insights.topSelling'),
-      description: t('insights.topSellingDesc'),
-    },
-    {
-      id: 2,
-      type: 'warning',
-      icon: AlertTriangle,
-      title: t('insights.lowStock'),
-      description: t('insights.lowStockDesc'),
-    },
-    {
-      id: 3,
-      type: 'info',
-      icon: TrendingUp,
-      title: t('insights.salesTrend'),
-      description: t('insights.salesTrendDesc'),
-    },
-    {
-      id: 4,
-      type: 'info',
-      icon: Clock,
-      title: t('insights.peakHours'),
-      description: t('insights.peakHoursDesc'),
-    },
-  ];
-
-  const getTypeStyles = (type: string) => {
+  // دالة لربط نوع الرؤية بالأيقونة واللون المناسبين
+  const getInsightAppearance = (type: InsightData['type']) => {
     switch (type) {
       case 'success':
-        return 'bg-success/10 border-success/20 text-success';
+        return { icon: Award, styles: 'bg-success/10 border-success/20 text-success' };
       case 'warning':
-        return 'bg-warning/10 border-warning/20 text-warning';
+        return { icon: AlertTriangle, styles: 'bg-warning/10 border-warning/20 text-warning' };
+      case 'info':
       default:
-        return 'bg-primary/10 border-primary/20 text-primary';
+        return { icon: CheckCircle, styles: 'bg-primary/10 border-primary/20 text-primary' };
     }
   };
 
+  // دالة لعرض هيكل التحميل
+  const renderSkeleton = () => (
+    <div className="space-y-3">
+      {Array.from({ length: 3 }).map((_, index) => (
+        <div key={index} className="flex items-start gap-3 p-3">
+          <Skeleton className="w-5 h-5 rounded-full mt-0.5" />
+          <div className="flex-1">
+            <Skeleton className="h-4 w-1/2 mb-2" />
+            <Skeleton className="h-3 w-full" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+
   return (
-    <Card className="glass-card">
+    <Card className="glass-card h-full">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-foreground">
           <Lightbulb className="w-5 h-5 text-warning" />
@@ -66,23 +60,31 @@ const SmartInsights: React.FC = () => {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        {insights.map((insight, index) => (
-          <motion.div
-            key={insight.id}
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: index * 0.1 }}
-            className={`p-3 rounded-lg border ${getTypeStyles(insight.type)}`}
-          >
-            <div className="flex items-start gap-3">
-              <insight.icon className="w-5 h-5 shrink-0 mt-0.5" />
-              <div>
-                <p className="font-medium text-sm">{insight.title}</p>
-                <p className="text-xs opacity-80 mt-0.5">{insight.description}</p>
-              </div>
-            </div>
-          </motion.div>
-        ))}
+        {isLoading ? (
+          renderSkeleton()
+        ) : (
+          data.map((insight, index) => {
+            const { icon: Icon, styles } = getInsightAppearance(insight.type);
+            return (
+              <motion.div
+                key={insight.id}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: index * 0.1 }}
+                className={`p-3 rounded-lg border ${styles}`}
+              >
+                <div className="flex items-start gap-3">
+                  <Icon className="w-5 h-5 shrink-0 mt-0.5" />
+                  <div>
+                    {/* 4. استخدام البيانات الحقيقية القادمة من الـ API */}
+                    <p className="font-medium text-sm">{insight.title}</p>
+                    <p className="text-xs opacity-80 mt-0.5">{insight.description}</p>
+                  </div>
+                </div>
+              </motion.div>
+            );
+          })
+        )}
       </CardContent>
     </Card>
   );

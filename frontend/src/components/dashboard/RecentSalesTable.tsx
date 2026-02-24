@@ -3,17 +3,49 @@ import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useNavigate } from 'react-router-dom';
+import { formatDistanceToNow } from 'date-fns';
+import { ar } from 'date-fns/locale';
 
-const recentSales = [
-  { id: 1, customer: 'أحمد محمد', amount: 250.00, items: 3, time: 'منذ 5 دقائق' },
-  { id: 2, customer: 'سارة علي', amount: 180.50, items: 2, time: 'منذ 12 دقيقة' },
-  { id: 3, customer: 'محمد خالد', amount: 420.00, items: 5, time: 'منذ 25 دقيقة' },
-  { id: 4, customer: 'فاطمة أحمد', amount: 95.00, items: 1, time: 'منذ 45 دقيقة' },
-  { id: 5, customer: 'عمر حسن', amount: 310.75, items: 4, time: 'منذ ساعة' },
-];
+// تعريف أنواع البيانات للوضوح
+interface Sale {
+  id: number;
+  invoice_number: string;
+  customer: { id: number; name: string } | null;
+  total_amount: string | number; // قد يأتي كنص أو رقم
+  status: string;
+  invoice_date: string;
+}
 
-export const RecentSalesTable: React.FC = () => {
+interface RecentSalesTableProps {
+  data: Sale[];
+  isLoading: boolean;
+}
+
+export const RecentSalesTable: React.FC<RecentSalesTableProps> = ({ data, isLoading }) => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+
+  if (isLoading) {
+    return (
+      <div className="glass-card p-5">
+        <div className="flex items-center justify-between mb-4">
+          <Skeleton className="h-7 w-32" />
+          <Skeleton className="h-9 w-20" />
+        </div>
+        <div className="space-y-4">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="flex items-center gap-4 py-3">
+              <Skeleton className="h-6 w-1/3" />
+              <Skeleton className="h-6 w-1/4" />
+              <Skeleton className="h-6 w-1/4" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <motion.div
@@ -26,7 +58,7 @@ export const RecentSalesTable: React.FC = () => {
         <h3 className="text-lg font-semibold text-foreground">
           {t('dashboard.recentSales')}
         </h3>
-        <Button variant="ghost" size="sm" className="text-primary">
+        <Button variant="ghost" size="sm" className="text-primary" onClick={() => navigate('/sales/invoices')}>
           {t('common.viewAll')}
         </Button>
       </div>
@@ -34,25 +66,14 @@ export const RecentSalesTable: React.FC = () => {
         <table className="w-full">
           <thead>
             <tr className="border-b border-border">
-              <th className="text-start py-3 px-2 text-sm font-medium text-muted-foreground">
-                {t('pos.customer')}
-              </th>
-              <th className="text-start py-3 px-2 text-sm font-medium text-muted-foreground">
-                {t('products.quantity')}
-              </th>
-              <th className="text-start py-3 px-2 text-sm font-medium text-muted-foreground">
-                {t('pos.total')}
-              </th>
-              <th className="text-start py-3 px-2 text-sm font-medium text-muted-foreground">
-                الوقت
-              </th>
-              <th className="text-start py-3 px-2 text-sm font-medium text-muted-foreground">
-                {t('common.actions')}
-              </th>
+              <th className="text-start py-3 px-2 text-sm font-medium text-muted-foreground">{t('pos.customer')}</th>
+              <th className="text-start py-3 px-2 text-sm font-medium text-muted-foreground">{t('pos.total')}</th>
+              <th className="text-start py-3 px-2 text-sm font-medium text-muted-foreground">الوقت</th>
+              <th className="text-start py-3 px-2 text-sm font-medium text-muted-foreground">{t('common.actions')}</th>
             </tr>
           </thead>
           <tbody>
-            {recentSales.map((sale, index) => (
+            {data.map((sale, index) => (
               <motion.tr
                 key={sale.id}
                 initial={{ opacity: 0, x: -10 }}
@@ -61,19 +82,21 @@ export const RecentSalesTable: React.FC = () => {
                 className="border-b border-border/50 hover:bg-muted/30 transition-colors"
               >
                 <td className="py-3 px-2">
-                  <span className="font-medium text-foreground">{sale.customer}</span>
+                  <span className="font-medium text-foreground">{sale.customer?.name || t('common.guest')}</span>
                 </td>
                 <td className="py-3 px-2">
-                  <span className="text-muted-foreground">{sale.items} منتجات</span>
+                  {/* ================================================================= */}
+                  {/* **تم التصحيح هنا: تحويل القيمة إلى رقم قبل استخدام toFixed** */}
+                  {/* ================================================================= */}
+                  <span className="font-semibold text-success">{Number(sale.total_amount).toFixed(2)} ريال</span>
                 </td>
                 <td className="py-3 px-2">
-                  <span className="font-semibold text-success">${sale.amount.toFixed(2)}</span>
+                  <span className="text-muted-foreground text-sm">
+                    {formatDistanceToNow(new Date(sale.invoice_date), { addSuffix: true, locale: ar })}
+                  </span>
                 </td>
                 <td className="py-3 px-2">
-                  <span className="text-muted-foreground text-sm">{sale.time}</span>
-                </td>
-                <td className="py-3 px-2">
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate(`/sales/invoices/${sale.id}`)}>
                     <Eye className="w-4 h-4" />
                   </Button>
                 </td>

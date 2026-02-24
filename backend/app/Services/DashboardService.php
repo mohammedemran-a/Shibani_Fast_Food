@@ -12,311 +12,304 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
+/**
+ * خدمة لوحة التحكم
+ * 
+ * تحتوي على كل المنطق الخاص بحساب الإحصائيات والبيانات
+ * اللازمة للوحة التحكم لضمان أن المتحكم يبقى نظيفًا.
+ * تم تحسينها للأداء العالي وتجنب مشاكل N+1.
+ */
 class DashboardService
 {
     /**
-     * Cache duration in seconds (5 minutes)
+     * مدة التخزين المؤقت بالثواني (5 دقائق)
      */
     const CACHE_DURATION = 300;
 
     /**
-     * Get all dashboard statistics with caching
-     * @param string|null $period - today, week, month, all
-     * @param string|null $start_date - Custom start date
-     * @param string|null $end_date - Custom end date
+     * الدالة الرئيسية لتجميع كل إحصائيات لوحة التحكم مع التخزين المؤقت.
      */
     public static function getStats($period = 'all', $start_date = null, $end_date = null)
     {
         $cacheKey = 'dashboard_stats_' . $period . '_' . $start_date . '_' . $end_date;
         
         return Cache::remember($cacheKey, self::CACHE_DURATION, function () use ($period, $start_date, $end_date) {
-            // تحديد الفترة الزمنية
-            $dateRange = self::getDateRange($period, $start_date, $end_date);
             
+            [$from, $to] = self::getDateRange($period, $start_date, $end_date);
+            
+            $salesStats = self::getSalesStats($from, $to);
+            $purchasesStats = self::getPurchasesStats($from, $to);
+            $expensesStats = self::getExpensesStats($from, $to);
+            $productStats = self::getProductStats();
+            $peopleStats = self::getPeopleStats();
+            $profitStats = self::getProfitStats($from, $to, $expensesStats);
+            $smartInsights = self::getSmartInsights($productStats, $profitStats);
+
             return [
-                // المبيعات
-                'sales' => self::getSalesStats($dateRange),
-                
-                // المشتريات
-                'purchases' => self::getPurchasesStats($dateRange),
-                
-                // المنتجات
-                'products' => self::getProductsStats(),
-                
-                // العملاء والموردين
-                'people' => self::getPeopleStats(),
-                
-                // الأرباح
-                'profit' => self::getProfitStats($dateRange),
-                
-                // المصروفات
-                'expenses' => self::getExpensesStats($dateRange),
-                
-                // أفضل المنتجات مبيعاً (Top 5)
-                'top_products' => self::getTopProducts($dateRange),
-                
-                // مبيعات آخر 7 أيام
-                'sales_chart' => self::getLast7DaysSales($dateRange),
-                
-                // مشتريات آخر 7 أيام
-                'purchases_chart' => self::getLast7DaysPurchases($dateRange),
-                
-                // الفترة المحددة
-                'period' => $period,
-                'date_range' => $dateRange,
-                
-                // وقت آخر تحديث
+                'sales' => $salesStats,
+                'purchases' => $purchasesStats,
+                'products' => $productStats,
+                'people' => $peopleStats,
+                'profit' => $profitStats,
+                'expenses' => $expensesStats,
+                'top_products' => self::getTopProducts($from, $to),
+                'sales_chart_data' => self::getSalesChartData($from, $to),
+                'smart_insights' => $smartInsights,
+                'recent_sales' => self::getRecentSales($from, $to),
                 'last_updated' => now()->toDateTimeString(),
             ];
         });
     }
-    
-    /**
-     * تحديد نطاق التاريخ
-     */
-    private static function getDateRange($period, $start_date = null, $end_date = null)
-    {
-        $now = Carbon::now();
-        
-        switch ($period) {
-            case 'today':
-                return [
-                    'start' => Carbon::today(),
-                    'end' => Carbon::today()->endOfDay(),
-                ];
-            
-            case 'week':
-                return [
-                    'start' => $now->copy()->subDays(7),
-                    'end' => $now,
-                ];
-            
-            case 'month':
-                return [
-                    'start' => $now->copy()->subDays(30),
-                    'end' => $now,
-                ];
-            
-            case 'custom':
-                if ($start_date && $end_date) {
-                    return [
-                        'start' => Carbon::parse($start_date),
-                        'end' => Carbon::parse($end_date)->endOfDay(),
-                    ];
-                }
-                // fallthrough to 'all' if custom dates not provided
-            
-            case 'all':
-            default:
-                return [
-                    'start' => null,
-                    'end' => null,
-                ];
-        }
-    }
 
     /**
-     * إحصائيات المبيعات
+     * حساب إحصائيات المبيعات.
      */
-    private static function getSalesStats($dateRange = null)
+    private static function getSalesStats(?Carbon $from, ?Carbon $to): array
     {
         $query = SalesInvoice::query();
-        
-        if ($dateRange && $dateRange['start'] && $dateRange['end']) {
-            $query->whereBetween('created_at', [$dateRange['start'], $dateRange['end']]);
+        if ($from && $to) {
+            $query->whereBetween('invoice_date', [$from, $to]);
         }
         
+        $result = $query->select(
+            DB::raw('SUM(total_amount) as total'),
+            DB::raw('COUNT(id) as count')
+        )->first();
+
         return [
-            'total' => (float) $query->sum('total_amount'),
-            'count' => $query->count(),
-            'average' => $query->count() > 0 ? (float) $query->avg('total_amount') : 0,
+            'total' => (float) ($result->total ?? 0),
+            'count' => (int) ($result->count ?? 0),
         ];
     }
 
     /**
-     * إحصائيات المشتريات
+     * حساب إحصائيات المشتريات.
      */
-    private static function getPurchasesStats($dateRange = null)
+    private static function getPurchasesStats(?Carbon $from, ?Carbon $to): array
     {
         $query = PurchaseInvoice::query();
-        
-        if ($dateRange && $dateRange['start'] && $dateRange['end']) {
-            $query->whereBetween('created_at', [$dateRange['start'], $dateRange['end']]);
+        if ($from && $to) {
+            $query->whereBetween('invoice_date', [$from, $to]);
         }
         
+        $result = $query->select(
+            DB::raw('SUM(total_amount) as total'),
+            DB::raw('COUNT(id) as count')
+        )->first();
+
         return [
-            'total' => (float) $query->sum('total_amount'),
-            'count' => $query->count(),
-            'average' => $query->count() > 0 ? (float) $query->avg('total_amount') : 0,
+            'total' => (float) ($result->total ?? 0),
+            'count' => (int) ($result->count ?? 0),
         ];
     }
 
     /**
-     * إحصائيات المنتجات
+     * حساب إحصائيات المصروفات.
      */
-    private static function getProductsStats()
+    private static function getExpensesStats(?Carbon $from, ?Carbon $to): array
+    {
+        $query = Expense::query();
+        if ($from && $to) {
+            $query->whereBetween('date', [$from, $to]);
+        }
+        
+        $result = $query->select(
+            DB::raw('SUM(amount) as total'),
+            DB::raw('COUNT(id) as count')
+        )->first();
+
+        return [
+            'total' => (float) ($result->total ?? 0),
+            'count' => (int) ($result->count ?? 0),
+        ];
+    }
+
+    /**
+     * حساب الأرباح الحقيقية من الفواتير والمصروفات.
+     */
+    private static function getProfitStats(?Carbon $from, ?Carbon $to, array $expensesStats): array
+    {
+        $query = DB::table('sales_invoices')
+            ->join('sales_invoice_items', 'sales_invoices.id', '=', 'sales_invoice_items.sales_invoice_id');
+
+        if ($from && $to) {
+            $query->whereBetween('sales_invoices.invoice_date', [$from, $to]);
+        }
+
+        $grossProfitResult = $query->select(
+            DB::raw('SUM(sales_invoice_items.quantity * (sales_invoice_items.unit_price - sales_invoice_items.purchase_price)) as total_profit'),
+            DB::raw('SUM(sales_invoice_items.quantity * sales_invoice_items.unit_price) as total_revenue')
+        )->first();
+
+        $totalProfit = (float) ($grossProfitResult->total_profit ?? 0);
+        $totalRevenue = (float) ($grossProfitResult->total_revenue ?? 0);
+        $netProfit = $totalProfit - $expensesStats['total'];
+        $margin = $totalRevenue > 0 ? ($totalProfit / $totalRevenue) * 100 : 0;
+
+        return [
+            'total' => $totalProfit,
+            'net_profit' => $netProfit,
+            'margin' => $margin,
+        ];
+    }
+
+    /**
+     * إحصائيات المنتجات (لا تعتمد على التاريخ).
+     */
+    private static function getProductStats(): array
     {
         return [
             'total_count' => Product::count(),
-            'active_count' => Product::where('is_active', true)->count(),
-            'low_stock_count' => Product::whereRaw('quantity <= reorder_level')->count(),
-            'out_of_stock_count' => Product::where('quantity', 0)->count(),
-            'total_value' => (float) Product::selectRaw('SUM(quantity * purchase_price) as total')->value('total'),
+            'low_stock_count' => Product::whereColumn('quantity', '<=', 'reorder_level')->count(),
         ];
     }
 
     /**
-     * إحصائيات العملاء والموردين
+     * إحصائيات الأشخاص (لا تعتمد على التاريخ).
      */
-    private static function getPeopleStats()
+    private static function getPeopleStats(): array
     {
         return [
             'customers_count' => Customer::count(),
-            'new_customers_this_month' => Customer::whereMonth('created_at', now()->month)
-                ->whereYear('created_at', now()->year)
-                ->count(),
-            'suppliers_count' => Supplier::count(),
             'active_customers' => Customer::where('is_active', true)->count(),
+            'suppliers_count' => Supplier::count(),
+            'active_suppliers' => Supplier::where('is_active', true)->count(),
         ];
     }
 
     /**
-     * إحصائيات الأرباح
+     * توليد رؤى ذكية بناءً على البيانات.
      */
-    private static function getProfitStats($dateRange = null)
+    private static function getSmartInsights(array $productStats, array $profitStats): array
     {
-        $salesQuery = SalesInvoice::query();
-        $purchasesQuery = PurchaseInvoice::query();
-        $expensesQuery = Expense::query();
-        
-        if ($dateRange && $dateRange['start'] && $dateRange['end']) {
-            $salesQuery->whereBetween('created_at', [$dateRange['start'], $dateRange['end']]);
-            $purchasesQuery->whereBetween('created_at', [$dateRange['start'], $dateRange['end']]);
-            $expensesQuery->whereBetween('date', [$dateRange['start'], $dateRange['end']]);
-        }
-        
-        $totalSales = (float) $salesQuery->sum('total_amount');
-        $totalPurchases = (float) $purchasesQuery->sum('total_amount');
-        $totalExpenses = (float) $expensesQuery->sum('amount');
+        $insights = [];
 
-        return [
-            'total' => $totalSales - $totalPurchases - $totalExpenses,
-            'margin' => $totalSales > 0 ? (($totalSales - $totalPurchases) / $totalSales) * 100 : 0,
-        ];
-    }
-
-    /**
-     * إحصائيات المصروفات
-     */
-    private static function getExpensesStats($dateRange = null)
-    {
-        $query = Expense::query();
-        
-        if ($dateRange && $dateRange['start'] && $dateRange['end']) {
-            $query->whereBetween('date', [$dateRange['start'], $dateRange['end']]);
-        }
-        
-        return [
-            'total' => (float) $query->sum('amount'),
-            'count' => $query->count(),
-        ];
-    }
-
-    /**
-     * أفضل 5 منتجات مبيعاً
-     * محسّن للبيانات الكبيرة
-     */
-    private static function getTopProducts($dateRange = null)
-    {
-        try {
-            $query = DB::table('sales_invoice_items')
-                ->join('products', 'sales_invoice_items.product_id', '=', 'products.id')
-                ->join('sales_invoices', 'sales_invoice_items.sales_invoice_id', '=', 'sales_invoices.id');
-            
-            if ($dateRange && $dateRange['start'] && $dateRange['end']) {
-                $query->whereBetween('sales_invoices.created_at', [$dateRange['start'], $dateRange['end']]);
-            }
-            
-            return $query->select(
-                    'products.id',
-                    'products.name',
-                    DB::raw('SUM(sales_invoice_items.quantity) as total_sold'),
-                    DB::raw('SUM(sales_invoice_items.total_price) as total_revenue')
-                )
-                ->groupBy('products.id', 'products.name')
-                ->orderByDesc('total_sold')
-                ->limit(5)
-                ->get()
-                ->map(function ($item) {
-                    return [
-                        'id' => $item->id,
-                        'name' => $item->name,
-                        'total_sold' => (int) $item->total_sold,
-                        'total_revenue' => (float) $item->total_revenue,
-                    ];
-                });
-        } catch (\Exception $e) {
-            \Log::error('Top Products Error: ' . $e->getMessage());
-            return [];
-        }
-    }
-
-    /**
-     * مبيعات آخر 7 أيام
-     */
-    private static function getLast7DaysSales($dateRange = null)
-    {
-        $last7Days = [];
-        $endDate = $dateRange && $dateRange['end'] ? Carbon::parse($dateRange['end']) : Carbon::today();
-        
-        for ($i = 6; $i >= 0; $i--) {
-            $date = $endDate->copy()->subDays($i);
-            $last7Days[] = [
-                'date' => $date->format('Y-m-d'),
-                'day' => $date->format('D'),
-                'total' => (float) SalesInvoice::whereDate('created_at', $date)->sum('total_amount'),
-                'count' => SalesInvoice::whereDate('created_at', $date)->count(),
+        if ($productStats['low_stock_count'] > 0) {
+            $insights[] = [
+                'id' => 'low_stock',
+                'type' => 'warning',
+                'title' => 'تنبيه المخزون المنخفض',
+                'description' => "لديك {$productStats['low_stock_count']} منتجًا وصل إلى حد إعادة الطلب. قم بمراجعة المخزون.",
             ];
         }
-        
-        return $last7Days;
-    }
 
-    /**
-     * مشتريات آخر 7 أيام
-     */
-    private static function getLast7DaysPurchases($dateRange = null)
-    {
-        $last7Days = [];
-        $endDate = $dateRange && $dateRange['end'] ? Carbon::parse($dateRange['end']) : Carbon::today();
-        
-        for ($i = 6; $i >= 0; $i--) {
-            $date = $endDate->copy()->subDays($i);
-            $last7Days[] = [
-                'date' => $date->format('Y-m-d'),
-                'day' => $date->format('D'),
-                'total' => (float) PurchaseInvoice::whereDate('created_at', $date)->sum('total_amount'),
-                'count' => PurchaseInvoice::whereDate('created_at', $date)->count(),
+        if ($profitStats['margin'] < 15 && $profitStats['margin'] > 0) {
+            $insights[] = [
+                'id' => 'low_margin',
+                'type' => 'warning',
+                'title' => 'هامش ربح منخفض',
+                'description' => "هامش الربح الإجمالي حاليًا هو " . round($profitStats['margin'], 1) . "%. قد تحتاج لمراجعة أسعارك.",
+            ];
+        } elseif ($profitStats['margin'] > 40) {
+            $insights[] = [
+                'id' => 'high_margin',
+                'type' => 'success',
+                'title' => 'هامش ربح ممتاز',
+                'description' => "أداء رائع! هامش الربح الإجمالي هو " . round($profitStats['margin'], 1) . "%.",
             ];
         }
+
+        if (empty($insights)) {
+            $insights[] = [
+                'id' => 'all_good',
+                'type' => 'info',
+                'title' => 'كل شيء على ما يرام',
+                'description' => 'لا توجد تنبيهات هامة في الوقت الحالي. استمر في العمل الجيد!',
+            ];
+        }
+
+        return $insights;
+    }
+
+    /**
+     * تجميع بيانات الرسم البياني للمبيعات باستعلام واحد.
+     */
+    private static function getSalesChartData(?Carbon $from, ?Carbon $to): array
+    {
+        if (!$from || !$to) {
+            $to = Carbon::now()->endOfDay();
+            $from = Carbon::now()->subDays(6)->startOfDay();
+        }
+
+        $dateFormat = ($to->diffInDays($from) > 31) ? '%Y-%m' : '%Y-%m-%d';
+
+        return SalesInvoice::whereBetween('invoice_date', [$from, $to])
+            ->select(
+                DB::raw("DATE_FORMAT(invoice_date, '$dateFormat') as date"),
+                DB::raw('SUM(total_amount) as total_sales')
+            )
+            ->groupBy('date')
+            ->orderBy('date', 'asc')
+            ->get()
+            ->toArray();
+    }
+
+    /**
+     * أفضل 5 منتجات مبيعًا.
+     */
+    private static function getTopProducts(?Carbon $from, ?Carbon $to, int $limit = 5): array
+    {
+        $query = DB::table('sales_invoice_items')
+            ->join('products', 'sales_invoice_items.product_id', '=', 'products.id')
+            ->join('sales_invoices', 'sales_invoice_items.sales_invoice_id', '=', 'sales_invoices.id');
         
-        return $last7Days;
+        if ($from && $to) {
+            $query->whereBetween('sales_invoices.invoice_date', [$from, $to]);
+        }
+        
+        return $query->select(
+                'products.name',
+                'products.image',
+                DB::raw('SUM(sales_invoice_items.quantity) as total_quantity_sold')
+            )
+            ->groupBy('products.id', 'products.name', 'products.image')
+            ->orderByDesc('total_quantity_sold')
+            ->limit($limit)
+            ->get()
+            ->toArray();
     }
 
     /**
-     * مسح الـ Cache يدوياً
+     * جلب آخر المبيعات.
      */
-    public static function clearCache()
+    private static function getRecentSales(?Carbon $from, ?Carbon $to, int $limit = 5): array
     {
-        return Cache::forget('dashboard_stats');
+        $query = SalesInvoice::with('customer:id,name');
+        if ($from && $to) {
+            $query->whereBetween('invoice_date', [$from, $to]);
+        }
+        return $query->select('id', 'invoice_number', 'customer_id', 'total_amount', 'status', 'invoice_date')
+            ->orderByDesc('invoice_date')
+            ->limit($limit)
+            ->get()
+            ->toArray();
     }
 
     /**
-     * تحديث الـ Cache
+     * دالة مساعدة لتحديد نطاق التاريخ.
      */
-    public static function refreshCache()
+    private static function getDateRange(string $period, ?string $startDate, ?string $endDate): array
     {
-        self::clearCache();
-        return self::getStats();
+        if ($period === 'custom' && $startDate && $endDate) {
+            return [Carbon::parse($startDate)->startOfDay(), Carbon::parse($endDate)->endOfDay()];
+        }
+        
+        $to = Carbon::now()->endOfDay();
+        
+        switch ($period) {
+            case 'today':
+                $from = Carbon::now()->startOfDay();
+                break;
+            case 'week':
+                $from = Carbon::now()->startOfWeek();
+                break;
+            case 'month':
+                $from = Carbon::now()->startOfMonth();
+                break;
+            case 'all':
+            default:
+                return [null, null]; // إرجاع null للتعامل مع كل السجلات
+        }
+        return [$from, $to];
     }
 }

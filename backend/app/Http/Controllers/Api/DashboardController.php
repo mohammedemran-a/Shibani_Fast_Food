@@ -4,59 +4,56 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Services\DashboardService;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 
+/**
+ * متحكم لوحة التحكم
+ * 
+ * نقطة الدخول لجلب جميع الإحصائيات والبيانات اللازمة
+ * لعرض لوحة التحكم الرئيسية.
+ */
 class DashboardController extends Controller
 {
     /**
-     * Get dashboard statistics
-     * 
-     * @param \Illuminate\Http\Request $request
-     * @return \Illuminate\Http\JsonResponse
-     * 
-     * Query Parameters:
-     * - period: today, week, month, all, custom (default: all)
-     * - start_date: Custom start date (YYYY-MM-DD) - required if period=custom
-     * - end_date: Custom end date (YYYY-MM-DD) - required if period=custom
+     * جلب إحصائيات لوحة التحكم.
      */
-    public function index(\Illuminate\Http\Request $request)
+    public function index(Request $request)
     {
         try {
-            // الحصول على الفلتر من الطلب
-            $period = $request->query('period', 'all');
-            $startDate = $request->query('start_date');
-            $endDate = $request->query('end_date');
+            $validated = $request->validate([
+                'period' => 'sometimes|in:today,week,month,all,custom',
+                'start_date' => 'required_if:period,custom|date_format:Y-m-d',
+                'end_date' => 'required_if:period,custom|date_format:Y-m-d|after_or_equal:start_date',
+            ]);
+
+            $period = $validated['period'] ?? 'all';
+            $startDate = $validated['start_date'] ?? null;
+            $endDate = $validated['end_date'] ?? null;
             
-            // التحقق من صحة الفترة
-            $validPeriods = ['today', 'week', 'month', 'all', 'custom'];
-            if (!in_array($period, $validPeriods)) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Invalid period. Must be one of: ' . implode(', ', $validPeriods)
-                ], 400);
-            }
-            
-            // التحقق من وجود التواريخ للفترة المخصصة
-            if ($period === 'custom' && (!$startDate || !$endDate)) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'start_date and end_date are required for custom period'
-                ], 400);
-            }
-            
+            // استدعاء الخدمة من ملفها المنفصل
             $stats = DashboardService::getStats($period, $startDate, $endDate);
             
             return response()->json([
                 'success' => true,
                 'data' => $stats,
-                'message' => 'Dashboard statistics retrieved successfully'
+                'message' => 'تم جلب إحصائيات لوحة التحكم بنجاح'
             ]);
+
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'بيانات الإدخال غير صالحة',
+                'errors' => $e->errors(),
+            ], 422);
         } catch (\Exception $e) {
-            \Log::error('Dashboard Error: ' . $e->getMessage());
+            // تسجيل الخطأ بالتفصيل للمساعدة في التشخيص
+            Log::error('خطأ في لوحة التحكم: ' . $e->getMessage() . ' في الملف: ' . $e->getFile() . ' على السطر: ' . $e->getLine());
             
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to retrieve dashboard statistics',
-                'error' => $e->getMessage()
+                'message' => 'فشل في جلب إحصائيات لوحة التحكم (خطأ في الخادم)',
             ], 500);
         }
     }

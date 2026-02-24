@@ -159,11 +159,11 @@ export default function LoginPage() {
               </form>
             </Form>
 
-            {/* Demo Credentials */}
+            {/* Demo Credentials 
             <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
               <p className="text-sm font-semibold text-blue-900 mb-2">{t('auth.login.demoCredentials')}:</p>
               <div className="space-y-1 text-sm text-blue-800">
-                <p>
+                {/* <p>
                   <strong>{t('auth.login.admin')}:</strong> admin@smartpos.com / admin123
                 </p>
                 <p>
@@ -171,9 +171,9 @@ export default function LoginPage() {
                 </p>
                 <p>
                   <strong>{t('auth.login.manager')}:</strong> manager@smartpos.com / manager123
-                </p>
+                </p> 
               </div>
-            </div>
+            </div>*/}
           </CardContent>
         </Card>
 

@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 import { 
   ArrowLeft, ArrowRight, User, Phone, Mail, MapPin, 
   FileText, Heart, CreditCard, Gift, Calendar, Package,
-  TrendingUp, DollarSign, Loader2
+  TrendingUp, DollarSign, Loader2, ServerCrash
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,7 +25,7 @@ const CustomerDetailsContent: React.FC = () => {
 
   const BackIcon = isRTL ? ArrowRight : ArrowLeft;
 
-  // جلب بيانات العميل من API
+  // 1. جلب بيانات العميل الكاملة من الواجهة الخلفية. هذا الاستعلام يجلب حقل `loyalty_points` تلقائيًا.
   const { data: customerResponse, isLoading, error } = useQuery({
     queryKey: ['customer', id],
     queryFn: () => customerService.getCustomer(Number(id)),
@@ -47,6 +47,7 @@ const CustomerDetailsContent: React.FC = () => {
   if (error || !customer) {
     return (
       <div className="flex flex-col items-center justify-center h-96 gap-4">
+        <ServerCrash className="w-16 h-16 text-destructive" />
         <p className="text-destructive">فشل تحميل بيانات العميل</p>
         <Button onClick={() => navigate('/people/customers')}>
           العودة للقائمة
@@ -88,8 +89,12 @@ const CustomerDetailsContent: React.FC = () => {
                 {t('customers.memberSince')}: {new Date(customer.created_at).toLocaleDateString('ar-SA')}
               </p>
             </div>
+            {/* 2. الربط الأول: عرض نقاط الولاء في بطاقة الملخص العلوية */}
             <div className="text-end text-primary-foreground">
-              <div className="text-3xl font-bold">{customer.loyalty_points || 0}</div>
+              <div className="text-3xl font-bold">
+                {/* استخدام القيمة الحقيقية من `customer.loyalty_points` مع التأكد من أنها رقم صحيح */}
+                {Math.floor(Number(customer.loyalty_points)) || 0}
+              </div>
               <div className="text-sm opacity-90">{t('customers.loyaltyPoints')}</div>
             </div>
           </div>
@@ -293,7 +298,7 @@ const CustomerDetailsContent: React.FC = () => {
           </Card>
         </TabsContent>
 
-        {/* Loyalty Tab */}
+        {/* 3. الربط الثاني: عرض نقاط الولاء في علامة التبويب المخصصة */}
         <TabsContent value="loyalty" className="mt-6">
           <Card className="glass-card">
             <CardHeader>
@@ -303,7 +308,8 @@ const CustomerDetailsContent: React.FC = () => {
               <div className="text-center py-8">
                 <Gift className="w-16 h-16 mx-auto mb-4 text-primary" />
                 <div className="text-4xl font-bold text-primary mb-2">
-                  {customer.loyalty_points || 0}
+                  {/* استخدام القيمة الحقيقية من `customer.loyalty_points` مع التأكد من أنها رقم صحيح */}
+                  {Math.floor(Number(customer.loyalty_points)) || 0}
                 </div>
                 <p className="text-muted-foreground">نقطة متاحة</p>
               </div>
