@@ -144,4 +144,11 @@ class Product extends Model
     {
         return $this->getTotalQuantityAttribute() <= $this->reorder_level;
     }
+     /* هذه الدالة تعرف علاقة "واحد إلى متعدد" بين المنتج وعناصر فواتير البيع.
+     * هذا يسمح لنا بالتحقق مما إذا كان المنتج قد تم بيعه من قبل.
+     */
+    public function salesInvoiceItems(): HasMany
+    {
+        return $this->hasMany(SalesInvoiceItem::class);
+    }
 }

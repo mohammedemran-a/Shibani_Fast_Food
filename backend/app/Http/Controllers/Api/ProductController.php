@@ -168,12 +168,12 @@ class ProductController extends Controller
             return response()->json(['success' => false, 'message' => 'فشل في إنشاء المنتج. يرجى مراجعة السجلات.', 'error' => $e->getMessage(),], 500);
         }
     }
-          /**
+       /**
      * ✅ ===================================================================
      * ✅ دالة التحديث (تمت إعادة كتابتها بالكامل لتكون قوية وموثوقة)
      * ✅ ===================================================================
      */
-    public function update(UpdateProductRequest $request, Product $product) // ✅ الحل: استخدام UpdateProductRequest
+    public function update(UpdateProductRequest $request, Product $product)
     {
         $validated = $request->validated();
 
@@ -193,10 +193,12 @@ class ProductController extends Controller
 
                 // 2. تحديث الصورة إذا تم إرسال صورة جديدة
                 if ($request->hasFile('image')) {
-                    if ($product->image_path && Storage::disk('public')->exists($product->image_path)) {
-                        Storage::disk('public')->delete($product->image_path);
+                    // ✅ الحل: استخدام اسم الحقل الصحيح 'image'
+                    if ($product->image && Storage::disk('public')->exists($product->image)) {
+                        Storage::disk('public')->delete($product->image);
                     }
-                    $product->image_path = $request->file('image')->store('products', 'public');
+                    // ✅ الحل: استخدام اسم الحقل الصحيح 'image'
+                    $product->image = $request->file('image')->store('products', 'public');
                     $product->save();
                 }
 
@@ -250,46 +252,6 @@ class ProductController extends Controller
         }
     }
 
-
-    public function destroy(Product $product)
-    {
-        if ($product->salesInvoiceItems()->exists()) {
-            return response()->json(['success' => false, 'message' => 'Cannot delete product. It is associated with existing sales invoices. You can deactivate it instead.',], 422);
-        }
-        DB::beginTransaction();
-        try {
-            if ($product->image_path && Storage::disk('public')->exists($product->image_path)) {
-                Storage::disk('public')->delete($product->image_path);
-            }
-            $product->delete();
-            DB::commit();
-            return response()->json(['success' => true, 'message' => 'Product deleted successfully']);
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Product Deletion Failed: ' . $e->getMessage());
-            return response()->json(['success' => false, 'message' => 'An error occurred while deleting the product.',], 500);
-        }
-    }
-    public function downloadTemplate(): StreamedResponse
-    {
-        $fileName = 'قالب_استيراد_المنتجات.csv';
-        $internalHeaders = ['name', 'category_name', 'brand_name', 'product_type', 'description', 'sku', 'base_unit_name', 'base_unit_barcode', 'base_selling_price', 'initial_batch_quantity', 'initial_batch_cost_price', 'initial_batch_expiry_date', 'additional_unit_1_name', 'additional_unit_1_factor', 'additional_unit_1_barcode', 'additional_unit_1_price', 'additional_unit_2_name', 'additional_unit_2_factor', 'additional_unit_2_barcode', 'additional_unit_2_price',];
-        $publicHeaders = ['اسم المنتج (إلزامي)', 'اسم الفئة (إلزامي)', 'اسم الماركة', 'نوع المنتج (Standard أو Weighted)', 'وصف المنتج', 'رمز SKU', 'اسم الوحدة الأساسية (إلزامي)', 'باركود الوحدة الأساسية', 'سعر بيع الوحدة الأساسية (إلزامي)', 'الكمية الأولية', 'تكلفة الشراء الأولية', 'تاريخ الصلاحية الأولي (YYYY-MM-DD)', 'اسم الوحدة الإضافية 1', 'معامل تحويل الوحدة 1', 'باركود الوحدة 1', 'سعر بيع خاص للوحدة 1', 'اسم الوحدة الإضافية 2', 'معامل تحويل الوحدة 2', 'باركود الوحدة 2', 'سعر بيع خاص للوحدة 2',];
-        $sampleData = [['name' => 'مياه نوفا (قارورة)', 'category_name' => 'مشروبات باردة', 'brand_name' => 'نوفا', 'product_type' => 'Standard', 'description' => 'مياه شرب معبأة', 'sku' => 'NOV-WAT-500', 'base_unit_name' => 'قارورة', 'base_unit_barcode' => '6281011100011', 'base_selling_price' => 1, 'initial_batch_quantity' => 480, 'initial_batch_cost_price' => 0.6, 'initial_batch_expiry_date' => '2028-01-01', 'additional_unit_1_name' => 'كرتونة', 'additional_unit_1_factor' => 24, 'additional_unit_1_barcode' => '6281011100012', 'additional_unit_1_price' => 22], ['name' => 'بيبسي (علبة)', 'category_name' => 'مشروبات غازية', 'brand_name' => 'بيبسي', 'product_type' => 'Standard', 'description' => '330 مل', 'sku' => 'PEP-CAN-330', 'base_unit_name' => 'علبة', 'base_unit_barcode' => '6291002123456', 'base_selling_price' => 2.5, 'initial_batch_quantity' => 120, 'initial_batch_cost_price' => 1.75, 'initial_batch_expiry_date' => '', 'additional_unit_1_name' => 'ربطة', 'additional_unit_1_factor' => 6, 'additional_unit_1_barcode' => '6291002123457', 'additional_unit_1_price' => 14],];
-        return new StreamedResponse(function () use ($internalHeaders, $publicHeaders, $sampleData) {
-            $handle = fopen('php://output', 'w');
-            fprintf($handle, chr(0xEF) . chr(0xBB) . chr(0xBF));
-            fputcsv($handle, $publicHeaders);
-            foreach ($sampleData as $row) {
-                $orderedRow = [];
-                foreach ($internalHeaders as $header) {
-                    $orderedRow[] = $row[$header] ?? '';
-                }
-                fputcsv($handle, $orderedRow);
-            }
-            fclose($handle);
-        }, 200, ['Content-Type' => 'text/csv; charset=utf-8', 'Content-Disposition' => 'attachment; filename="' . rawurlencode($fileName) . '"',]);
-    }
     // app/Http/Controllers/Api/ProductController.php
 public function updateStatus(Request $request, Product $product)
 {
@@ -306,5 +268,43 @@ public function updateStatus(Request $request, Product $product)
         'data' => $product,
     ]);
 }
+    /**
+     * ✅ ===================================================================
+     * ✅ الحل: دالة حذف قوية وموثوقة
+     * ✅ ===================================================================
+     */
+    public function destroy(Product $product)
+    {
+        // 1. التحقق من وجود المنتج في فواتير البيع
+        if ($product->salesInvoiceItems()->exists()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'لا يمكن حذف المنتج لأنه مرتبط بفواتير بيع حالية. يمكنك إلغاء تفعيله بدلاً من ذلك.',
+            ], 422);
+        }
+
+        DB::beginTransaction();
+        try {
+            // 2. حذف الصورة المرتبطة بالمنتج إذا كانت موجودة
+            if ($product->image && Storage::disk('public')->exists($product->image)) {
+                Storage::disk('public')->delete($product->image);
+            }
+            
+            // 3. حذف المنتج (سيتم حذف العلاقات المرتبطة به تلقائيًا بفضل onDelete('cascade'))
+            $product->delete();
+
+            DB::commit();
+
+            return response()->json(['success' => true, 'message' => 'تم حذف المنتج بنجاح.']);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('فشل في حذف المنتج: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'حدث خطأ أثناء حذف المنتج.',
+            ], 500);
+        }
+    }
+
 
 }
