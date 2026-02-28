@@ -1,140 +1,166 @@
-// frontend/src/components/pos/CartSection.tsx
+// src/components/pos/CartSection.tsx
 
-import React, { memo, useRef, useEffect, useMemo, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import React, { memo, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Minus, Plus, Trash2, ShoppingBag, Banknote, CreditCard, Wallet, User, Search, X } from 'lucide-react';
+import { Minus, Plus, Trash2, ShoppingBag, Banknote, CreditCard, Wallet, ChevronsUpDown, Loader2 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import apiClient from '@/api/apiClient';
+
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { useCart } from '@/hooks/useCart';
+import { CustomerSearch } from './CustomerSearch';
+import { Customer, PosProduct, CartItem, SellableUnit } from '@/types'; 
 
-// الواجهات تبقى كما هي
-export interface CartItem { id: number; name: string; price: number; quantity: number; image: string; }
-export interface Customer { id: number; name: string; phone?: string; }
+const CartItemRow: React.FC<{ item: CartItem }> = memo(({ item }) => {
+    const { updateQuantity, removeFromCart, changeUnit } = useCart.getState();
+    const [isUnitSwitcherOpen, setIsUnitSwitcherOpen] = useState(false);
 
+    const { data: product, isLoading } = useQuery<PosProduct>({
+        queryKey: ['pos_product_units', item.product_id],
+        queryFn: async () => {
+            const response = await apiClient.get(`/products/${item.product_id}?pos=true`);
+            return response.data.data;
+        },
+        enabled: isUnitSwitcherOpen,
+        staleTime: 5 * 60 * 1000,
+    });
+
+    const handleUnitSelect = (selectedUnit: SellableUnit) => {
+        changeUnit(item.barcode_id, selectedUnit);
+        setIsUnitSwitcherOpen(false);
+    };
+
+    return (
+        <>
+            <motion.div
+                layout
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50"
+            >
+                <img src={item.image_url || '/no-image.svg'} alt={item.product_name} className="w-12 h-12 rounded-lg object-cover bg-muted flex-shrink-0" />
+                
+                <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-sm truncate">{item.product_name}</p>
+                    <Button 
+                        variant="link" 
+                        className="h-auto p-0 text-primary text-xs"
+                        onClick={() => setIsUnitSwitcherOpen(true)}
+                    >
+                        {item.unit_name}
+                        <ChevronsUpDown className="w-3 h-3 ms-1" />
+                    </Button>
+                </div>
+
+                <div className="flex items-center gap-1">
+                    <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateQuantity(item.barcode_id, item.quantity - 1)}><Minus className="w-3 h-3" /></Button>
+                    <span className="w-6 text-center font-medium text-sm">{item.quantity}</span>
+                    <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateQuantity(item.barcode_id, item.quantity + 1)}><Plus className="w-3 h-3" /></Button>
+                </div>
+                <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive/70 hover:text-destructive" onClick={() => removeFromCart(item.barcode_id)}><Trash2 className="w-4 h-4" /></Button>
+            </motion.div>
+
+            <Dialog open={isUnitSwitcherOpen} onOpenChange={setIsUnitSwitcherOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>تغيير الوحدة</DialogTitle>
+                        <DialogDescription>اختر الوحدة الجديدة للمنتج "{item.product_name}".</DialogDescription>
+                    </DialogHeader>
+                    <div className="py-4 space-y-2">
+                        {isLoading ? (
+                            <div className="flex justify-center items-center h-24"><Loader2 className="w-6 h-6 animate-spin" /></div>
+                        ) : (
+                            // ✅ =================================================
+                            // ✅ التصحيح الجذري والنهائي
+                            // ✅ التأكد من وجود product و product.sellable_units قبل استدعاء map
+                            // ✅ =================================================
+                            product?.sellable_units?.map(unit => (
+                                <Button
+                                    key={unit.barcode_id}
+                                    variant={unit.barcode_id === item.barcode_id ? 'default' : 'outline'}
+                                    className="w-full justify-between h-12 text-base"
+                                    onClick={() => handleUnitSelect(unit)}
+                                >
+                                    <span>{unit.unit_name}</span>
+                                    <span className="font-bold">${unit.selling_price.toFixed(2)}</span>
+                                </Button>
+                            ))
+                        )}
+                    </div>
+                </DialogContent>
+            </Dialog>
+        </>
+    );
+});
+
+// ... (بقية كود CartSection يبقى كما هو دون تغيير)
 interface CartSectionProps {
-  items: CartItem[];
-  onUpdateQuantity: (id: number, quantity: number) => void;
-  onRemoveItem: (id: number) => void;
-  onClearCart: () => void;
-  onCheckout: (method: 'cash' | 'wallet' | 'debt') => void;
-  customers: Customer[];
-  recentCustomers: Customer[]; // **تحسين 1: إضافة قائمة العملاء الأخيرين**
-  selectedCustomer: Customer | null;
-  onSelectCustomer: (customer: Customer | null) => void;
-  customerSearch: string;
-  onCustomerSearchChange: (query: string) => void;
-  isLoadingCustomers: boolean;
-  focusCustomerSearch: number;
+    onCheckout: (method: 'cash' | 'wallet' | 'debt') => void;
+    selectedCustomer: Customer | null;
+    onSelectCustomer: (customer: Customer | null) => void;
+    focusCustomerSearch: number;
 }
 
-const CartItemRow = memo(({ item, onUpdateQuantity, onRemoveItem }: { item: CartItem; onUpdateQuantity: CartSectionProps['onUpdateQuantity']; onRemoveItem: CartSectionProps['onRemoveItem'] }) => (
-    <motion.div layout initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors">
-      <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted flex-shrink-0"><img src={item.image || '/no-image.svg'} alt={item.name} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).src = '/no-image.svg'; }} /></div>
-      <div className="flex-1 min-w-0"><p className="font-medium text-foreground text-sm truncate">{item.name}</p><p className="text-primary font-semibold">${item.price.toFixed(2)}</p></div>
-      <div className="flex items-center gap-2">
-        <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => onUpdateQuantity(item.id, item.quantity - 1)}> <Minus className="w-3 h-3" /> </Button>
-        <span className="w-6 text-center font-medium">{item.quantity}</span>
-        <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}> <Plus className="w-3 h-3" /> </Button>
-        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => onRemoveItem(item.id)}> <Trash2 className="w-3 h-3" /> </Button>
-      </div>
-    </motion.div>
-));
+export const CartSection: React.FC<CartSectionProps> = memo(({ onCheckout, selectedCustomer, onSelectCustomer, focusCustomerSearch }) => {
+    const items = useCart(state => state.items);
+    const subtotal = useCart(state => state.subtotal);
+    const { clearCart } = useCart.getState();
 
-export const CartSection = memo(({
-  items, onUpdateQuantity, onRemoveItem, onClearCart, onCheckout,
-  customers, recentCustomers, selectedCustomer, onSelectCustomer, customerSearch,
-  onCustomerSearchChange, isLoadingCustomers, focusCustomerSearch
-}: CartSectionProps) => {
-  const { t } = useTranslation();
-  const [isCustomerListOpen, setIsCustomerListOpen] = useState(false);
-  const searchInputRef = useRef<HTMLInputElement>(null);
+    const { tax, total } = useMemo(() => {
+        const taxRate = 0.15;
+        const taxAmount = subtotal * taxRate;
+        return { tax: taxAmount, total: subtotal + taxAmount };
+    }, [subtotal]);
 
-  useEffect(() => {
-    if (focusCustomerSearch > 0) {
-      searchInputRef.current?.focus();
-    }
-  }, [focusCustomerSearch]);
-
-  const { subtotal, tax, total } = useMemo(() => {
-    const sub = items.reduce((s, item) => s + item.price * item.quantity, 0);
-    const taxRate = 0.15;
-    const t = sub * taxRate;
-    return { subtotal: sub, tax: t, total: sub + t };
-  }, [items]);
-
-  const displayCustomers = customerSearch ? customers : recentCustomers;
-
-  return (
-    <div className="flex flex-col h-full bg-card rounded-2xl border border-border overflow-hidden">
-      <div className="p-4 border-b border-border"><div className="flex items-center justify-between"><div className="flex items-center gap-2"><ShoppingBag className="w-5 h-5 text-primary" /><h3 className="font-semibold text-foreground">{t('pos.cart')}</h3></div><span className="text-sm text-muted-foreground">{items.length} {t('pos.all', { count: items.length })}</span></div></div>
-      
-      {/* ================================================================= */}
-      {/* **تصحيح 3: إعادة هيكلة قسم البحث بالكامل** */}
-      {/* ================================================================= */}
-      <div className="p-4 border-b border-border">
-        <label className="text-sm font-medium text-muted-foreground mb-2 block">{t('pos.customer')}</label>
-        {selectedCustomer ? (
-          <div className="flex items-center justify-between p-2 rounded-md border border-primary/50 bg-primary/10">
-            <div className="flex items-center gap-2 font-medium text-primary">
-              <User className="w-4 h-4" />
-              <span>{selectedCustomer.name}</span>
+    return (
+        <div className="flex flex-col h-full bg-card rounded-2xl border overflow-hidden">
+            <div className="p-4 border-b">
+                <h3 className="font-semibold text-lg flex items-center gap-2">
+                    <ShoppingBag className="w-5 h-5 text-primary" />
+                    سلة المبيعات
+                </h3>
             </div>
-            <Button variant="ghost" size="icon" className="h-6 w-6 text-primary" onClick={() => onSelectCustomer(null)}>
-              <X className="w-4 h-4" />
-            </Button>
-          </div>
-        ) : (
-          <Popover open={isCustomerListOpen} onOpenChange={setIsCustomerListOpen}>
-            <PopoverTrigger asChild>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  ref={searchInputRef}
-                  placeholder={t('pos.searchCustomer')}
-                  className="w-full pl-9"
-                  value={customerSearch}
-                  onChange={(e) => onCustomerSearchChange(e.target.value)}
-                  onFocus={() => setIsCustomerListOpen(true)}
-                />
-              </div>
-            </PopoverTrigger>
-            <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
-              <Command>
-                <CommandList>
-                  <CommandEmpty>{isLoadingCustomers ? t('common.loading') : t('common.noResults')}</CommandEmpty>
-                  <CommandGroup heading={customerSearch ? t('common.searchResults') : t('common.recentCustomers')}>
-                    <CommandItem onSelect={() => { onSelectCustomer(null); setIsCustomerListOpen(false); }}><User className="me-2 h-4 w-4" /><span>{t('pos.walkInCustomer')}</span></CommandItem>
-                    {displayCustomers.map((customer) => (
-                      <CommandItem key={customer.id} onSelect={() => { onSelectCustomer(customer); setIsCustomerListOpen(false); onCustomerSearchChange(''); }}>
-                        <User className="me-2 h-4 w-4" />
-                        <span>{customer.name}</span>
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
-        )}
-      </div>
+            
+            <CustomerSearch 
+                selectedCustomer={selectedCustomer} 
+                onSelectCustomer={onSelectCustomer} 
+                focusTrigger={focusCustomerSearch}
+            />
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
-        <AnimatePresence>{items.length === 0 ? (<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center justify-center h-full text-muted-foreground"><ShoppingBag className="w-12 h-12 mb-2 opacity-50" /><p>{t('pos.emptyCart')}</p></motion.div>) : (items.map((item) => (<CartItemRow key={item.id} item={item} onUpdateQuantity={onUpdateQuantity} onRemoveItem={onRemoveItem} />)))}</AnimatePresence>
-      </div>
-      <div className="p-4 mt-auto border-t border-border space-y-3">
-        <div className="space-y-2 text-sm"><div className="flex justify-between text-muted-foreground"><span>{t('pos.subtotal')}</span><span>${subtotal.toFixed(2)}</span></div><div className="flex justify-between text-muted-foreground"><span>{t('pos.tax')} (15%)</span><span>${tax.toFixed(2)}</span></div><div className="flex justify-between text-lg font-bold text-foreground pt-2 border-t border-border"><span>{t('pos.total')}</span><span className="text-primary">${total.toFixed(2)}</span></div></div>
-        <div className="space-y-2">
-          <div className="grid grid-cols-3 gap-2">
-            <button onClick={() => onCheckout('cash')} disabled={items.length === 0} className={cn('flex flex-col items-center justify-center gap-2 p-3 rounded-lg border-2 transition-all', 'border-border hover:border-primary/50', 'disabled:opacity-50 disabled:pointer-events-none')}><Banknote className="w-6 h-6 text-orange-500" /><span className="text-xs font-medium">{t('payment.cash')}</span></button>
-            <button onClick={() => onCheckout('wallet')} disabled={items.length === 0} className={cn('flex flex-col items-center justify-center gap-2 p-3 rounded-lg border-2 transition-all', 'border-border hover:border-primary/50', 'disabled:opacity-50 disabled:pointer-events-none')}><Wallet className="w-6 h-6 text-blue-500" /><span className="text-xs font-medium">{t('payment.wallet')}</span></button>
-            <button onClick={() => onCheckout('debt')} disabled={items.length === 0} className={cn('flex flex-col items-center justify-center gap-2 p-3 rounded-lg border-2 transition-all', 'border-border hover:border-primary/50', 'disabled:opacity-50 disabled:pointer-events-none')}><CreditCard className="w-6 h-6 text-green-500" /><span className="text-xs font-medium">{t('payment.credit')}</span></button>
-          </div>
-          <Button variant="outline" className="w-full" onClick={onClearCart} disabled={items.length === 0}><Trash2 className="w-4 h-4 me-2" />{t('pos.clear')}</Button>
+            <div className="flex-1 overflow-y-auto p-2">
+                <AnimatePresence>
+                    {items.length === 0 ? (
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center justify-center h-full text-muted-foreground">
+                            <ShoppingBag className="w-12 h-12 mb-2 opacity-50" />
+                            <p>السلة فارغة</p>
+                        </motion.div>
+                    ) : (
+                        items.map((item) => <CartItemRow key={item.barcode_id} item={item} />)
+                    )}
+                </AnimatePresence>
+            </div>
+
+            <div className="p-4 mt-auto border-t space-y-4 bg-muted/30">
+                <div className="space-y-1 text-sm">
+                    <div className="flex justify-between"><span>المجموع الفرعي</span><span>${subtotal.toFixed(2)}</span></div>
+                    <div className="flex justify-between"><span>الضريبة (15%)</span><span>${tax.toFixed(2)}</span></div>
+                    <div className="flex justify-between text-lg font-bold pt-1 border-t mt-1"><span>الإجمالي</span><span className="text-primary">${total.toFixed(2)}</span></div>
+                </div>
+                <div className="space-y-2">
+                    <div className="grid grid-cols-3 gap-2">
+                        <Button onClick={() => onCheckout('cash')} disabled={items.length === 0} className="flex-col h-16"><Banknote className="w-6 h-6 mb-1" /><span>نقدي</span></Button>
+                        <Button onClick={() => onCheckout('wallet')} disabled={items.length === 0} className="flex-col h-16"><Wallet className="w-6 h-6 mb-1" /><span>محفظة</span></Button>
+                        <Button onClick={() => onCheckout('debt')} disabled={items.length === 0} className="flex-col h-16"><CreditCard className="w-6 h-6 mb-1" /><span>دين</span></Button>
+                    </div>
+                    <Button variant="outline" className="w-full" onClick={() => { clearCart(); onSelectCustomer(null); }} disabled={items.length === 0}>
+                        <Trash2 className="w-4 h-4 me-2" />
+                        تفريغ السلة
+                    </Button>
+                </div>
+            </div>
         </div>
-      </div>
-    </div>
-  );
+    );
 });

@@ -124,6 +124,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Product Returns routes (Sales Returns)
     Route::apiResource('product-returns', ProductReturnController::class);
+     Route::get('/pos/products', [ProductController::class, 'getPosProducts']);
+   
+Route::patch('products/{product}/status', [App\Http\Controllers\Api\ProductController::class, 'updateStatus']);
+
     Route::post('product-returns/{return}/approve', [ProductReturnController::class, 'approve']);
     Route::post('product-returns/{return}/reject', [ProductReturnController::class, 'reject']);
 

@@ -4,116 +4,126 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\DB;
 
 /**
- * نموذج المنتج
+ * موديل المنتج (Product Model)
  * 
- * يمثل المنتجات في النظام مع جميع التفاصيل المتعلقة بها
- * مثل الأسعار، الكميات، الصور، والعلاقات مع الفئات والعلامات التجارية
+ * يمثل المنتج كوحدة أساسية في النظام. لم يعد يحتوي على كمية مباشرة،
+ * بل أصبحت الكمية الإجمالية هي مجموع الكميات المتبقية في جميع دفعات المخزون.
+ * هذا الموديل هو العقل المركزي الذي يربط المنتج بدفعاته، باركوداته، وفئاته.
  */
 class Product extends Model
 {
     use HasFactory;
 
     /**
-     * الحقول القابلة للتعبئة
-     * 
+     * الحقول القابلة للتعبئة بشكل جماعي (Mass Assignable).
+     * تم تحديثها لتعكس الهيكل الجديد لجدول `products`.
+     *
      * @var array
      */
     protected $fillable = [
-        'name',              // اسم المنتج
-        'sku',               // رمز المنتج (Stock Keeping Unit)
-        'barcode',           // الباركود
-        'category_id',       // معرف الفئة
-        'brand_id',          // معرف العلامة التجارية
-        'unit_id',           // معرف وحدة القياس
-        'purchase_price',    // سعر الشراء
-        'selling_price',     // سعر البيع
-        'quantity',          // الكمية المتوفرة
-        'reorder_level',     // مستوى إعادة الطلب (تنبيه عند انخفاض المخزون)
-        'expiry_date',       // تاريخ انتهاء الصلاحية
-        'description',       // وصف المنتج
-        'image',             // مسار الصورة
-        'is_active',         // حالة التفعيل (نشط/غير نشط)
+        'name',
+        'sku',
+        'description',
+        'category_id',
+        'brand_id',
+        'base_unit_name',        // اسم الوحدة الأساسية (مثال: "حبة")
+        'purchase_price',        // متوسط سعر الشراء (سيتم تحديثه تلقائيًا)
+        'selling_price',         // سعر بيع الوحدة الأساسية
+        'reorder_level',         // حد إعادة الطلب (بالوحدة الأساسية)
+        'image',
+        'is_active',
     ];
 
     /**
-     * تحويل أنواع البيانات
-     * 
+     * تحويل أنواع البيانات (Casting).
+     * تم تحديثها لضمان الدقة في التعامل مع الأرقام العشرية.
+     *
      * @var array
      */
     protected $casts = [
-        'purchase_price' => 'float',    // تحويل سعر الشراء إلى رقم عشري
-        'selling_price' => 'float',     // تحويل سعر البيع إلى رقم عشري
-        'quantity' => 'integer',        // تحويل الكمية إلى رقم صحيح
-        'reorder_level' => 'integer',   // تحويل مستوى إعادة الطلب إلى رقم صحيح
-        'is_active' => 'boolean',       // تحويل حالة التفعيل إلى قيمة منطقية
-        'expiry_date' => 'date',        // تحويل تاريخ الصلاحية إلى كائن تاريخ
+        'purchase_price' => 'decimal:2',
+        'selling_price' => 'decimal:2',
+        'reorder_level' => 'integer',
+        'is_active' => 'boolean',
     ];
 
     /**
-     * الحقول المضافة تلقائياً للنموذج
-     * 
+     * الحقول المحسوبة التي يتم إضافتها تلقائيًا عند تحويل الموديل إلى مصفوفة أو JSON.
+     * `total_quantity`: سيقوم بحساب إجمالي الكمية من جميع الدفعات.
+     * `image_url`: سيقوم بإنشاء رابط كامل للصورة.
+     *
      * @var array
      */
-    protected $appends = ['image_url'];
+    protected $appends = ['total_quantity', 'image_url'];
+
+    // =================================================================
+    // **العلاقات الجديدة (New Relationships)**
+    // =================================================================
 
     /**
-     * العلاقة مع الفئة
-     * 
-     * كل منتج ينتمي إلى فئة واحدة
-     * 
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     * علاقة: المنتج الواحد لديه العديد من دفعات المخزون (One-to-Many).
+     * هذه هي العلاقة الأهم في النظام الجديد.
      */
-    public function category()
+    public function stockBatches(): HasMany
+    {
+        return $this->hasMany(ProductStockBatch::class);
+    }
+
+    /**
+     * علاقة: المنتج الواحد لديه العديد من الباركودات/الوحدات (One-to-Many).
+     */
+    public function barcodes(): HasMany
+    {
+        return $this->hasMany(ProductBarcode::class);
+    }
+
+    // =================================================================
+    // **العلاقات القديمة (Existing Relationships)**
+    // =================================================================
+
+    /**
+     * علاقة: المنتج ينتمي إلى فئة واحدة.
+     */
+    public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
     }
 
     /**
-     * العلاقة مع العلامة التجارية
-     * 
-     * كل منتج ينتمي إلى علامة تجارية واحدة (اختياري)
-     * 
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     * علاقة: المنتج ينتمي إلى علامة تجارية واحدة.
      */
-    public function brand()
+    public function brand(): BelongsTo
     {
         return $this->belongsTo(Brand::class);
     }
 
+    // =================================================================
+    // **الحقول المحسوبة (Accessors)**
+    // =================================================================
+
     /**
-     * العلاقة مع وحدة القياس
+     * Accessor لحساب إجمالي الكمية المتوفرة من المنتج.
      * 
-     * كل منتج له وحدة قياس واحدة (كيلو، قطعة، لتر، إلخ)
-     * 
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     * يقوم بجمع `quantity_remaining` من جميع دفعات المخزون المرتبطة بهذا المنتج.
+     * هذا يضمن أن الكمية المعروضة دائمًا دقيقة وتعكس الواقع.
+     *
+     * @return float
      */
-    public function unit()
+    public function getTotalQuantityAttribute(): float
     {
-        return $this->belongsTo(Unit::class);
+        // استخدام علاقة `stockBatches` مع دالة `sum` للحصول على المجموع بكفاءة.
+        return (float) $this->stockBatches()->sum('quantity_remaining');
     }
 
     /**
-     * العلاقة مع الباركودات
-     * 
-     * المنتج يمكن أن يكون له عدة باركودات
-     * 
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     * Accessor للحصول على رابط الصورة الكامل.
      */
-    public function barcodes()
-    {
-        return $this->hasMany(ProductBarcode::class);
-    }
-
-    /**
-     * Accessor للحصول على رابط الصورة الكامل
-     * 
-     * يقوم بتحويل مسار الصورة النسبي إلى رابط كامل
-     * 
-     * @return string|null
-     */
-    public function getImageUrlAttribute()
+    public function getImageUrlAttribute(): ?string
     {
         if ($this->image) {
             return asset('storage/' . $this->image);
@@ -121,45 +131,17 @@ class Product extends Model
         return null;
     }
 
+    // =================================================================
+    // **دوال مساعدة (Helper Methods)**
+    // =================================================================
+
     /**
-     * التحقق من أن المنتج في حالة تنبيه مخزون منخفض
-     * 
+     * التحقق مما إذا كان المنتج قد وصل إلى حد إعادة الطلب.
+     *
      * @return bool
      */
-    public function isLowStock()
+    public function isLowStock(): bool
     {
-        return $this->quantity <= $this->reorder_level;
-    }
-
-    /**
-     * التحقق من أن المنتج متوفر في المخزون
-     * 
-     * @return bool
-     */
-    public function isInStock()
-    {
-        return $this->quantity > 0;
-    }
-
-    /**
-     * Scope للمنتجات النشطة فقط
-     * 
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @return \Illuminate\Database\Eloquent\Builder
-     */
-    public function scopeActive($query)
-    {
-        return $query->where('is_active', true);
-    }
-
-    /**
-     * Scope للمنتجات ذات المخزون المنخفض
-     * 
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @return \Illuminate\Database\Eloquent\Builder
-     */
-    public function scopeLowStock($query)
-    {
-        return $query->whereColumn('quantity', '<=', 'reorder_level');
+        return $this->getTotalQuantityAttribute() <= $this->reorder_level;
     }
 }

@@ -7,8 +7,9 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration
 {
     /**
-     * جدول تفاصيل فواتير المبيعات (Sales Invoice Items)
-     * يحتوي على المنتجات في كل فاتورة بيع
+     * تشغيل ملفات الهجرة.
+     *
+     * جدول عناصر فاتورة البيع - النسخة المحسّنة لنظام FIFO.
      */
     public function up(): void
     {
@@ -16,27 +17,33 @@ return new class extends Migration
             $table->id();
             $table->foreignId('sales_invoice_id')->constrained('sales_invoices')->onDelete('cascade');
             $table->foreignId('product_id')->constrained('products')->onDelete('cascade');
-            $table->integer('quantity'); // الكمية المباعة
             
             // =================================================================
-            // **التعديل الرئيسي هنا: إضافة عمود سعر الشراء**
+            // **التعديلات الجوهرية**
             // =================================================================
-            /**
-             * سعر شراء الوحدة عند وقت البيع.
-             * هذا العمود حيوي لحساب الأرباح بدقة في المستقبل، حيث يضمن
-             * أن التقارير تستخدم التكلفة الفعلية للبضاعة المباعة في تلك اللحظة،
-             * وليس سعر الشراء الحالي للمنتج الذي قد يتغير.
-             */
-            $table->decimal('purchase_price', 10, 2)->comment('سعر شراء الوحدة عند البيع');
+
+            // 1. تغيير نوع الكمية إلى decimal لدعم الوحدات القابلة للتجزئة (مثل بيع 1.5 كيلو)
+            $table->decimal('quantity', 10, 2);
+
+            // 2. سعر بيع الوحدة (بدون تغيير)
+            $table->decimal('unit_price', 10, 2);
             
-            $table->decimal('unit_price', 10, 2); // سعر بيع الوحدة
-            $table->decimal('total_price', 12, 2); // السعر الإجمالي (quantity * unit_price)
+            // 3. تغيير اسم العمود ليعكس الغرض الحقيقي منه بدقة
+            // هذا هو سعر تكلفة الوحدة (من دفعة المخزون) في لحظة البيع
+            // هذا هو مفتاح حساب الأرباح الدقيقة
+            $table->decimal('cost_price_per_unit', 12, 4);
+
+            // 4. الإجمالي (الكمية * سعر البيع) - (بدون تغيير)
+            $table->decimal('total_price', 12, 2);
+            
+            // =================================================================
+            
             $table->timestamps();
         });
     }
 
     /**
-     * Reverse the migrations.
+     * التراجع عن ملفات الهجرة.
      */
     public function down(): void
     {

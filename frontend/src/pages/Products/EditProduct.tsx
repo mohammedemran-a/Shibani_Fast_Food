@@ -1,595 +1,91 @@
-import React from 'react';
-import { useTranslation } from 'react-i18next';
-import { useNavigate, useParams } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { ArrowRight, ArrowLeft, Save, Plus, Trash2, Barcode, Upload, X } from 'lucide-react';
+import React, { useMemo } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { Loader2, ArrowRight, ArrowLeft } from 'lucide-react';
+import { useProduct } from '@/hooks/useProducts';
+import ProductForm from './ProductForm'; // تأكد من أن المسار صحيح
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useTheme } from '@/contexts/ThemeContext';
-import { toast } from 'sonner';
-import { useProduct, useUpdateProduct } from '@/hooks/useProducts';
-import { useCategories } from '@/hooks/useCategories';
-import { useBrands } from '@/hooks/useBrands';
-import { useUnits } from '@/hooks/useUnits';
 
-interface BarcodeVariant {
-  id: number;
-  weight: number;
-  weightUnit: string;
-  barcode: string;
-  price: number;
+export default function EditProduct() {
+    const { id } = useParams<{ id: string }>();
+    const navigate = useNavigate();
+    const { isRTL } = useTheme();
+    const BackIcon = isRTL ? ArrowRight : ArrowLeft;
+
+    // الخطوة 1: جلب البيانات
+    const { data: productData, isLoading, isError } = useProduct(Number(id!));
+
+    // الخطوة 2: تحويل البيانات (لن يتم تشغيله إلا بعد وصول البيانات)
+    const formattedProductData = useMemo(() => {
+        if (!productData?.data) return null; // **مهم جدًا: إرجاع null إذا لم تكن البيانات موجودة**
+
+        const product = productData.data;
+        
+        const baseBarcode = product.barcodes.find(b => b.is_base_unit);
+        const additionalBarcodes = product.barcodes.filter(b => !b.is_base_unit);
+
+        return {
+            id: product.id,
+            name: product.name,
+            category_id: String(product.category_id),
+            brand_id: product.brand_id ? String(product.brand_id) : undefined,
+            product_type: product.product_type,
+            description: product.description ?? '',
+            sku: product.sku ?? '',
+            reorder_level: product.reorder_level,
+            is_active: product.is_active,
+            image_url: product.image_url,
+            stock_batches: product.stock_batches,
+            base_unit: {
+                name: baseBarcode?.unit_name || '',
+                barcode: baseBarcode?.barcode || '',
+            },
+            base_selling_price: baseBarcode?.selling_price ?? 0,
+            additional_units: additionalBarcodes.map(unit => ({
+                id: unit.id,
+                name: unit.unit_name,
+                conversion_factor: unit.unit_quantity,
+                barcode: unit.barcode ?? '',
+                selling_price: unit.selling_price,
+            })),
+        };
+    }, [productData]);
+
+    // الخطوة 3: عرض شاشة التحميل إذا كانت البيانات قيد الجلب
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center h-96">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                <p className="ml-2">جاري تحميل بيانات المنتج...</p>
+            </div>
+        );
+    }
+
+    // الخطوة 4: عرض رسالة خطأ إذا فشل الجلب أو لم يتم العثور على البيانات
+    if (isError || !formattedProductData) {
+        return (
+            <div className="text-center py-12">
+                <p className="text-destructive mb-4">فشل في تحميل المنتج أو أن المنتج غير موجود.</p>
+                <Button onClick={() => navigate('/products')}>العودة إلى القائمة</Button>
+            </div>
+        );
+    }
+
+    // الخطوة 5: عرض الفورم فقط عندما تكون البيانات جاهزة ومُهيأة
+    return (
+        <div className="space-y-6 animate-fade-in">
+            <div className="flex items-center gap-4">
+                <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+                    <BackIcon className="w-5 h-5" />
+                </Button>
+                <div>
+                    <h1 className="text-2xl md:text-3xl font-bold text-foreground">تعديل المنتج</h1>
+                    <p className="text-muted-foreground mt-1">تحديث بيانات: {formattedProductData.name}</p>
+                </div>
+            </div>
+            
+            {/* **الضمانة النهائية**: نحن لا نعرض ProductForm إلا إذا كانت formattedProductData تحتوي على بيانات حقيقية */}
+            <ProductForm existingProduct={formattedProductData} />
+        </div>
+    );
 }
-
-const EditProduct: React.FC = () => {
-  const { t } = useTranslation();
-  const navigate = useNavigate();
-  const { id } = useParams<{ id: string }>();
-  const { isRTL } = useTheme();
-  
-  // Fetch product data
-  const { data: productData, isLoading: isLoadingProduct } = useProduct(id!);
-  const product = productData?.data;
-  
-  // Fetch data from API
-  const { data: categoriesData } = useCategories();
-  const { data: brandsData } = useBrands();
-  const { data: unitsData } = useUnits();
-  
-  const categories = categoriesData?.data || [];
-  const brands = brandsData?.data || [];
-  const units = unitsData?.data || [];
-  const [formData, setFormData] = React.useState({
-    name: '',
-    sku: '',
-    barcode: '',
-    category: '',
-    brand: '',
-    unit: '',
-    innerUnits: 1,
-    totalPurchasePrice: 0,
-    salePrice: 0,
-    quantity: 0,
-    expiryDate: '',
-    hasMultipleBarcodes: false,
-    isActive: true,
-  });
-  
-  // Load product data into form
-  React.useEffect(() => {
-    if (product) {
-      setFormData({
-        name: product.name || '',
-        sku: product.sku || '',
-        barcode: product.barcode || '',
-        category: product.category_id?.toString() || '',
-        brand: product.brand_id?.toString() || '',
-        unit: product.unit_id?.toString() || '',
-        innerUnits: 1,
-        totalPurchasePrice: Number(product.purchase_price) || 0,
-        salePrice: Number(product.selling_price) || 0,
-        quantity: Number(product.quantity) || 0,
-        expiryDate: product.expiry_date || '',
-        hasMultipleBarcodes: false,
-        isActive: product.is_active ?? true,
-      });
-      if (product.image) {
-        setImagePreview(product.image);
-      }
-    }
-  }, [product]);
-  const [imageFile, setImageFile] = React.useState<File | null>(null);
-  const [imagePreview, setImagePreview] = React.useState<string>('');
-  const [barcodeVariants, setBarcodeVariants] = React.useState<BarcodeVariant[]>([]);
-
-  const BackIcon = isRTL ? ArrowRight : ArrowLeft;
-  const unitPrice = formData.innerUnits > 0 ? formData.totalPurchasePrice / formData.innerUnits : 0;
-
-  const generateBarcode = () => {
-    // Generate a 13-digit barcode (EAN-13 format)
-    const timestamp = Date.now().toString();
-    const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-    return (timestamp.slice(-10) + random).slice(0, 13);
-  };
-
-  const handleGenerateBarcode = () => {
-    const newBarcode = generateBarcode();
-    setFormData({ ...formData, barcode: newBarcode });
-    toast.success(`تم توليد الباركود: ${newBarcode}`);
-  };
-
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setImageFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleRemoveImage = () => {
-    setImageFile(null);
-    setImagePreview('');
-  };
-
-  const handleAddBarcodeVariant = () => {
-    setBarcodeVariants([...barcodeVariants, {
-      id: Date.now(),
-      weight: 0,
-      weightUnit: 'g',
-      barcode: generateBarcode(),
-      price: 0,
-    }]);
-  };
-
-  const handleRemoveBarcodeVariant = (id: number) => {
-    setBarcodeVariants(barcodeVariants.filter(v => v.id !== id));
-  };
-
-  const handleBarcodeVariantChange = (id: number, field: string, value: string | number) => {
-    setBarcodeVariants(barcodeVariants.map(v => {
-      if (v.id === id) {
-        return { ...v, [field]: value };
-      }
-      return v;
-    }));
-  };
-
-  const updateProduct = useUpdateProduct();
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    try {
-      // Create FormData for file upload support
-      const submitData = new FormData();
-      
-        // Add all form fields
-        submitData.append('name', formData.name);
-      submitData.append('sku', formData.sku || `PRD-${Date.now()}`);
-      // Add barcode if provided
-      if (formData.barcode) {
-        submitData.append('barcode', formData.barcode);
-      }
-      submitData.append('category_id', formData.category);
-      submitData.append('brand_id', formData.brand || '');
-      submitData.append('unit_id', formData.unit);
-      submitData.append('purchase_price', formData.totalPurchasePrice.toString());
-      submitData.append('selling_price', formData.salePrice.toString());
-      submitData.append('quantity', formData.quantity.toString());
-      submitData.append('reorder_level', '10');
-      submitData.append('is_active', formData.isActive ? '1' : '0');
-      
-      if (formData.expiryDate) {
-        submitData.append('expiry_date', formData.expiryDate);
-      }
-      
-      // Add image if selected
-      if (imageFile) {
-        submitData.append('image', imageFile);
-      }
-      
-      await updateProduct.mutateAsync({ id: id!, data: submitData as any });
-      toast.success('تم تحديث المنتج بنجاح');
-      navigate('/products');
-    } catch (error: any) {
-      const message = error.response?.data?.message || t('common.error');
-      const errors = error.response?.data?.errors;
-      if (errors) {
-        const firstError = Object.values(errors)[0] as string[];
-        toast.error(`${message}: ${firstError[0]}`);
-      } else {
-        toast.error(message);
-      }
-    }
-  };
-
-  if (isLoadingProduct) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-  
-  if (!product) {
-    return (
-      <div className="flex flex-col items-center justify-center h-96">
-        <p className="text-muted-foreground">لم يتم العثور على المنتج</p>
-        <Button onClick={() => navigate('/products')} className="mt-4">العودة إلى المنتجات</Button>
-      </div>
-    );
-  }
-  
-  return (
-    <div className="space-y-6 animate-fade-in">
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-          <BackIcon className="w-5 h-5" />
-        </Button>
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-foreground">تعديل منتج</h1>
-          <p className="text-muted-foreground mt-1">تحديث بيانات المنتج</p>
-        </div>
-      </div>
-
-      {/* Form */}
-      <form onSubmit={handleSubmit}>
-        <div className="grid gap-6 lg:grid-cols-2">
-          {/* Basic Info */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="glass-card p-6 space-y-4"
-          >
-            <h3 className="font-semibold text-foreground text-lg">{t('products.basicInfo')}</h3>
-            
-            <div className="space-y-2">
-              <Label htmlFor="name">{t('products.name')} *</Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                required
-              />
-            </div>
-
-            {/* Image Upload */}
-            <div className="space-y-2">
-              <Label>{t('products.image')}</Label>
-              <div className="flex items-center gap-4">
-                {imagePreview ? (
-                  <div className="relative">
-                    <img
-                      src={imagePreview}
-                      alt="Product preview"
-                      className="w-24 h-24 object-cover rounded-lg border-2 border-border"
-                    />
-                    <Button
-                      type="button"
-                      size="icon"
-                      variant="destructive"
-                      className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
-                      onClick={handleRemoveImage}
-                    >
-                      <X className="w-4 h-4" />
-                    </Button>
-                  </div>
-                ) : (
-                  <label className="flex flex-col items-center justify-center w-24 h-24 border-2 border-dashed border-border rounded-lg cursor-pointer hover:border-primary transition-colors">
-                    <Upload className="w-6 h-6 text-muted-foreground" />
-                    <span className="text-xs text-muted-foreground mt-1">{t('common.upload')}</span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={handleImageChange}
-                    />
-                  </label>
-                )}
-                <div className="text-sm text-muted-foreground">
-                  <p>{t('products.imageHint')}</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="sku">
-                  {t('products.sku')}
-                  <span className="text-xs text-muted-foreground mr-2">(اختياري)</span>
-                </Label>
-                <Input
-                  id="sku"
-                  value={formData.sku}
-                  onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
-                  placeholder="PRD-001"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="barcode">
-                  <span className="flex items-center gap-2">
-                    <Barcode className="w-4 h-4" />
-                    {t('products.barcode')}
-                  </span>
-                </Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="barcode"
-                    value={formData.barcode}
-                    onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
-                    placeholder="1234567890123"
-                    className="flex-1"
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    onClick={handleGenerateBarcode}
-                    title="توليد باركود تلقائي"
-                  >
-                    <Barcode className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="expiryDate">{t('products.expiryDate')}</Label>
-              <Input
-                id="expiryDate"
-                type="date"
-                value={formData.expiryDate}
-                onChange={(e) => setFormData({ ...formData, expiryDate: e.target.value })}
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>{t('products.category')}</Label>
-                <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder={t('products.selectCategory')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map((category: any) => (
-                      <SelectItem key={category.id} value={category.id.toString()}>
-                        {category.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>{t('products.brand')}</Label>
-                <Select value={formData.brand} onValueChange={(value) => setFormData({ ...formData, brand: value })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder={t('products.selectBrand')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {brands.map((brand: any) => (
-                      <SelectItem key={brand.id} value={brand.id.toString()}>
-                        {brand.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </motion.div>
-
-          {/* Pricing Info */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="glass-card p-6 space-y-4"
-          >
-            <h3 className="font-semibold text-foreground text-lg">{t('products.pricingUnits')}</h3>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>{t('products.unit')}</Label>
-                <Select value={formData.unit} onValueChange={(value) => setFormData({ ...formData, unit: value })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder={t('products.selectUnit')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {units.map((unit: any) => (
-                      <SelectItem key={unit.id} value={unit.id.toString()}>
-                        {unit.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="innerUnits">{t('products.innerUnits')}</Label>
-                <Input
-                  id="innerUnits"
-                  type="number"
-                  min="1"
-                  value={formData.innerUnits}
-                  onChange={(e) => setFormData({ ...formData, innerUnits: Number(e.target.value) })}
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="totalPurchasePrice">{t('products.totalPurchasePrice')}</Label>
-                <Input
-                  id="totalPurchasePrice"
-                  type="number"
-                  step="0.01"
-                  value={formData.totalPurchasePrice}
-                  onChange={(e) => setFormData({ ...formData, totalPurchasePrice: Number(e.target.value) })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>{t('products.unitPrice')} ({t('common.auto')})</Label>
-                <Input
-                  value={`$${unitPrice.toFixed(2)}`}
-                  readOnly
-                  className="bg-muted"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="salePrice">{t('products.salePrice')}</Label>
-                <Input
-                  id="salePrice"
-                  type="number"
-                  step="0.01"
-                  value={formData.salePrice}
-                  onChange={(e) => setFormData({ ...formData, salePrice: Number(e.target.value) })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="quantity">{t('products.initialQuantity')}</Label>
-                <Input
-                  id="quantity"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={formData.quantity}
-                  onChange={(e) => setFormData({ ...formData, quantity: Number(e.target.value) })}
-                />
-              </div>
-            </div>
-
-            {/* Product Status */}
-            <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
-              <div>
-                <Label className="text-base font-medium">{t('products.status')}</Label>
-                <p className="text-sm text-muted-foreground">{t('products.statusDescription')}</p>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={formData.isActive}
-                  onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-              </label>
-            </div>
-
-            {/* Profit Preview */}
-            {formData.salePrice > 0 && unitPrice > 0 && (
-              <div className="p-4 bg-success/10 rounded-lg">
-                <p className="text-sm text-muted-foreground">{t('products.expectedProfit')}:</p>
-                <p className="text-xl font-bold text-success">
-                  ${(formData.salePrice - unitPrice).toFixed(2)} ({((formData.salePrice - unitPrice) / unitPrice * 100).toFixed(1)}%)
-                </p>
-              </div>
-            )}
-          </motion.div>
-        </div>
-
-        {/* Multiple Barcodes Section */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="glass-card p-6 space-y-4 mt-6"
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="font-semibold text-foreground text-lg flex items-center gap-2">
-                <Barcode className="w-5 h-5 text-primary" />
-                {t('products.multipleBarcodes')}
-              </h3>
-              <p className="text-sm text-muted-foreground mt-1">{t('products.multipleBarcodesDesc')}</p>
-            </div>
-            <Button type="button" variant="outline" size="sm" onClick={handleAddBarcodeVariant} className="gap-2">
-              <Plus className="w-4 h-4" />
-              {t('products.addVariant')}
-            </Button>
-          </div>
-
-          {barcodeVariants.length > 0 && (
-            <div className="space-y-3">
-              {barcodeVariants.map((variant, index) => (
-                <motion.div
-                  key={variant.id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                  className="grid grid-cols-12 gap-3 items-end p-4 bg-muted/30 rounded-lg"
-                >
-                  <div className="col-span-6 sm:col-span-2 space-y-2">
-                    <Label>{t('products.weight')}</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={variant.weight}
-                      onChange={(e) => handleBarcodeVariantChange(variant.id, 'weight', Number(e.target.value))}
-                    />
-                  </div>
-                  <div className="col-span-6 sm:col-span-2 space-y-2">
-                    <Label>{t('products.weightUnit')}</Label>
-                    <Select 
-                      value={variant.weightUnit}
-                      onValueChange={(value) => handleBarcodeVariantChange(variant.id, 'weightUnit', value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="g">{t('units.gram')}</SelectItem>
-                        <SelectItem value="kg">{t('units.kg')}</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="col-span-6 sm:col-span-3 space-y-2">
-                    <Label>{t('products.barcode')}</Label>
-                    <Input
-                      value={variant.barcode}
-                      onChange={(e) => handleBarcodeVariantChange(variant.id, 'barcode', e.target.value)}
-                    />
-                  </div>
-                  <div className="col-span-6 sm:col-span-2 space-y-2">
-                    <Label>{t('products.salePrice')}</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={variant.price}
-                      onChange={(e) => handleBarcodeVariantChange(variant.id, 'price', Number(e.target.value))}
-                    />
-                  </div>
-                  <div className="col-span-6 sm:col-span-2 space-y-2">
-                    <Label>{t('products.stockDeduction')}</Label>
-                    <Input
-                      value={variant.weightUnit === 'g' ? `${(variant.weight / 1000).toFixed(3)} ${t('units.kg')}` : `${variant.weight} ${t('units.kg')}`}
-                      readOnly
-                      className="bg-muted text-muted-foreground"
-                    />
-                  </div>
-                  <div className="col-span-6 sm:col-span-1">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleRemoveBarcodeVariant(variant.id)}
-                      className="text-destructive hover:text-destructive"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          )}
-
-          {barcodeVariants.length === 0 && (
-            <div className="text-center py-8 text-muted-foreground">
-              <Barcode className="w-12 h-12 mx-auto mb-2 opacity-50" />
-              <p>{t('products.noBarcodeVariants')}</p>
-            </div>
-          )}
-        </motion.div>
-
-        {/* Actions */}
-        <div className="flex justify-end gap-4 mt-6">
-          <Button type="button" variant="outline" onClick={() => navigate(-1)}>
-            {t('common.cancel')}
-          </Button>
-          <Button type="submit" className="gradient-primary border-0 gap-2">
-            <Save className="w-4 h-4" />
-            {t('common.save')}
-          </Button>
-        </div>
-      </form>
-    </div>
-  );
-};
-
-export default EditProduct;

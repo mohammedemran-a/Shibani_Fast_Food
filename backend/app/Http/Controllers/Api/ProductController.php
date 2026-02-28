@@ -3,418 +3,308 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreProductRequest;
+use App\Http\Requests\UpdateProductRequest;
 use App\Models\Product;
 use Illuminate\Http\Request;
-use Symfony\Component\HttpFoundation\StreamedResponse; // 1. إضافة الاستيراد اللازم
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
-/**
- * متحكم المنتجات
- * 
- * يدير جميع العمليات المتعلقة بالمنتجات (CRUD)
- * مع دعم البحث، الفلترة، والترقيم
- */
 class ProductController extends Controller
 {
     /**
-     * عرض قائمة المنتجات مع الفلترة والبحث
-     * 
-     * يدعم:
-     * - البحث بالاسم، SKU، أو الباركود
-     * - الفلترة حسب الفئة، العلامة التجارية، وحالة التفعيل
-     * - الترقيم الديناميكي أو عرض الكل
-     * 
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
+     * ✅ دالة قائمة المنتجات الرئيسية (تم جعلها متوافقة تمامًا مع الواجهة الأمامية).
      */
     public function index(Request $request)
     {
-        // استعلام أساسي مع تحميل العلاقات
-        $query = Product::with(['category', 'brand', 'unit']);
+        // بناء الاستعلام مع العلاقات المطلوبة من الواجهة الأمامية
+        $query = Product::with(['category', 'brand', 'stockBatches', 'barcodes']);
 
-        // البحث في الاسم، SKU، أو الباركود
         if ($request->has('search')) {
             $search = $request->search;
             $query->where(function($q) use ($search) {
                 $q->where('name', 'like', "%$search%")
                   ->orWhere('sku', 'like', "%$search%")
-                  ->orWhere('barcode', 'like', "%$search%");
+                  ->orWhereHas('barcodes', function($barcodeQuery) use ($search) {
+                      $barcodeQuery->where('barcode', 'like', "%$search%");
+                  });
             });
         }
 
-        // الفلترة حسب الفئة
-        if ($request->has('category_id')) {
+        if ($request->has('category_id') && $request->category_id !== 'all') {
             $query->where('category_id', $request->category_id);
         }
-
-        // الفلترة حسب العلامة التجارية
         if ($request->has('brand_id')) {
             $query->where('brand_id', $request->brand_id);
         }
-
-        // الفلترة حسب حالة التفعيل
-        // تحويل string 'true'/'false' إلى boolean 1/0
         if ($request->has('is_active')) {
-            $isActive = filter_var($request->is_active, FILTER_VALIDATE_BOOLEAN);
-            $query->where('is_active', $isActive);
+            $query->where('is_active', filter_var($request->is_active, FILTER_VALIDATE_BOOLEAN));
         }
 
-        // عرض جميع المنتجات بدون ترقيم إذا طُلب ذلك
-        if ($request->has('all') && $request->all == 'true') {
-            $products = $query->get();
-            return response()->json([
-                'success' => true,
-                'data' => ['data' => $products, 'total' => $products->count()],
-            ]);
-        }
-        
-        // الترقيم الديناميكي (افتراضي: 50 منتج لكل صفحة لضمان الأداء)
-        $products = $query->paginate($request->per_page ?? 50);
+        // ✅ الحل الجذري والنهائي: استخدام get() وإرجاع استجابة JSON متوافقة.
+        // الواجهة الأمامية لا تستخدم paginate، لذا نستخدم get() لجلب كل النتائج.
+        $products = $query->latest()->get();
 
-        return response()->json([
-            'success' => true,
-            'data' => $products,
-        ]);
+        // الواجهة الأمامية تتوقع بنية { data: { data: [...] } }
+        // لذا نلف الاستجابة بهذا الشكل لضمان التوافق التام.
+        return response()->json(['data' => ['data' => $products]]);
     }
 
     /**
-     * إنشاء منتج جديد
-     * 
-     * يدعم:
-     * - إنشاء الفئة، العلامة التجارية، أو الوحدة تلقائياً إذا لم تكن موجودة
-     * - توليد SKU وBarcode تلقائياً
-     * - رفع الصورة
-     * - تفعيل المنتج افتراضياً
-     * 
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
+     * ✅ دالة جديدة ومخصصة لنقطة البيع فقط (لا تغيير هنا).
      */
-    public function store(Request $request)
+    public function getPosProducts(Request $request)
     {
-        // التحقق من صحة البيانات
-        $validated = $request->validate([
-            'name' => 'required|string',
-            'sku' => 'nullable|unique:products',
-            'barcode' => 'nullable|unique:products',
-            'category_id' => 'nullable|exists:categories,id',
-            'category_name' => 'nullable|string',
-            'brand_id' => 'nullable|exists:brands,id',
-            'brand_name' => 'nullable|string',
-            'unit_id' => 'nullable|exists:units,id',
-            'unit_name' => 'nullable|string',
-            'purchase_price' => 'required|numeric|min:0',
-            'selling_price' => 'required|numeric|min:0',
-            'quantity' => 'required|integer|min:0',
-            'reorder_level' => 'integer|min:0',
-            'expiry_date' => 'nullable|date',
-            'description' => 'nullable|string',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:10240',
-            'is_active' => 'boolean',
-        ]);
+        $query = Product::with(['barcodes', 'stockBatches'])
+            ->where('is_active', true);
 
-        // معالجة الفئة - إنشاؤها إذا تم توفير الاسم
-        if (!empty($validated['category_name'])) {
-            $category = \App\Models\Category::firstOrCreate(
-                ['name' => $validated['category_name']]
-            );
-            $validated['category_id'] = $category->id;
-        }
-        
-        // معالجة العلامة التجارية - إنشاؤها إذا تم توفير الاسم
-        if (!empty($validated['brand_name'])) {
-            $brand = \App\Models\Brand::firstOrCreate(
-                ['name' => $validated['brand_name']]
-            );
-            $validated['brand_id'] = $brand->id;
-        }
-        
-        // معالجة الوحدة - إنشاؤها إذا تم توفير الاسم
-        if (!empty($validated['unit_name'])) {
-            // توليد اختصار للوحدة
-            $abbr = preg_match('/^[a-zA-Z]/', $validated['unit_name']) 
-                ? strtolower(substr($validated['unit_name'], 0, 3)) 
-                : 'u' . substr(md5($validated['unit_name']), 0, 2);
-            
-            $unit = \App\Models\Unit::firstOrCreate(
-                ['name' => $validated['unit_name']],
-                ['abbreviation' => $abbr]
-            );
-            $validated['unit_id'] = $unit->id;
-        }
-        
-        // التحقق من وجود الفئة (إلزامي)
-        if (empty($validated['category_id'])) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Category is required',
-            ], 422);
-        }
-        
-        // التحقق من وجود الوحدة (إلزامي)
-        if (empty($validated['unit_id'])) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Unit is required',
-            ], 422);
+        if ($request->has('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('name', 'like', "%$search%")
+                  ->orWhereHas('barcodes', function($barcodeQuery) use ($search) {
+                      $barcodeQuery->where('barcode', 'like', "%$search%");
+                  });
+            });
         }
 
-        // تفعيل المنتج افتراضياً
-        if (!isset($validated['is_active'])) {
-            $validated['is_active'] = true;
-        }
-        
-        // توليد SKU تلقائياً إذا لم يتم توفيره
-        if (empty($validated['sku'])) {
-            $validated['sku'] = 'PRD-' . time() . rand(100, 999);
-        }
-        
-        // توليد Barcode تلقائياً إذا لم يتم توفيره
-        if (empty($validated['barcode'])) {
-            $validated['barcode'] = time() . rand(1000, 9999);
-        }
-        
-        // معالجة رفع الصورة
-        if ($request->hasFile('image')) {
-            $validated['image'] = $request->file('image')->store('products', 'public');
+        if ($request->has('category_id') && $request->category_id !== 'all') {
+            $query->where('category_id', $request->category_id);
         }
 
-        // إنشاء المنتج
-        $product = Product::create($validated);
+        $products = $query->latest()->get();
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Product created successfully',
-            'data' => $product->load(['category', 'brand', 'unit']),
-        ], 201);
+        $transformedProducts = $products->map(function ($product) {
+            return $this->transformProductForPos($product);
+        });
+
+        return response()->json(['success' => true, 'data' => $transformedProducts]);
     }
 
     /**
-     * عرض تفاصيل منتج محدد
-     * 
-     * @param string $id
-     * @return \Illuminate\Http\JsonResponse
+     * ✅ دالة عرض منتج واحد (لا تغيير هنا).
      */
     public function show(string $id)
     {
-        $product = Product::with(['category', 'brand', 'unit'])->find($id);
+        $product = Product::with(['category', 'brand', 'stockBatches', 'barcodes'])->find($id);
 
         if (!$product) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Product not found',
-            ], 404);
+            return response()->json(['success' => false, 'message' => 'Product not found'], 404);
+        }
+        
+        if (request()->boolean('pos')) {
+            $productData = $this->transformProductForPos($product);
+            return response()->json(['success' => true, 'data' => $productData]);
         }
 
-        return response()->json([
-            'success' => true,
-            'data' => $product,
-        ]);
+        return response()->json(['success' => true, 'data' => $product]);
     }
 
     /**
-     * تحديث منتج موجود
-     * 
-     * يدعم:
-     * - تحديث جميع الحقول
-     * - إنشاء الفئة/العلامة/الوحدة إذا تم توفير الاسم
-     * - تحديث الصورة مع حذف الصورة القديمة
-     * 
-     * @param Request $request
-     * @param string $id
-     * @return \Illuminate\Http\JsonResponse
+     * ✅ دالة مركزية ومحسّنة لتحويل بيانات المنتج (مع إصلاح منطق السعر).
      */
-    public function update(Request $request, string $id)
+    protected function transformProductForPos(Product $product): array
     {
-        $product = Product::find($id);
+        $totalStock = $product->stockBatches()->sum('quantity_remaining');
+        
+        $baseUnit = $product->barcodes->firstWhere('is_base_unit', true);
+        $basePrice = $baseUnit ? (float) $baseUnit->selling_price : 0;
 
-        if (!$product) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Product not found',
-            ], 404);
-        }
-
-        // التحقق من صحة البيانات
-        $validated = $request->validate([
-            'name' => 'string',
-            'sku' => 'unique:products,sku,' . $product->id,
-            'barcode' => 'unique:products,barcode,' . $product->id,
-            'category_id' => 'nullable|exists:categories,id',
-            'category_name' => 'nullable|string',
-            'brand_id' => 'nullable|exists:brands,id',
-            'brand_name' => 'nullable|string',
-            'unit_id' => 'nullable|exists:units,id',
-            'unit_name' => 'nullable|string',
-            'purchase_price' => 'numeric|min:0',
-            'selling_price' => 'numeric|min:0',
-            'quantity' => 'integer|min:0',
-            'reorder_level' => 'integer|min:0',
-            'expiry_date' => 'nullable|date',
-            'description' => 'nullable|string',
-            'is_active' => 'boolean',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:10240',
-        ]);
-
-        // معالجة الفئة بالاسم
-        if (!empty($validated['category_name']) && empty($validated['category_id'])) {
-            $category = \App\Models\Category::firstOrCreate(
-                ['name' => $validated['category_name']],
-                ['description' => '']
-            );
-            $validated['category_id'] = $category->id;
-        }
-        unset($validated['category_name']);
-
-        // معالجة العلامة التجارية بالاسم
-        if (!empty($validated['brand_name']) && empty($validated['brand_id'])) {
-            $brand = \App\Models\Brand::firstOrCreate(
-                ['name' => $validated['brand_name']],
-                ['description' => '']
-            );
-            $validated['brand_id'] = $brand->id;
-        }
-        unset($validated['brand_name']);
-
-        // معالجة الوحدة بالاسم
-        if (!empty($validated['unit_name']) && empty($validated['unit_id'])) {
-            $unit = \App\Models\Unit::firstOrCreate(
-                ['name' => $validated['unit_name']],
-                ['abbreviation' => mb_substr($validated['unit_name'], 0, 3)]
-            );
-            $validated['unit_id'] = $unit->id;
-        }
-        unset($validated['unit_name']);
-
-        // معالجة رفع الصورة الجديدة
-        if ($request->hasFile('image')) {
-            // حذف الصورة القديمة إذا كانت موجودة
-            if ($product->image && \Storage::disk('public')->exists($product->image)) {
-                \Storage::disk('public')->delete($product->image);
+        $sellableUnits = $product->barcodes->map(function ($barcode) use ($totalStock, $basePrice) {
+            $price = (float) $barcode->selling_price;
+            
+            if ($price <= 0 && $basePrice > 0) {
+                $price = $basePrice * (float) $barcode->unit_quantity;
             }
-            $validated['image'] = $request->file('image')->store('products', 'public');
-        }
 
-        // تحديث المنتج
-        $product->update($validated);
+            return [
+                'barcode_id' => $barcode->id,
+                'unit_name' => $barcode->unit_name,
+                'selling_price' => $price,
+                'conversion_factor' => (float) $barcode->unit_quantity,
+                'barcode' => $barcode->barcode,
+                'stock_in_this_unit' => $barcode->unit_quantity > 0 ? floor($totalStock / $barcode->unit_quantity) : 0,
+            ];
+        });
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Product updated successfully',
-            'data' => $product->load(['category', 'brand', 'unit']),
-        ]);
+        return [
+            'id' => $product->id,
+            'name' => $product->name,
+            'image_url' => $product->image_url,
+            'total_stock_in_base_units' => (float) $totalStock,
+            'sellable_units' => $sellableUnits,
+        ];
     }
 
-    /**
-     * حذف منتج
-     * 
-     * يقوم بحذف المنتج والصورة المرتبطة به
-     * 
-     * @param string $id
-     * @return \Illuminate\Http\JsonResponse
-     */
-    public function destroy(string $id)
+    // ... (بقية دوال المتحكم store, update, destroy, downloadTemplate تبقى كما هي دون أي تغيير)
+    public function store(StoreProductRequest $request)
     {
-        $product = Product::find($id);
+        $validated = $request->validated();
+        try {
+            $product = DB::transaction(function () use ($validated, $request) {
+                $product = Product::create(['name' => $validated['name'], 'category_id' => $validated['category_id'], 'brand_id' => $validated['brand_id'] ?? null, 'product_type' => $validated['product_type'], 'description' => $validated['description'] ?? null, 'sku' => $validated['sku'] ?? ('PRD-' . time() . rand(100, 999)), 'reorder_level' => $validated['reorder_level'] ?? 0, 'is_active' => $validated['is_active'] ?? true,]);
+                if ($request->hasFile('image')) {
+                    $path = $request->file('image')->store('products', 'public');
+                    $product->image_path = $path;
+                    $product->save();
+                }
+                $product->barcodes()->create(['barcode' => $validated['base_unit']['barcode'] ?? ('PROD-' . $product->id), 'unit_name' => $validated['base_unit']['name'], 'unit_quantity' => 1, 'selling_price' => $validated['base_selling_price'], 'is_base_unit' => true,]);
+                if (!empty($validated['additional_units'])) {
+                    foreach ($validated['additional_units'] as $unit) {
+                        $product->barcodes()->create(['barcode' => $unit['barcode'], 'unit_name' => $unit['name'], 'unit_quantity' => $unit['conversion_factor'], 'selling_price' => $unit['selling_price'] ?? null, 'is_base_unit' => false,]);
+                    }
+                }
+                if (isset($validated['initial_batch']['quantity']) && $validated['initial_batch']['quantity'] > 0) {
+                    $product->stockBatches()->create(['quantity_received' => $validated['initial_batch']['quantity'], 'quantity_remaining' => $validated['initial_batch']['quantity'], 'purchase_price_per_unit' => $validated['initial_batch']['cost_price'], 'expiry_date' => $validated['initial_batch']['expiry_date'] ?? null, 'notes' => 'الدفعة الأولية عند إنشاء المنتج',]);
+                }
+                return $product;
+            });
+            $product->load(['category', 'brand', 'barcodes', 'stockBatches']);
+            return response()->json(['success' => true, 'message' => 'تم إنشاء المنتج بنجاح.', 'data' => $product,], 201);
+        } catch (\Throwable $e) {
+            Log::error("خطأ في إنشاء المنتج: " . $e->getMessage() . " في الملف: " . $e->getFile() . " على السطر: " . $e->getLine());
+            return response()->json(['success' => false, 'message' => 'فشل في إنشاء المنتج. يرجى مراجعة السجلات.', 'error' => $e->getMessage(),], 500);
+        }
+    }
+          /**
+     * ✅ ===================================================================
+     * ✅ دالة التحديث (تمت إعادة كتابتها بالكامل لتكون قوية وموثوقة)
+     * ✅ ===================================================================
+     */
+    public function update(UpdateProductRequest $request, Product $product) // ✅ الحل: استخدام UpdateProductRequest
+    {
+        $validated = $request->validated();
 
-        if (!$product) {
+        try {
+            DB::transaction(function () use ($product, $validated, $request) {
+                // 1. تحديث الحقول الأساسية للمنتج
+                $product->update([
+                    'name' => $validated['name'],
+                    'category_id' => $validated['category_id'],
+                    'brand_id' => $validated['brand_id'] ?? null,
+                    'product_type' => $validated['product_type'],
+                    'description' => $validated['description'] ?? null,
+                    'sku' => $validated['sku'] ?? $product->sku,
+                    'reorder_level' => $validated['reorder_level'] ?? 0,
+                    'is_active' => $validated['is_active'] ?? true,
+                ]);
+
+                // 2. تحديث الصورة إذا تم إرسال صورة جديدة
+                if ($request->hasFile('image')) {
+                    if ($product->image_path && Storage::disk('public')->exists($product->image_path)) {
+                        Storage::disk('public')->delete($product->image_path);
+                    }
+                    $product->image_path = $request->file('image')->store('products', 'public');
+                    $product->save();
+                }
+
+                // 3. تحديث الوحدة الأساسية (باستخدام updateOrCreate لضمان وجودها)
+                $product->barcodes()->updateOrCreate(
+                    ['is_base_unit' => true],
+                    [
+                        'barcode' => $validated['base_unit']['barcode'] ?? ('PROD-' . $product->id),
+                        'unit_name' => $validated['base_unit']['name'],
+                        'unit_quantity' => 1,
+                        'selling_price' => $validated['base_selling_price'],
+                    ]
+                );
+
+                // 4. تحديث الوحدات الإضافية (منطق ذكي: حذف القديم، تحديث الموجود، إضافة الجديد)
+                $incomingUnitIds = collect($validated['additional_units'] ?? [])->pluck('id')->filter();
+                
+                // حذف الوحدات التي لم تعد موجودة
+                $product->barcodes()->where('is_base_unit', false)->whereNotIn('id', $incomingUnitIds)->delete();
+
+                // تحديث أو إنشاء الوحدات الإضافية
+                if (!empty($validated['additional_units'])) {
+                    foreach ($validated['additional_units'] as $unit) {
+                        $product->barcodes()->updateOrCreate(
+                            ['id' => $unit['id'] ?? null], // البحث بالـ ID
+                            [
+                                'barcode' => $unit['barcode'],
+                                'unit_name' => $unit['name'],
+                                'unit_quantity' => $unit['conversion_factor'],
+                                'selling_price' => $unit['selling_price'] ?? null,
+                                'is_base_unit' => false,
+                            ]
+                        );
+                    }
+                }
+            });
+
+            return response()->json([
+                'success' => true,
+                'message' => 'تم تحديث المنتج بنجاح.',
+                'data' => $product->fresh()->load(['category', 'brand', 'barcodes', 'stockBatches']),
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('فشل في تحديث المنتج: ' . $e->getMessage() . ' في الملف: ' . $e->getFile() . ' على السطر: ' . $e->getLine());
             return response()->json([
                 'success' => false,
-                'message' => 'Product not found',
-            ], 404);
+                'message' => 'حدث خطأ أثناء تحديث المنتج.',
+                'error' => $e->getMessage(),
+            ], 500);
         }
-
-        // حذف الصورة إذا كانت موجودة
-        if ($product->image && \Storage::disk('public')->exists($product->image)) {
-            \Storage::disk('public')->delete($product->image);
-        }
-
-        $product->delete();
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Product deleted successfully',
-        ]);
     }
 
-    // =================================================================
-    // **2. إضافة الدالة الجديدة هنا**
-    // =================================================================
-    /**
-     * يقوم بتوليد وتنزيل ملف CSV كقالب لاستيراد المنتجات.
-     * يحتوي الملف على الأعمدة المطلوبة وبيانات تجريبية لتوضيح التنسيق.
-     * هذا الحل يضمن أن القالب دائمًا محدث ومتوافق مع الحقول المطلوبة في قاعدة البيانات.
-     *
-     * @return \Symfony\Component\HttpFoundation\StreamedResponse
-     */
+
+    public function destroy(Product $product)
+    {
+        if ($product->salesInvoiceItems()->exists()) {
+            return response()->json(['success' => false, 'message' => 'Cannot delete product. It is associated with existing sales invoices. You can deactivate it instead.',], 422);
+        }
+        DB::beginTransaction();
+        try {
+            if ($product->image_path && Storage::disk('public')->exists($product->image_path)) {
+                Storage::disk('public')->delete($product->image_path);
+            }
+            $product->delete();
+            DB::commit();
+            return response()->json(['success' => true, 'message' => 'Product deleted successfully']);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Product Deletion Failed: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'An error occurred while deleting the product.',], 500);
+        }
+    }
     public function downloadTemplate(): StreamedResponse
     {
-        $fileName = 'products_template.csv';
-
-        // الأعمدة المطلوبة بناءً على دالة store وقواعد التحقق
-        $headers = [
-            'name',             // (مطلوب) اسم المنتج
-            'sku',              // (اختياري) رمز المنتج
-            'barcode',          // (اختياري) الباركود
-            'category_name',    // (مطلوب) اسم الفئة
-            'brand_name',       // (اختياري) اسم الماركة
-            'unit_name',        // (مطلوب) اسم الوحدة
-            'purchase_price',   // (مطلوب) سعر الشراء
-            'selling_price',    // (مطلوب) سعر البيع
-            'quantity',         // (مطلوب) الكمية الأولية
-            'reorder_level',    // (اختياري) مستوى إعادة الطلب
-            'expiry_date',      // (اختياري) تاريخ الصلاحية (YYYY-MM-DD)
-        ];
-
-        // بيانات تجريبية لتوضيح كيفية ملء الملف
-        $sampleData = [
-            [
-                'name' => 'قهوة أرابيكا فاخرة',
-                'sku' => 'COF-001',
-                'barcode' => '1234567890123',
-                'category_name' => 'مشروبات ساخنة',
-                'brand_name' => 'براند القهوة',
-                'unit_name' => 'كيس',
-                'purchase_price' => 15.50,
-                'selling_price' => 25.00,
-                'quantity' => 100,
-                'reorder_level' => 20,
-                'expiry_date' => '2027-12-31',
-            ],
-            [
-                'name' => 'شاي أخضر عضوي',
-                'sku' => 'TEA-002',
-                'barcode' => '9876543210987',
-                'category_name' => 'مشروبات ساخنة',
-                'brand_name' => 'براند الشاي',
-                'unit_name' => 'علبة',
-                'purchase_price' => 8.00,
-                'selling_price' => 15.00,
-                'quantity' => 150,
-                'reorder_level' => 30,
-                'expiry_date' => '', // يمكن تركه فارغًا
-            ],
-        ];
-
-        // إعداد استجابة لتنزيل الملف مباشرة في المتصفح
-        $response = new StreamedResponse(function () use ($headers, $sampleData) {
+        $fileName = 'قالب_استيراد_المنتجات.csv';
+        $internalHeaders = ['name', 'category_name', 'brand_name', 'product_type', 'description', 'sku', 'base_unit_name', 'base_unit_barcode', 'base_selling_price', 'initial_batch_quantity', 'initial_batch_cost_price', 'initial_batch_expiry_date', 'additional_unit_1_name', 'additional_unit_1_factor', 'additional_unit_1_barcode', 'additional_unit_1_price', 'additional_unit_2_name', 'additional_unit_2_factor', 'additional_unit_2_barcode', 'additional_unit_2_price',];
+        $publicHeaders = ['اسم المنتج (إلزامي)', 'اسم الفئة (إلزامي)', 'اسم الماركة', 'نوع المنتج (Standard أو Weighted)', 'وصف المنتج', 'رمز SKU', 'اسم الوحدة الأساسية (إلزامي)', 'باركود الوحدة الأساسية', 'سعر بيع الوحدة الأساسية (إلزامي)', 'الكمية الأولية', 'تكلفة الشراء الأولية', 'تاريخ الصلاحية الأولي (YYYY-MM-DD)', 'اسم الوحدة الإضافية 1', 'معامل تحويل الوحدة 1', 'باركود الوحدة 1', 'سعر بيع خاص للوحدة 1', 'اسم الوحدة الإضافية 2', 'معامل تحويل الوحدة 2', 'باركود الوحدة 2', 'سعر بيع خاص للوحدة 2',];
+        $sampleData = [['name' => 'مياه نوفا (قارورة)', 'category_name' => 'مشروبات باردة', 'brand_name' => 'نوفا', 'product_type' => 'Standard', 'description' => 'مياه شرب معبأة', 'sku' => 'NOV-WAT-500', 'base_unit_name' => 'قارورة', 'base_unit_barcode' => '6281011100011', 'base_selling_price' => 1, 'initial_batch_quantity' => 480, 'initial_batch_cost_price' => 0.6, 'initial_batch_expiry_date' => '2028-01-01', 'additional_unit_1_name' => 'كرتونة', 'additional_unit_1_factor' => 24, 'additional_unit_1_barcode' => '6281011100012', 'additional_unit_1_price' => 22], ['name' => 'بيبسي (علبة)', 'category_name' => 'مشروبات غازية', 'brand_name' => 'بيبسي', 'product_type' => 'Standard', 'description' => '330 مل', 'sku' => 'PEP-CAN-330', 'base_unit_name' => 'علبة', 'base_unit_barcode' => '6291002123456', 'base_selling_price' => 2.5, 'initial_batch_quantity' => 120, 'initial_batch_cost_price' => 1.75, 'initial_batch_expiry_date' => '', 'additional_unit_1_name' => 'ربطة', 'additional_unit_1_factor' => 6, 'additional_unit_1_barcode' => '6291002123457', 'additional_unit_1_price' => 14],];
+        return new StreamedResponse(function () use ($internalHeaders, $publicHeaders, $sampleData) {
             $handle = fopen('php://output', 'w');
-
-            // إضافة BOM لضمان دعم اللغة العربية في Excel
-            fprintf($handle, chr(0xEF).chr(0xBB).chr(0xBF));
-
-            // كتابة صف العناوين (Headers)
-            fputcsv($handle, $headers);
-
-            // كتابة البيانات التجريبية
+            fprintf($handle, chr(0xEF) . chr(0xBB) . chr(0xBF));
+            fputcsv($handle, $publicHeaders);
             foreach ($sampleData as $row) {
-                fputcsv($handle, $row);
+                $orderedRow = [];
+                foreach ($internalHeaders as $header) {
+                    $orderedRow[] = $row[$header] ?? '';
+                }
+                fputcsv($handle, $orderedRow);
             }
-
             fclose($handle);
-        }, 200, [
-            'Content-Type' => 'text/csv',
-            'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
-        ]);
-
-        return $response;
+        }, 200, ['Content-Type' => 'text/csv; charset=utf-8', 'Content-Disposition' => 'attachment; filename="' . rawurlencode($fileName) . '"',]);
     }
+    // app/Http/Controllers/Api/ProductController.php
+public function updateStatus(Request $request, Product $product)
+{
+    $validated = $request->validate([
+        'is_active' => 'required|boolean',
+    ]);
+
+    $product->is_active = $validated['is_active'];
+    $product->save();
+
+    return response()->json([
+        'success' => true,
+        'message' => 'تم تحديث حالة المنتج بنجاح.',
+        'data' => $product,
+    ]);
+}
+
 }

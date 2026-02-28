@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
-import { Plus, Search, Filter, Edit2, Trash2, Eye, AlertTriangle } from 'lucide-react';
+import { Plus, Search, Filter, Edit2, Trash2, Eye, AlertTriangle, Package, PackageCheck, PackageX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Link } from 'react-router-dom';
@@ -16,35 +16,63 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { useProducts, useDeleteProduct } from '@/hooks/useProducts';
+// ✅ استيراد الـ hook الجديد
+import { useProducts, useDeleteProduct, useUpdateProductStatus } from '@/hooks/useProducts';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { Product } from '@/api/productService';
 
 const ProductsList: React.FC = () => {
   const { t, i18n } = useTranslation();
   const [search, setSearch] = useState('');
   const queryClient = useQueryClient();
 
-  // Fetch products with caching (5 minutes)
-  const { data: productsData, isLoading, error } = useProducts({ search });
+  const { data: productsData, isLoading, error } = useProducts({ 
+    search,
+    with: 'stockBatches,barcodes,category,brand' 
+  });
 
-  // Delete product mutation
   const deleteMutation = useDeleteProduct();
+  // ✅ استخدام الـ hook الجديد والمخصص
+  const updateStatusMutation = useUpdateProductStatus();
 
-  const getStatusBadge = (quantity: number) => {
+  // الدوال المساعدة (لا تغيير هنا)
+  const getTotalStock = (product: Product): number => {
+    if (!product.stock_batches) return 0;
+    return product.stock_batches.reduce((total, batch) => total + Number(batch.quantity_remaining), 0);
+  };
+
+  const getBaseSellingPrice = (product: Product): number => {
+    const baseUnit = product.barcodes?.find(b => b.is_base_unit);
+    return baseUnit ? Number(baseUnit.selling_price) : 0;
+  };
+
+  const getLastCostPrice = (product: Product): number => {
+    if (!product.stock_batches || product.stock_batches.length === 0) return 0;
+    const lastBatch = product.stock_batches[product.stock_batches.length - 1];
+    return Number(lastBatch.purchase_price_per_unit);
+  };
+
+  const getStatusBadge = (product: Product) => {
+    const totalStock = getTotalStock(product);
+    
     let label = t('products.available');
     let styleClass = 'bg-success/10 text-success';
+    let Icon = PackageCheck;
 
-    if (quantity === 0) {
+    if (totalStock === 0) {
       label = t('products.outOfStock');
       styleClass = 'bg-destructive/10 text-destructive';
-    } else if (quantity < 10) {
+      Icon = PackageX;
+    } else if (product.reorder_level && totalStock <= product.reorder_level) {
       label = t('products.lowStock');
       styleClass = 'bg-warning/10 text-warning';
+      Icon = AlertTriangle;
     }
 
     return (
-      <span className={`px-2 py-1 rounded-full text-xs font-medium ${styleClass}`}>
+      <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium ${styleClass}`}>
+        <Icon className="h-3 w-3" />
         {label}
       </span>
     );
@@ -54,7 +82,26 @@ const ProductsList: React.FC = () => {
     deleteMutation.mutate(id);
   };
 
-  const products = productsData?.data?.data || [];
+  /**
+   * ✅ ===================================================================
+   * ✅ الحل: استخدام الـ hook الجديد والمخصص
+   * ✅ ===================================================================
+   */
+  const handleToggleActive = (product: Product) => {
+    const newStatus = !product.is_active;
+    
+    // استدعاء الـ mutation الجديدة
+    updateStatusMutation.mutate({ id: product.id, isActive: newStatus }, {
+      onSuccess: () => {
+        toast.success(newStatus ? 'تم تفعيل المنتج' : 'تم إلغاء تفعيل المنتج');
+      },
+      onError: () => {
+        toast.error('فشل في تحديث حالة المنتج');
+      }
+    });
+  };
+
+  const products: Product[] = productsData?.data?.data || [];
 
   if (isLoading) {
     return (
@@ -79,7 +126,7 @@ const ProductsList: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Header */}
+      {/* Header (لا تغيير هنا) */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-foreground">{t('products.title')}</h1>
@@ -101,7 +148,7 @@ const ProductsList: React.FC = () => {
         </div>
       </div>
 
-      {/* Filters */}
+      {/* Filters (لا تغيير هنا) */}
       <div className="glass-card p-4">
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="relative flex-1">
@@ -120,87 +167,58 @@ const ProductsList: React.FC = () => {
         </div>
       </div>
 
-      {/* Table */}
+      {/* Table (مُحدَّث بالكامل) */}
       <div className="glass-card overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="w-full text-sm">
             <thead className="bg-muted/50">
               <tr>
-                <th className="text-start py-4 px-4 font-medium text-muted-foreground">{t('products.name')}</th>
-                <th className="text-start py-4 px-4 font-medium text-muted-foreground">{t('products.sku')}</th>
-                <th className="text-start py-4 px-4 font-medium text-muted-foreground">{t('products.category')}</th>
-                <th className="text-start py-4 px-4 font-medium text-muted-foreground">{t('products.purchasePrice')}</th>
-                <th className="text-start py-4 px-4 font-medium text-muted-foreground">{t('products.salePrice')}</th>
-                <th className="text-start py-4 px-4 font-medium text-muted-foreground">{t('products.quantity')}</th>
-                <th className="text-start py-4 px-4 font-medium text-muted-foreground">{t('common.status')}</th>
-                <th className="text-start py-4 px-4 font-medium text-muted-foreground">{t('common.actions')}</th>
+                <th className="text-start py-3 px-4 font-medium text-muted-foreground">{t('products.name')}</th>
+                <th className="text-start py-3 px-4 font-medium text-muted-foreground">{t('products.sku')}</th>
+                <th className="text-start py-3 px-4 font-medium text-muted-foreground">{t('products.category')}</th>
+                <th className="text-start py-3 px-4 font-medium text-muted-foreground">آخر تكلفة</th>
+                <th className="text-start py-3 px-4 font-medium text-muted-foreground">سعر البيع (أساسي)</th>
+                <th className="text-start py-3 px-4 font-medium text-muted-foreground">المخزون</th>
+                <th className="text-start py-3 px-4 font-medium text-muted-foreground">{t('common.status')}</th>
+                <th className="text-end py-3 px-4 font-medium text-muted-foreground">{t('common.actions')}</th>
               </tr>
             </thead>
             <tbody>
-              {products.map((product: any, index: number) => (
+              {products.map((product, index) => (
                 <motion.tr
                   key={product.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
                   transition={{ delay: index * 0.05 }}
                   className="border-t border-border hover:bg-muted/30 transition-colors"
                 >
-                  <td className="py-4 px-4">
+                  <td className="py-3 px-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted flex-shrink-0">
+                      <div className="w-10 h-10 rounded-lg overflow-hidden bg-muted flex-shrink-0">
                         <img 
                           src={product.image_url || '/no-image.svg'} 
                           alt={product.name}
                           className="w-full h-full object-cover"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).src = '/no-image.svg';
-                          }}
+                          onError={(e) => { (e.target as HTMLImageElement).src = '/no-image.svg'; }}
                         />
                       </div>
-                      <span className="font-medium text-foreground">
-                        {i18n.language === 'ar' ? (product.name_ar || product.name) : (product.name || product.name_ar)}
-                      </span>
+                      <span className="font-medium text-foreground">{product.name}</span>
                     </div>
                   </td>
-                  <td className="py-4 px-4 text-muted-foreground">{product.sku}</td>
-                  <td className="py-4 px-4 text-muted-foreground">
-                    {product.category ? (i18n.language === 'ar' ? (product.category.name_ar || product.category.name) : (product.category.name || product.category.name_ar)) : '-'}
-                  </td>
-                  <td className="py-4 px-4 text-muted-foreground">${Number(product.purchase_price || 0).toFixed(2)}</td>
-                  <td className="py-4 px-4 font-semibold text-primary">${Number(product.selling_price || 0).toFixed(2)}</td>
-                  <td className="py-4 px-4 text-muted-foreground">{product.quantity}</td>
-                  <td className="py-4 px-4">{getStatusBadge(product.quantity)}</td>
-                  <td className="py-4 px-4">
-                    <div className="flex items-center gap-1">
+                  <td className="py-3 px-4 text-muted-foreground">{product.sku}</td>
+                  <td className="py-3 px-4 text-muted-foreground">{product.category?.name || '-'}</td>
+                  <td className="py-3 px-4 text-muted-foreground">${getLastCostPrice(product).toFixed(2)}</td>
+                  <td className="py-3 px-4 font-semibold text-primary">${getBaseSellingPrice(product).toFixed(2)}</td>
+                  <td className="py-3 px-4 font-semibold">{getTotalStock(product)}</td>
+                  <td className="py-3 px-4">{getStatusBadge(product)}</td>
+                  <td className="py-3 px-4">
+                    <div className="flex items-center justify-end gap-1">
                       <Button 
                         variant="ghost" 
                         size="icon" 
                         className="h-8 w-8"
-                        onClick={() => {
-                          const newStatus = !product.is_active;
-                          const token = localStorage.getItem('auth_token');
-                          fetch(`http://localhost:8000/api/products/${product.id}`, {
-                            method: 'PUT',
-                            headers: { 
-                              'Content-Type': 'application/json',
-                              'Accept': 'application/json',
-                              'Authorization': `Bearer ${token}`,
-                            },
-                            body: JSON.stringify({ is_active: newStatus })
-                          })
-                          .then(res => {
-                            if (!res.ok) throw new Error('Failed to update');
-                            return res.json();
-                          })
-                          .then(() => {
-                            toast.success(newStatus ? 'تم تفعيل المنتج' : 'تم إلغاء تفعيل المنتج');
-                            queryClient.invalidateQueries({ queryKey: ['products'] });
-                          })
-                          .catch(err => {
-                            toast.error('فشل في تحديث حالة المنتج');
-                            console.error(err);
-                          });
-                        }}
+                        onClick={() => handleToggleActive(product)}
+                        disabled={updateStatusMutation.isPending} // ✅ استخدام الحالة الصحيحة
                       >
                         <Eye className={`w-4 h-4 ${product.is_active ? 'text-success' : 'text-muted-foreground'}`} />
                       </Button>
@@ -215,6 +233,7 @@ const ProductsList: React.FC = () => {
                             variant="ghost" 
                             size="icon" 
                             className="h-8 w-8 text-destructive hover:text-destructive"
+                            disabled={deleteMutation.isPending}
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>
@@ -246,8 +265,9 @@ const ProductsList: React.FC = () => {
               ))}
               {products.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="py-8 text-center text-muted-foreground">
-                    {t('common.noData')}
+                  <td colSpan={8} className="py-16 text-center text-muted-foreground">
+                    <Package className="mx-auto h-12 w-12 opacity-50" />
+                    <p className="mt-4">{t('common.noData')}</p>
                   </td>
                 </tr>
               )}
