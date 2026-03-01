@@ -3,62 +3,43 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Product;
 use App\Models\PurchaseInvoice;
 use App\Models\PurchaseInvoiceItem;
-use App\Models\Product;
+use App\Models\ProductStockBatch;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
-/**
- * متحكم فواتير المشتريات
- * 
- * يدير جميع العمليات المتعلقة بفواتير الشراء من الموردين
- * مع دعم الترقيم التلقائي والضريبة والخصم
- */
 class PurchaseInvoiceController extends Controller
 {
     /**
      * عرض قائمة فواتير المشتريات مع الفلترة
-     * 
-     * يدعم:
-     * - الفلترة حسب نطاق التاريخ
-     * - البحث برقم الفاتورة
-     * - الفلترة حسب المورد
-     * - الترقيم الديناميكي
-     * 
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
      */
     public function index(Request $request)
     {
-        // استعلام أساسي مع تحميل العلاقات
         $query = PurchaseInvoice::with(['supplier', 'items.product', 'creator']);
 
-        // الفلترة حسب تاريخ البداية
         if ($request->has('from_date') && $request->from_date) {
             $query->whereDate('invoice_date', '>=', $request->from_date);
         }
         
-        // الفلترة حسب تاريخ النهاية
         if ($request->has('to_date') && $request->to_date) {
             $query->whereDate('invoice_date', '<=', $request->to_date);
         }
 
-        // البحث برقم الفاتورة
         if ($request->has('search') && $request->search) {
             $query->where('invoice_number', 'like', '%' . $request->search . '%');
         }
 
-        // الفلترة حسب المورد
         if ($request->has('supplier_id') && $request->supplier_id) {
             $query->where('supplier_id', $request->supplier_id);
         }
 
-        // الفلترة حسب الحالة
         if ($request->has('status') && $request->status) {
             $query->where('status', $request->status);
         }
 
-        // الترتيب حسب الأحدث أولاً مع الترقيم
         $invoices = $query->orderBy('invoice_date', 'desc')
                           ->paginate($request->get('per_page', 50));
 
@@ -69,129 +50,75 @@ class PurchaseInvoiceController extends Controller
     }
 
     /**
-     * إنشاء فاتورة شراء جديدة
-     * 
-     * العملية:
-     * 1. توليد رقم فاتورة تلقائي (PUR-YYYYMMDD-XXXX)
-     * 2. حساب المجموع الفرعي والضريبة والخصم
-     * 3. إنشاء الفاتورة الرئيسية
-     * 4. إنشاء عناصر الفاتورة (المنتجات)
-     * 5. إضافة الكميات إلى المخزون
-     * 6. إرجاع الفاتورة الكاملة مع العلاقات
-     * 
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
+     * ✅ ===================================================================
+     * ✅ دالة إنشاء فاتورة شراء جديدة (النسخة النهائية والمحدثة)
+     * ✅ ===================================================================
      */
     public function store(Request $request)
     {
-        // التحقق من صحة البيانات
         $validated = $request->validate([
             'supplier_id' => 'required|exists:suppliers,id',
             'invoice_date' => 'required|date',
-            'due_date' => 'nullable|date|after_or_equal:invoice_date',
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
-            'items.*.quantity' => 'required|integer|min:1',
-            'items.*.unit_price' => 'required|numeric|min:0',
-            'tax_amount' => 'nullable|numeric|min:0',
-            'discount_amount' => 'nullable|numeric|min:0',
-            'paid_amount' => 'nullable|numeric|min:0',
-            'notes' => 'nullable|string',
+            'items.*.quantity' => 'required|numeric|min:0.001',
+            'items.*.purchase_price_per_unit' => 'required|numeric|min:0',
+            'items.*.expiry_date' => 'nullable|date|after_or_equal:today',
         ]);
 
-        // بدء معاملة قاعدة البيانات
-        \DB::beginTransaction();
-        
         try {
-            // حساب المجموع الفرعي (مجموع أسعار جميع المنتجات)
-            $subtotal = 0;
-            foreach ($validated['items'] as $item) {
-                $subtotal += $item['quantity'] * $item['unit_price'];
-            }
-
-            // حساب الضريبة والخصم
-            $taxAmount = $validated['tax_amount'] ?? 0;
-            $discountAmount = $validated['discount_amount'] ?? 0;
-
-            // حساب المجموع الإجمالي
-            $totalAmount = $subtotal + $taxAmount - $discountAmount;
-
-            // توليد رقم الفاتورة التلقائي
-            // الصيغة: PUR-YYYYMMDD-XXXX (مثال: PUR-20231220-0001)
-            $lastInvoice = PurchaseInvoice::orderBy('id', 'desc')->first();
-            $invoiceNumber = 'PUR-' . date('Ymd') . '-' . str_pad(
-                ($lastInvoice ? $lastInvoice->id + 1 : 1), 
-                4, 
-                '0', 
-                STR_PAD_LEFT
-            );
-
-            // إنشاء الفاتورة الرئيسية
-            $invoice = PurchaseInvoice::create([
-                'invoice_number' => $invoiceNumber,
-                'supplier_id' => $validated['supplier_id'],
-                'invoice_date' => $validated['invoice_date'],
-                'due_date' => $validated['due_date'] ?? null,
-                'subtotal' => $subtotal,
-                'tax_amount' => $taxAmount,
-                'discount_amount' => $discountAmount,
-                'total_amount' => $totalAmount,
-                'paid_amount' => $validated['paid_amount'] ?? 0,
-                'status' => 'completed',
-                'notes' => $validated['notes'] ?? null,
-                'created_by' => auth()->id(),
-            ]);
-
-            // معالجة عناصر الفاتورة (المنتجات)
-            foreach ($validated['items'] as $item) {
-                // إنشاء عنصر الفاتورة
-                PurchaseInvoiceItem::create([
-                    'purchase_invoice_id' => $invoice->id,
-                    'product_id' => $item['product_id'],
-                    'quantity' => $item['quantity'],
-                    'unit_price' => $item['unit_price'],
-                    'total_price' => $item['quantity'] * $item['unit_price'],
+            $invoice = DB::transaction(function () use ($validated, $request) {
+                // 2. إنشاء فاتورة الشراء الرئيسية مع قيمة أولية للمبلغ الإجمالي
+                $invoice = PurchaseInvoice::create([
+                    'supplier_id' => $validated['supplier_id'],
+                    'invoice_date' => $validated['invoice_date'],
+                    'invoice_number' => 'PUR-' . date('Ymd') . '-' . str_pad(PurchaseInvoice::count() + 1, 4, '0', STR_PAD_LEFT),
+                    'created_by' => $request->user()->id,
+                    'total_amount' => 0, // ✅ الحل: إضافة قيمة أولية هنا
                 ]);
-                
-                // إضافة الكمية إلى المخزون
-                $product = Product::find($item['product_id']);
-                if ($product) {
-                    $product->increment('quantity', $item['quantity']);
+
+                $totalInvoiceAmount = 0;
+
+                // 3. معالجة كل عنصر وإضافة دفعة مخزون جديدة
+                foreach ($validated['items'] as $itemData) {
+                    ProductStockBatch::create([
+                        'product_id' => $itemData['product_id'],
+                        'purchase_invoice_id' => $invoice->id,
+                        'quantity_received' => $itemData['quantity'],
+                        'quantity_remaining' => $itemData['quantity'],
+                        'purchase_price_per_unit' => $itemData['purchase_price_per_unit'],
+                        'expiry_date' => $itemData['expiry_date'] ?? null,
+                    ]);
+
+                    $totalItemPrice = $itemData['quantity'] * $itemData['purchase_price_per_unit'];
+                    PurchaseInvoiceItem::create([
+                        'purchase_invoice_id' => $invoice->id,
+                        'product_id' => $itemData['product_id'],
+                        'quantity' => $itemData['quantity'],
+                        'unit_price' => $itemData['purchase_price_per_unit'],
+                        'total_price' => $totalItemPrice,
+                    ]);
+
+                    $totalInvoiceAmount += $totalItemPrice;
                 }
-            }
 
-            // تأكيد المعاملة
-            \DB::commit();
+                // 6. تحديث المبلغ الإجمالي للفاتورة بالقيمة النهائية
+                $invoice->total_amount = $totalInvoiceAmount;
+                $invoice->save();
 
-            // إرجاع الفاتورة الكاملة مع العلاقات
-            return response()->json([
-                'success' => true,
-                'message' => 'تمت إضافة فاتورة الشراء بنجاح',
-                'data' => $invoice->load(['supplier', 'items.product', 'creator']),
-            ], 201);
-            
+                return $invoice;
+            });
+
+            return response()->json(['success' => true, 'message' => 'تم إنشاء فاتورة الشراء وإضافة المخزون بنجاح.', 'data' => $invoice], 201);
+
         } catch (\Exception $e) {
-            // التراجع عن جميع التغييرات في حالة الخطأ
-            \DB::rollBack();
-            
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage(),
-            ], 422);
+            Log::error("خطأ في إنشاء فاتورة الشراء: " . $e->getMessage() . " في الملف: " . $e->getFile() . " على السطر: " . $e->getLine());
+            return response()->json(['success' => false, 'message' => 'حدث خطأ غير متوقع أثناء إنشاء الفاتورة.', 'error' => $e->getMessage()], 500);
         }
     }
 
     /**
      * عرض تفاصيل فاتورة شراء محددة
-     * 
-     * يتضمن:
-     * - بيانات الفاتورة الأساسية
-     * - بيانات المورد
-     * - عناصر الفاتورة مع تفاصيل المنتجات
-     * - الكميات المرتجعة والمتاحة للإرجاع لكل منتج
-     * 
-     * @param string $id
-     * @return \Illuminate\Http\JsonResponse
      */
     public function show(string $id)
     {
@@ -209,7 +136,6 @@ class PurchaseInvoiceController extends Controller
             ], 404);
         }
 
-        // إضافة معلومات الكميات المتاحة للإرجاع لكل منتج
         $invoice->items->each(function($item) use ($invoice) {
             $item->returned_quantity = $invoice->getReturnedQuantity($item->product_id);
             $item->available_return_quantity = $invoice->getAvailableReturnQuantity($item->product_id);
@@ -223,10 +149,6 @@ class PurchaseInvoiceController extends Controller
 
     /**
      * تحديث فاتورة شراء موجودة
-     * 
-     * @param Request $request
-     * @param string $id
-     * @return \Illuminate\Http\JsonResponse
      */
     public function update(Request $request, string $id)
     {
@@ -239,7 +161,6 @@ class PurchaseInvoiceController extends Controller
             ], 404);
         }
 
-        // التحقق من صحة البيانات
         $validated = $request->validate([
             'paid_amount' => 'nullable|numeric|min:0',
             'status' => 'nullable|in:completed,pending,cancelled',
@@ -257,11 +178,6 @@ class PurchaseInvoiceController extends Controller
 
     /**
      * حذف فاتورة شراء
-     * 
-     * تحذير: سيتم حذف جميع عناصر الفاتورة والمرتجعات المرتبطة
-     * 
-     * @param string $id
-     * @return \Illuminate\Http\JsonResponse
      */
     public function destroy(string $id)
     {
@@ -274,20 +190,13 @@ class PurchaseInvoiceController extends Controller
             ], 404);
         }
 
-        \DB::beginTransaction();
+        DB::beginTransaction();
         
         try {
-            // خصم الكميات من المخزون قبل الحذف
-            foreach ($invoice->items as $item) {
-                $product = Product::find($item->product_id);
-                if ($product) {
-                    $product->decrement('quantity', $item->quantity);
-                }
-            }
-
+            ProductStockBatch::where('purchase_invoice_id', $invoice->id)->delete();
             $invoice->delete();
 
-            \DB::commit();
+            DB::commit();
 
             return response()->json([
                 'success' => true,
@@ -295,7 +204,7 @@ class PurchaseInvoiceController extends Controller
             ]);
             
         } catch (\Exception $e) {
-            \DB::rollBack();
+            DB::rollBack();
             
             return response()->json([
                 'success' => false,
@@ -306,11 +215,6 @@ class PurchaseInvoiceController extends Controller
 
     /**
      * الحصول على قائمة المنتجات في فاتورة مع الكميات المتاحة للإرجاع
-     * 
-     * يستخدم في صفحة المرتجعات لعرض المنتجات المتاحة للإرجاع
-     * 
-     * @param string $id
-     * @return \Illuminate\Http\JsonResponse
      */
     public function getItemsForReturn(string $id)
     {
@@ -323,7 +227,6 @@ class PurchaseInvoiceController extends Controller
             ], 404);
         }
 
-        // إضافة معلومات الكميات لكل منتج
         $items = $invoice->items->map(function($item) use ($invoice) {
             return [
                 'id' => $item->id,

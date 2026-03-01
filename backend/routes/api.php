@@ -27,6 +27,7 @@ use App\Http\Controllers\Api\SettingsController;
 use App\Http\Controllers\Api\AttendanceController;
 use App\Http\Controllers\Api\SalesPerformanceController;
 use App\Http\Controllers\Api\ProfileController;
+use App\Http\Controllers\Api\SearchController; // ✅ إضافة: استدعاء متحكم البحث الجديد
 
 /*
 |--------------------------------------------------------------------------
@@ -60,7 +61,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/profile/avatar', [ProfileController::class, 'deleteAvatar']);
     Route::post('/profile/change-password', [ProfileController::class, 'changePassword']);
 
+    // ✅ ===================================================================
+    // ✅  مسارات البحث المخصصة (Search Routes)
+    // ✅ ===================================================================
+    Route::get('/search/products-for-purchase', [SearchController::class, 'searchProductsForPurchase']);
+
+
     // Products routes
+    Route::get('/products/search', [App\Http\Controllers\Api\ProductController::class, 'search']);
     Route::apiResource('products', ProductController::class);
     Route::post('products/import', [ImportController::class, 'importProducts']);
     Route::post('products/{product}/barcode', [ProductController::class, 'generateBarcode']);
@@ -109,7 +117,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('debts', DebtController::class);
     Route::post('debts/{debt}/payment', [DebtController::class, 'recordPayment']);
     Route::get('debts/summary/pending', [DebtController::class, 'pendingSummary']);
-// ** إضافة: مسارات الديون الجديدة **
+    // ** إضافة: مسارات الديون الجديدة **
     Route::get('/customer-debts-summary', [App\Http\Controllers\Api\DebtController::class, 'getDebtsSummary']);
     Route::post('/debts/pay', [App\Http\Controllers\Api\DebtController::class, 'storePayment']);
     Route::get('/customers/{customer}/debts', [App\Http\Controllers\Api\CustomerController::class, 'getDebtDetails']);
@@ -124,9 +132,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Product Returns routes (Sales Returns)
     Route::apiResource('product-returns', ProductReturnController::class);
-     Route::get('/pos/products', [ProductController::class, 'getPosProducts']);
-   
-Route::patch('products/{product}/status', [App\Http\Controllers\Api\ProductController::class, 'updateStatus']);
+    Route::get('/pos/products', [ProductController::class, 'getPosProducts']);
+
+    Route::patch('products/{product}/status', [App\Http\Controllers\Api\ProductController::class, 'updateStatus']);
 
     Route::post('product-returns/{return}/approve', [ProductReturnController::class, 'approve']);
     Route::post('product-returns/{return}/reject', [ProductReturnController::class, 'reject']);

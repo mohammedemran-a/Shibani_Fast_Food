@@ -305,6 +305,45 @@ public function updateStatus(Request $request, Product $product)
             ], 500);
         }
     }
+           /**
+     * ✅ ===================================================================
+     * ✅ الحل: تعديل ترتيب بناء الاستعلام لتحميل العلاقات بعد الفلترة
+     * ✅ ===================================================================
+     * 
+     * هذه الدالة تبحث عن المنتجات حسب الاسم أو الـ SKU.
+     * تستخدم Pagination لضمان الأداء العالي حتى مع آلاف المنتجات.
+     * تعيد كائن المنتج كاملاً مع علاقة الباركود لتعمل الواجهة الأمامية بشكل صحيح.
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function search(Request $request)
+    {
+        $request->validate([
+            'query' => 'nullable|string|max:255',
+            'limit' => 'nullable|integer|min:1|max:50'
+        ]);
 
+        $searchQuery = $request->input('query', '');
+        $limit = $request->input('limit', 10);
+
+        // ✅ بناء الاستعلام الأساسي بدون تحميل العلاقات في البداية
+        $query = \App\Models\Product::query();
+
+        // ✅ تطبيق الفلترة فقط إذا كان هناك مصطلح بحث
+        if (!empty($searchQuery)) {
+            $query->where(function ($q) use ($searchQuery) {
+                $q->where('name', 'LIKE', "%{$searchQuery}%")
+                  ->orWhere('sku', 'LIKE', "%{$searchQuery}%");
+            });
+        }
+
+        // ✅ جلب النتائج مع تحميل العلاقات في النهاية وتحديد العدد الأقصى
+        $products = $query->with('barcodes') // 👈 تم نقل `with` إلى هنا
+                         ->take($limit)
+                         ->get();
+
+        return response()->json($products);
+    }
 
 }

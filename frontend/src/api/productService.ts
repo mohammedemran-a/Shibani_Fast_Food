@@ -1,6 +1,7 @@
 import apiClient from './apiClient';
 import { PRODUCTS_ENDPOINTS } from './endpoints';
 
+
 // =================================================================
 // 1. تعريف الأنواع (لا تغيير هنا)
 // =================================================================
@@ -17,12 +18,14 @@ export interface ProductStockBatch {
     updated_at: string;
 }
 
+// ✅ إضافة: تعريف سعر الشراء الافتراضي في الوحدة
 export interface ProductBarcode {
     id: number;
     product_id: number;
     barcode?: string | null;
     unit_name: string;
     unit_quantity: number;
+    purchase_price?: number | null; // ✅ إضافة: سعر الشراء الافتراضي
     selling_price?: number | null;
     is_base_unit: boolean;
     created_at: string;
@@ -90,6 +93,7 @@ export interface GenericResponse {
 // =================================================================
 
 class ProductService {
+  
   async getProducts(params?: Record<string, any>): Promise<ProductsResponse> {
     const response = await apiClient.get<ProductsResponse>(PRODUCTS_ENDPOINTS.LIST, { params });
     return response.data;
@@ -122,7 +126,10 @@ class ProductService {
     );
     return response.data;
   }
-
+  async searchProducts(query: string) {
+    const response = await apiClient.get('/products/search', { params: { query, limit: 10 } });
+    return response.data;
+  }
   async deleteProduct(id: number): Promise<GenericResponse> {
     const response = await apiClient.delete<GenericResponse>(PRODUCTS_ENDPOINTS.DELETE(id));
     return response.data;
@@ -154,18 +161,27 @@ class ProductService {
   }
 }
 
-// =================================================================
-// 3. الحل الجذري والنهائي: تعريف وتصدير الدالة الجديدة بشكل صحيح
-// =================================================================
-
-/**
- * ✅ دالة جديدة ومخصصة لتحديث حالة المنتج فقط
- */
 export const updateProductStatus = async (id: number, isActive: boolean): Promise<GenericResponse> => {
-    // ✅ استخدام `patch` والمسار الجديد
     const response = await apiClient.patch<GenericResponse>(`/products/${id}/status`, { is_active: isActive });
     return response.data;
 };
+
+/**
+ * ✅ ===================================================================
+ * ✅  دالة جديدة: بحث مخصص عن المنتجات لشاشة "إضافة فاتورة شراء"
+ * ✅ ===================================================================
+ * 
+ * تستدعي هذه الدالة نقطة النهاية المخصصة للبحث عن المنتجات في شاشة المشتريات.
+ * @param query - مصطلح البحث (اسم المنتج أو SKU).
+ * @returns قائمة بالمنتجات المطابقة مع الوحدات الخاصة بها.
+ */
+export const searchProductsForPurchase = async (query: string): Promise<Product[]> => {
+    const response = await apiClient.get<Product[]>('/search/products-for-purchase', {
+        params: { query, limit: 15 } 
+    });
+    return response.data;
+};
+
 
 const productService = new ProductService();
 
