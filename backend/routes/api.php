@@ -28,7 +28,7 @@ use App\Http\Controllers\Api\AttendanceController;
 use App\Http\Controllers\Api\SalesPerformanceController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\SearchController; // ✅ إضافة: استدعاء متحكم البحث الجديد
-
+use App\Http\Controllers\Api\EmployeeController;
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -53,7 +53,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', function (Request $request) {
         return $request->user();
     });
-
+Route::apiResource('employees', EmployeeController::class)->only(['index', 'show', 'update']);
     // Profile routes
     Route::get('/profile', [ProfileController::class, 'show']);
     Route::put('/profile', [ProfileController::class, 'update']);
