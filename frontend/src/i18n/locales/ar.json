@@ -38,7 +38,8 @@
     "people": "الأشخاص",
     "employees": "الموظفون",
     "tablesLayout": " الطاولات",
-    "kitchenDisplay": " المطبخ"
+    "kitchenDisplay": " المطبخ",
+    "inventory": "المخزون"
   },
   "dashboard": {
     "title": "لوحة التحكم",

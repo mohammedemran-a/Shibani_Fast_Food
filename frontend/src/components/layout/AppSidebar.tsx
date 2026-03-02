@@ -110,6 +110,11 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ isOpen, onToggle }) => {
       path: "/kitchen",
     },
     {
+      label: t("nav.inventory"),
+      icon: Package,
+      path: "/inventory",
+    },
+    {
       label: t("nav.products"),
       icon: Package,
       permission: "view_products",

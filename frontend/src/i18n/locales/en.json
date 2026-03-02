@@ -38,7 +38,8 @@
     "people": "People",
     "employees": "Employees",
     "tablesLayout": "Tables",
-    "kitchenDisplay": "Kitchen"
+    "kitchenDisplay": "Kitchen",
+    "inventory": "Inventory"
   },
   "dashboard": {
     "title": "Dashboard",

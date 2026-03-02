@@ -50,6 +50,7 @@ import { ExpenseManagement } from "@/pages/Expenses";
 import NotFound from "./pages/NotFound";
 import Unauthorized from "./pages/Unauthorized";
 import { KitchenDisplayPage } from "./pages/Kitchen";
+import { InventoryPage } from "@/pages/Inventory";
 
 const queryClient = new QueryClient();
 
@@ -94,8 +95,9 @@ const AppContent = () => {
                 </ProtectedRoute>
               }
             />
-          <Route path="/tables" element={<TablesLayoutPage />} />
-          <Route path="/kitchen" element={<KitchenDisplayPage />} />
+            <Route path="/tables" element={<TablesLayoutPage />} />
+            <Route path="/kitchen" element={<KitchenDisplayPage />} />
+            <Route path="/inventory" element={<InventoryPage />} />
             <Route
               path="/products/add"
               element={
