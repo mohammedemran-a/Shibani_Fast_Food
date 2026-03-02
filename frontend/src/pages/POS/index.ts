@@ -1,1 +1,1 @@
-export { default } from './POS';
+export { default } from './RestaurantPOSPage';

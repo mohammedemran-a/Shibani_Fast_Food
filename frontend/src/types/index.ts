@@ -1,47 +1,55 @@
-// src/types/index.ts
+// ===================================================================
+// أنواع البيانات الأساسية
+// ===================================================================
 
-// يمثل شكل الوحدة القابلة للبيع كما تأتي من الـ API الذكي الذي بنيناه
-export interface SellableUnit {
-    product_id: number;
-    product_name: string;
-    barcode_id: number;
-    unit_name: string;
-    barcode: string;
-    selling_price: number;
-    conversion_factor: number;
-    stock_in_this_unit: number;
-    image_url: string;
+export interface ProductCategory {
+  id: string;
+  name: string;
 }
 
-// يمثل شكل المنتج الكامل كما يأتي من الـ API لنقطة البيع
-export interface PosProduct {
-    id: number;
-    name: string;
-    image_url: string;
-    total_stock_in_base_units: number;
-    sellable_units: SellableUnit[];
+export interface Modifier {
+  id: string;
+  name: string;
+  price: number;
 }
 
-// يمثل شكل العنصر داخل سلة التسوق
-// لاحظ أنه يرث من SellableUnit ويضيف حقل الكمية
-export interface CartItem extends SellableUnit {
-    quantity: number;
+export interface Ingredient {
+  id: string;
+  name: string;
 }
 
-// يمثل شكل العميل
-export interface Customer {
-    id: number;
-    name: string;
-    phone?: string;
+export interface RestaurantProduct {
+  id: string;
+  name: string;
+  price: number;
+  categoryId: string;
+  imageUrl?: string;
+  availableModifiers?: Modifier[];
+  baseIngredients?: Ingredient[];
 }
 
-/**
- * ✅ ===================================================================
- * ✅ الحل: إضافة تعريف وتصدير النوع 'Category'
- * ✅ ===================================================================
- */
-export interface Category {
-    id: number | string; // استخدام 'string' يجعله متوافقًا مع خيار "الكل"
-    name: string;
-    description?: string | null;
+// ===================================================================
+// أنواع بيانات الطلبات والسلة
+// ===================================================================
+
+export interface RestaurantCartItem extends RestaurantProduct {
+  cartItemId: string; 
+  quantity: number;
+  notes?: string;
+  selectedModifiers?: Modifier[];
+  excludedIngredients?: Ingredient[];
+}
+
+export enum OrderType {
+  Takeaway = 'سفري',
+  Delivery = 'توصيل',
+  DineIn = 'محلي',
+  Apps = 'تطبيقات',
+}
+
+// ✅✅✅ الخطوة 1: إضافة تعريف DiscountType هنا ✅✅✅
+export enum DiscountType {
+  None,
+  Percentage,
+  FixedAmount,
 }

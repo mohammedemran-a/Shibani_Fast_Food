@@ -28,6 +28,7 @@ export interface SalesInvoice {
   updated_at: string;
 }
 
+// ✅✅✅ تم تعديل هذه الواجهة فقط ✅✅✅
 export interface CreateSalesInvoiceRequest {
   customer_id?: number | null;
   invoice_date: string;
@@ -38,6 +39,9 @@ export interface CreateSalesInvoiceRequest {
   discount_amount?: number;
   tax_amount?: number;
   notes?: string | null;
+  // الحقول الجديدة التي تتوقعها الواجهة الخلفية
+  subtotal?: number;
+  total_amount?: number;
 }
 
 export interface SalesInvoiceResponse {

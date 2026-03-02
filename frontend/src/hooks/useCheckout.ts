@@ -1,82 +1,83 @@
-// src/hooks/useCheckout.ts
-
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import apiClient from '@/api/apiClient';
+import { salesService, CreateSalesInvoiceRequest } from '../api/salesService';
+import { useCartStore } from './useCartStore';
 import { toast } from 'sonner';
-import { useCart } from './useCart';
-import { Customer } from '@/types';
+import { useMemo } from 'react';
+import { DiscountType } from '../types';
 
-export interface CheckoutDetails {
-    payment_method: 'cash' | 'wallet' | 'debt';
-    customer_id: number | null;
-    walletType?: string;
-    transactionCode?: string;
+export interface RestaurantCheckoutPayload {
+  paymentMethod: 'cash' | 'wallet';
+  paymentDetails?: {
+    walletProvider: string;
+    transactionCode: string;
+  };
 }
 
 export const useCheckout = () => {
-    const queryClient = useQueryClient();
+  const queryClient = useQueryClient();
+  const { items, orderType, discountType, discountValue, clearCart } = useCartStore();
 
-    const checkoutMutation = useMutation({
-        mutationFn: async (details: CheckoutDetails) => {
-            // الوصول إلى الحالة الحالية للسلة عند التنفيذ
-            const { items, subtotal } = useCart.getState();
+  const calculations = useMemo(() => {
+    const subtotal = items.reduce((total, item) => {
+      const modifiersPrice = item.selectedModifiers?.reduce((modTotal, mod) => modTotal + mod.price, 0) || 0;
+      const itemTotal = (item.price + modifiersPrice) * item.quantity;
+      return total + itemTotal;
+    }, 0);
 
-            if (items.length === 0) {
-                return Promise.reject(new Error('السلة فارغة. لا يمكن إتمام العملية.'));
-            }
+    let totalDiscount = 0;
+    if (discountType === DiscountType.Percentage) {
+      const percentage = Math.min(100, discountValue);
+      totalDiscount = (subtotal * percentage) / 100;
+    } else if (discountType === DiscountType.FixedAmount) {
+      totalDiscount = Math.min(subtotal, discountValue);
+    }
 
-            const taxRate = 0.15;
-            const taxAmount = subtotal * taxRate;
-            const totalAmount = subtotal + taxAmount;
+    const totalAmount = subtotal - totalDiscount;
 
-            const invoicePayload = {
-                customer_id: details.customer_id,
-                payment_method: details.payment_method,
-                subtotal: subtotal,
-                tax: taxAmount,
-                total: totalAmount,
-                discount: 0,
-                notes: details.payment_method === 'debt' ? 'فاتورة دين من نقطة البيع' : '',
-                
-                // ✅ =================================================
-                // ✅ التصحيح الجذري والنهائي
-                // ✅ =================================================
-                items: items.map(item => ({
-                    product_id: item.product_id,
-                    barcode_id: item.barcode_id, // ✅ إرسال barcode_id (مفتاح منطق FIFO)
-                    quantity: item.quantity,
-                    unit_price: item.selling_price, // إرسال سعر الوحدة المباعة
-                })),
-                
-                ...(details.payment_method === 'wallet' && {
-                    wallet_type: details.walletType,
-                    transaction_code: details.transactionCode,
-                }),
-            };
+    return { subtotal, totalDiscount, totalAmount };
+  }, [items, discountType, discountValue]);
 
-            // هذا هو السطر الذي يسبب الخطأ (useCheckout.ts:51)
-            return apiClient.post('/sales-invoices', invoicePayload);
-        },
+  const { mutate, isPending } = useMutation({
+    mutationFn: async (payload: RestaurantCheckoutPayload) => {
+      if (items.length === 0) {
+        return Promise.reject(new Error('السلة فارغة. لا يمكن إتمام العملية.'));
+      }
 
-        onSuccess: (response) => {
-            toast.success(response.data.message || 'تمت عملية البيع بنجاح!');
-            
-            // الوصول إلى دالة مسح السلة
-            const { clearCart } = useCart.getState();
-            clearCart(); 
-            
-            // إعادة تحميل البيانات الحيوية
-            queryClient.invalidateQueries({ queryKey: ['pos_products'] });
-            queryClient.invalidateQueries({ queryKey: ['dashboard_stats'] });
-            queryClient.invalidateQueries({ queryKey: ['recentCustomers'] });
-        },
+      // ✅✅✅ التصحيح الجذري لحمولة الطلب ✅✅✅
+      const invoicePayload: CreateSalesInvoiceRequest = {
+        invoice_date: new Date().toISOString(),
+        payment_method: payload.paymentMethod,
+        items: items.map(item => ({
+          product_id: parseInt(item.id, 10),
+          quantity: item.quantity,
+          unit_price: item.price,
+        })),
+        // إضافة الحقول المطلوبة من الواجهة الخلفية
+        subtotal: calculations.subtotal, // ✅ إضافة المجموع الفرعي
+        discount_amount: calculations.totalDiscount,
+        total_amount: calculations.totalAmount, // ✅ إضافة الإجمالي النهائي
+        notes: `طلب ${orderType}`,
+        ...(payload.paymentMethod === 'wallet' && {
+          wallet_name: payload.paymentDetails?.walletProvider,
+          transaction_code: payload.paymentDetails?.transactionCode,
+        }),
+      };
+      
+      return salesService.createSalesInvoice(invoicePayload);
+    },
+    onSuccess: (response) => {
+      toast.success(response.message || 'تم إنشاء الطلب بنجاح!');
+      clearCart();
+    },
+    onError: (error: any) => {
+      const message = error.response?.data?.message || 'حدث خطأ أثناء إتمام العملية.';
+      toast.error(message);
+    },
+  });
 
-        onError: (error: any) => {
-            // عرض رسالة خطأ واضحة للمستخدم
-            const message = error.response?.data?.message || error.message || 'حدث خطأ أثناء إتمام العملية.';
-            toast.error(message);
-        },
-    });
-
-    return checkoutMutation;
+  return { 
+    processCheckout: mutate, 
+    isPending,
+    ...calculations
+  };
 };
