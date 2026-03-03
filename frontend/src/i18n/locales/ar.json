@@ -39,7 +39,8 @@
     "employees": "الموظفون",
     "tablesLayout": " الطاولات",
     "kitchenDisplay": " المطبخ",
-    "inventory": "المخزون"
+    "inventory": "المخزون",
+     "employeesList": "الموظفين"
   },
   "dashboard": {
     "title": "لوحة التحكم",

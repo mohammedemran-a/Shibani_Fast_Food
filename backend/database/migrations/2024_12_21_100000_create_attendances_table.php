@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('attendances', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
+            $table->foreignId('employee_id')->constrained('employees')->onDelete('cascade');
             $table->date('date');
             $table->time('check_in')->nullable();
             $table->time('check_out')->nullable();
@@ -23,8 +23,8 @@ return new class extends Migration
             $table->timestamps();
             
             // Index for better performance
-            $table->index(['user_id', 'date']);
-            $table->unique(['user_id', 'date']);
+            $table->index(['employee_id', 'date']);
+            $table->unique(['employee_id', 'date']);
         });
     }
 

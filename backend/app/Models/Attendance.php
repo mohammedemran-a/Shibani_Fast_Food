@@ -12,11 +12,9 @@ class Attendance extends Model
 
     /**
      * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
      */
     protected $fillable = [
-        'user_id',
+        'employee_id', // <-- تعديل: من user_id إلى employee_id
         'date',
         'check_in',
         'check_out',
@@ -27,22 +25,29 @@ class Attendance extends Model
 
     /**
      * The attributes that should be cast.
-     *
-     * @var array<string, string>
      */
     protected $casts = [
         'date' => 'date',
-        'check_in' => 'datetime:H:i',
-        'check_out' => 'datetime:H:i',
+        // ملاحظة: لا نستخدم datetime هنا لأن الحقل من نوع time
+        // 'check_in' => 'datetime:H:i',
+        // 'check_out' => 'datetime:H:i',
         'work_hours' => 'integer',
     ];
 
     /**
-     * Get the user that owns the attendance.
+     * [تعديل] علاقة سجل الحضور بالموظف.
+     */
+    public function employee()
+    {
+        return $this->belongsTo(Employee::class);
+    }
+
+    /**
+     * [جديد] الوصول إلى بيانات المستخدم بسهولة من خلال الموظف.
      */
     public function user()
     {
-        return $this->belongsTo(User::class);
+        return $this->hasOneThrough(User::class, Employee::class, 'id', 'id', 'employee_id', 'user_id');
     }
 
     /**
@@ -54,8 +59,14 @@ class Attendance extends Model
             return null;
         }
 
-        $checkIn = Carbon::parse($this->check_in);
-        $checkOut = Carbon::parse($this->check_out);
+        // استخدام التاريخ الحالي مع الوقت لإنشاء كائن Carbon صحيح
+        $checkIn = Carbon::parse($this->date->toDateString() . ' ' . $this->check_in);
+        $checkOut = Carbon::parse($this->date->toDateString() . ' ' . $this->check_out);
+
+        // إذا كان وقت الخروج في اليوم التالي
+        if ($checkOut->lessThan($checkIn)) {
+            $checkOut->addDay();
+        }
 
         return $checkOut->diffInMinutes($checkIn);
     }
@@ -81,11 +92,11 @@ class Attendance extends Model
     }
 
     /**
-     * Scope for filtering by user.
+     * [تعديل] Scope for filtering by employee.
      */
-    public function scopeForUser($query, $userId)
+    public function scopeForEmployee($query, $employeeId)
     {
-        return $query->where('user_id', $userId);
+        return $query->where('employee_id', $employeeId);
     }
 
     /**

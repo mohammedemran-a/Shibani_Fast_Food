@@ -51,6 +51,7 @@ import NotFound from "./pages/NotFound";
 import Unauthorized from "./pages/Unauthorized";
 import { KitchenDisplayPage } from "./pages/Kitchen";
 import { InventoryPage } from "@/pages/Inventory";
+import EmployeesPage from "@/pages/People/EmployeesPage";
 
 const queryClient = new QueryClient();
 
@@ -235,6 +236,7 @@ const AppContent = () => {
                 </ProtectedRoute>
               }
             />
+ 
             <Route
               path="/people/customers/:id"
               element={
@@ -243,6 +245,15 @@ const AppContent = () => {
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/people/employees"
+              element={
+                
+                  <EmployeesPage />
+                
+              }
+            />
+           
             <Route
               path="/people/suppliers"
               element={

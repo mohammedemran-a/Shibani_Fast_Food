@@ -8,30 +8,33 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { attendanceService, type Attendance } from '@/api/attendanceService';
-import { userService } from '@/api/userService';
+import { employeeService } from '@/api/employeeService';
 import { format } from 'date-fns';
 import { ar, enUS } from 'date-fns/locale';
+import { AxiosError } from 'axios'; // <-- [إضافة] لاستيراد نوع الخطأ
 
 const AttendanceTracking: React.FC = () => {
   const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
   const currentLocale = i18n.language === 'ar' ? ar : enUS;
   
-  const [selectedUserId, setSelectedUserId] = useState<string>('all');
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>('all');
   const [dateRange] = useState({
     start_date: format(new Date(), 'yyyy-MM-dd'),
     end_date: format(new Date(), 'yyyy-MM-dd'),
   });
 
-  const { data: usersResponse } = useQuery({
-    queryKey: ['users'],
-    queryFn: () => userService.getAll(),
+  // [تعديل 1] جلب قائمة الموظفين
+  const { data: employeesResponse } = useQuery({
+    queryKey: ['employees'],
+    queryFn: () => employeeService.getAll(),
   });
 
+  // [تعديل 2] تغيير استعلام الحضور ليعتمد على employee_id
   const { data: attendancesResponse, isLoading, error } = useQuery({
-    queryKey: ['attendances', selectedUserId, dateRange],
+    queryKey: ['attendances', selectedEmployeeId, dateRange],
     queryFn: () => attendanceService.getAll({
-      user_id: selectedUserId !== 'all' ? parseInt(selectedUserId) : undefined,
+      employee_id: selectedEmployeeId !== 'all' ? parseInt(selectedEmployeeId) : undefined,
       start_date: dateRange.start_date,
       end_date: dateRange.end_date,
     }),
@@ -40,14 +43,16 @@ const AttendanceTracking: React.FC = () => {
   const checkInMutation = useMutation({
     mutationFn: () => attendanceService.checkIn(),
     onSuccess: (response) => {
-      if (response.success) {
+      // [تعديل 3] التحقق من وجود response أولاً
+      if (response?.success) {
         toast.success(response.message || t('common.success'));
         queryClient.invalidateQueries({ queryKey: ['attendances'] });
       } else {
-        toast.error(response.message || t('common.error'));
+        toast.error(response?.message || t('common.error'));
       }
     },
-    onError: (error: any) => {
+    // [تعديل 4] استخدام نوع خطأ محدد
+    onError: (error: AxiosError<{ message: string }>) => {
       const message = error.response?.data?.message || t('common.error');
       toast.error(message);
     },
@@ -56,14 +61,16 @@ const AttendanceTracking: React.FC = () => {
   const checkOutMutation = useMutation({
     mutationFn: () => attendanceService.checkOut(),
     onSuccess: (response) => {
-      if (response.success) {
+      // [تعديل 5] التحقق من وجود response أولاً
+      if (response?.success) {
         toast.success(response.message || t('common.success'));
         queryClient.invalidateQueries({ queryKey: ['attendances'] });
       } else {
-        toast.error(response.message || t('common.error'));
+        toast.error(response?.message || t('common.error'));
       }
     },
-    onError: (error: any) => {
+    // [تعديل 6] استخدام نوع خطأ محدد
+    onError: (error: AxiosError<{ message: string }>) => {
       const message = error.response?.data?.message || t('common.error');
       toast.error(message);
     },
@@ -92,27 +99,28 @@ const AttendanceTracking: React.FC = () => {
   const formatTime = (time: string | null) => {
     if (!time) return '-';
     try {
-      return format(new Date(`2000-01-01 ${time}`), 'hh:mm a', { locale: currentLocale });
+      return format(new Date(`2000-01-01T${time}`), 'hh:mm a', { locale: currentLocale });
     } catch (e) {
       return time;
     }
   };
 
-  const formatWorkHours = (hours: number | null) => {
-    if (!hours) return '-';
-    const h = Math.floor(hours);
-    const m = Math.round((hours - h) * 60);
+  const formatWorkHours = (minutes: number | null) => {
+    if (minutes === null || minutes < 0) return '-';
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
     return `${h}:${m.toString().padStart(2, '0')}`;
   };
 
-  const attendances = attendancesResponse?.data?.data || [];
-  const users = usersResponse?.data?.data || [];
+  // [تعديل 7] الوصول الصحيح للبيانات
+  const attendances = attendancesResponse?.data || [];
+  const employees = employeesResponse?.data || [];
 
   const stats = {
-    present: attendances.filter((a: Attendance) => a.status === 'present').length,
+    present: attendances.filter((a: Attendance) => a.status === 'present' || a.status === 'late').length,
     late: attendances.filter((a: Attendance) => a.status === 'late').length,
-    absent: attendances.filter((a: Attendance) => a.status === 'absent').length,
-    total: users.length,
+    absent: employees.length - attendances.filter(a => a.status !== 'absent').length, // حساب الغياب بشكل أدق
+    total: employees.length,
   };
 
   return (
@@ -131,11 +139,7 @@ const AttendanceTracking: React.FC = () => {
             disabled={checkInMutation.isPending}
             className="gradient-primary gap-2"
           >
-            {checkInMutation.isPending ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <LogIn className="w-4 h-4" />
-            )}
+            {checkInMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogIn className="w-4 h-4" />}
             {t('attendance.checkIn')}
           </Button>
           <Button
@@ -144,11 +148,7 @@ const AttendanceTracking: React.FC = () => {
             variant="outline"
             className="gap-2"
           >
-            {checkOutMutation.isPending ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <LogOut className="w-4 h-4" />
-            )}
+            {checkOutMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogOut className="w-4 h-4" />}
             {t('attendance.checkOut')}
           </Button>
         </div>
@@ -212,15 +212,16 @@ const AttendanceTracking: React.FC = () => {
       <Card className="glass-card">
         <CardContent className="pt-6">
           <div className="flex flex-col sm:flex-row gap-4">
-            <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+            <Select value={selectedEmployeeId} onValueChange={setSelectedEmployeeId}>
               <SelectTrigger className="w-[200px]">
                 <SelectValue placeholder={t('common.selectEmployee')} />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">{t('common.allEmployees')}</SelectItem>
-                {users.map((user: any) => (
-                  <SelectItem key={user.id} value={user.id.toString()}>
-                    {user.name}
+                {/* [تعديل 8] المرور على قائمة الموظفين وعرض اسم المستخدم المرتبط */}
+                {employees.map((employee) => (
+                  <SelectItem key={employee.id} value={employee.id.toString()}>
+                    {employee.user.name}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -288,9 +289,10 @@ const AttendanceTracking: React.FC = () => {
                         <td className="py-4 px-4">
                           <div className="flex items-center gap-3">
                             <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-medium text-xs">
-                              {record.user?.name.charAt(0).toUpperCase()}
+                              {/* [تعديل 9] الوصول إلى اسم المستخدم من خلال الموظف */}
+                              {record.employee?.user.name.charAt(0).toUpperCase()}
                             </div>
-                            <span className="font-medium">{record.user?.name}</span>
+                            <span className="font-medium">{record.employee?.user.name}</span>
                           </div>
                         </td>
                         <td className="py-4 px-4 text-center text-sm">
