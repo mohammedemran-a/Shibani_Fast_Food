@@ -4,53 +4,49 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use App\Models\PurchaseReturnItem;
 
 /**
- * نموذج عنصر فاتورة المشتريات
+ * ✅ نموذج عنصر فاتورة المشتريات (النسخة النهائية والمحدثة)
  * 
- * يمثل كل منتج في فاتورة الشراء مع تفاصيله (الكمية، السعر، الإجمالي)
+ * يمثل كل صنف مخزون في فاتورة الشراء مع تفاصيله.
  */
 class PurchaseInvoiceItem extends Model
 {
     use HasFactory;
 
     /**
-     * الحقول القابلة للتعبئة
+     * ✅ [تعديل] الحقول القابلة للتعبئة
      * 
      * @var array
      */
     protected $fillable = [
-        'purchase_invoice_id',  // معرف فاتورة الشراء
-        'product_id',           // معرف المنتج
-        'quantity',             // الكمية المشتراة
-        'unit_price',           // سعر الوحدة وقت الشراء
-        'total_price',          // السعر الإجمالي (الكمية × سعر الوحدة)
-        'notes',                // ملاحظات إضافية على العنصر (اختياري)
+        'purchase_invoice_id',
+        'inventory_item_id', // ✅ التغيير هنا
+        'quantity',
+        'unit_price',
+        'total_price',
+        'notes',
     ];
 
     /**
-     * تحويل أنواع البيانات
+     * ✅ [تعديل] تحويل أنواع البيانات
      * 
      * @var array
      */
     protected $casts = [
-        'quantity' => 'integer',        // تحويل الكمية إلى رقم صحيح
-        'unit_price' => 'decimal:2',    // تحويل سعر الوحدة إلى رقم عشري بمنزلتين
-        'total_price' => 'decimal:2',   // تحويل السعر الإجمالي إلى رقم عشري بمنزلتين
+        'quantity' => 'decimal:2', // ✅ من الأفضل أن يكون عشريًا ليدعم (1.5 كجم)
+        'unit_price' => 'decimal:2',
+        'total_price' => 'decimal:2',
     ];
 
     /**
-     * الحقول المضافة تلقائياً للنموذج
-     * 
-     * @var array
+     * ✅ [حذف] تم حذف مصفوفة $appends لتحسين الأداء.
+     * سيتم حساب هذه القيم عند الحاجة فقط.
      */
-    protected $appends = ['returned_quantity', 'available_return_quantity', 'sold_quantity'];
+    // protected $appends = [...]; // <-- محذوف
 
     /**
      * العلاقة مع فاتورة الشراء
-     * 
-     * كل عنصر ينتمي إلى فاتورة شراء واحدة
      * 
      * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
@@ -60,86 +56,22 @@ class PurchaseInvoiceItem extends Model
     }
 
     /**
-     * العلاقة مع المنتج
-     * 
-     * كل عنصر يمثل منتج واحد
+     * ✅ [تعديل] العلاقة مع صنف المخزون
      * 
      * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
-    public function product()
+    public function inventoryItem()
     {
-        return $this->belongsTo(Product::class);
+        return $this->belongsTo(InventoryItem::class);
     }
 
     /**
-     * العلاقة مع عناصر المرتجعات
-     * 
-     * كل عنصر يمكن أن يكون له عدة عناصر مرتجعة
-     * 
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     * ✅ [حذف] تم حذف كل الدوال الملحقة (Accessors) المعقدة.
+     * هذا المنطق يجب أن يكون في مكان آخر (مثل Services) إذا احتجناه،
+     * وليس في النموذج نفسه لتحسين الأداء والحفاظ على فصل المسؤوليات.
      */
-    public function returnItems()
-    {
-        return $this->hasMany(PurchaseReturnItem::class, 'product_id', 'product_id');
-    }
-
-    /**
-     * حساب الكمية المرتجعة من هذا العنصر
-     * 
-     * @return int
-     */
-    public function getReturnedQuantityAttribute()
-    {
-        // البحث في عناصر المرتجعات (وليس المرتجعات نفسها)
-        return PurchaseReturnItem::whereHas('purchaseReturn', function($query) {
-            $query->where('purchase_invoice_id', $this->purchase_invoice_id)
-                  ->where('status', '!=', 'rejected');
-        })->where('product_id', $this->product_id)->sum('quantity');
-    }
-
-    /**
-     * حساب الكمية المباعة من هذا المنتج بعد الشراء
-     * 
-     * يتم حساب الكمية المباعة من تاريخ الشراء إلى الآن
-     * 
-     * @return int
-     */
-    public function getSoldQuantityAttribute()
-    {
-        // الحصول على تاريخ الفاتورة
-        $invoiceDate = $this->purchaseInvoice->invoice_date;
-        
-        // حساب الكمية المباعة من هذا المنتج بعد تاريخ الشراء
-        return SalesInvoiceItem::where('product_id', $this->product_id)
-            ->whereHas('salesInvoice', function($query) use ($invoiceDate) {
-                $query->where('invoice_date', '>=', $invoiceDate);
-            })
-            ->sum('quantity');
-    }
-
-    /**
-     * حساب الكمية المتاحة للإرجاع
-     * 
-     * الكمية المتاحة = الكمية الأصلية - الكمية المرتجعة - الكمية المباعة
-     * 
-     * @return int
-     */
-    public function getAvailableReturnQuantityAttribute()
-    {
-        $original = $this->quantity;
-        $returned = $this->returned_quantity;
-        $sold = $this->sold_quantity;
-        
-        return max(0, $original - $returned - $sold);
-    }
-
-    /**
-     * الحصول على اسم المنتج
-     * 
-     * @return string
-     */
-    public function getProductNameAttribute()
-    {
-        return $this->product ? $this->product->name : 'منتج محذوف';
-    }
+    // public function getReturnedQuantityAttribute() { ... } // <-- محذوف
+    // public function getSoldQuantityAttribute() { ... } // <-- محذوف
+    // public function getAvailableReturnQuantityAttribute() { ... } // <-- محذوف
+    // public function getProductNameAttribute() { ... } // <-- محذوف
 }

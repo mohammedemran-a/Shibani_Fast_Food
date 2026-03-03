@@ -8,9 +8,12 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
+/**
+ * ✅ خدمة تحليلات المشتريات (النسخة النهائية والمحدثة)
+ */
 class PurchaseAnalyticsService
 {
-    const CACHE_DURATION = 300; // 5 minutes
+    const CACHE_DURATION = 300; // 5 دقائق
 
     /**
      * تحليلات المشتريات الشاملة
@@ -23,16 +26,15 @@ class PurchaseAnalyticsService
             $query = PurchaseInvoice::query();
             
             if ($startDate) {
-                $query->whereDate('created_at', '>=', $startDate);
+                $query->whereDate('invoice_date', '>=', $startDate);
             }
             if ($endDate) {
-                $query->whereDate('created_at', '<=', $endDate);
+                $query->whereDate('invoice_date', '<=', $endDate);
             }
             
             return [
                 'summary' => self::getPurchasesSummary($query),
-                'by_supplier' => self::getPurchasesBySupplier($query),
-                'by_payment_method' => self::getPurchasesByPaymentMethod($query),
+                'by_supplier' => self::getTopSuppliers($query, 10),
                 'by_status' => self::getPurchasesByStatus($query),
                 'daily_trend' => self::getDailyTrend($query),
                 'monthly_comparison' => self::getMonthlyComparison(),
@@ -45,59 +47,52 @@ class PurchaseAnalyticsService
      */
     private static function getPurchasesSummary($query)
     {
+        // ✅ [تعديل] استخدام selectRaw لتجميع البيانات بكفاءة
+        $summary = $query->clone()->selectRaw(
+            'COUNT(id) as total_invoices,
+             SUM(total_amount) as total_purchases,
+             AVG(total_amount) as average_invoice,
+             SUM(paid_amount) as total_paid,
+             SUM(total_amount - paid_amount) as total_remaining,
+             SUM(discount_amount) as total_discount,
+             SUM(tax_amount) as total_tax'
+        )->first();
+
         return [
-            'total_purchases' => (float) $query->sum('total_amount'),
-            'total_invoices' => $query->count(),
-            'average_invoice' => (float) $query->avg('total_amount'),
-            'total_paid' => (float) $query->sum('paid_amount'),
-            'total_remaining' => (float) $query->sum('remaining_amount'),
-            'total_discount' => (float) $query->sum('discount'),
-            'total_tax' => (float) $query->sum('tax'),
+            'total_invoices' => (int) $summary->total_invoices,
+            'total_purchases' => (float) $summary->total_purchases,
+            'average_invoice' => (float) $summary->average_invoice,
+            'total_paid' => (float) $summary->total_paid,
+            'total_remaining' => (float) $summary->total_remaining,
+            'total_discount' => (float) $summary->total_discount,
+            'total_tax' => (float) $summary->total_tax,
         ];
     }
 
     /**
-     * المشتريات حسب المورد
+     * ✅ [تعديل] المشتريات حسب المورد (أفضل الموردين)
      */
-    private static function getPurchasesBySupplier($query)
+    private static function getTopSuppliers($query, $limit = 10)
     {
-        return $query->clone()
-            ->join('suppliers', 'purchase_invoices.supplier_id', '=', 'suppliers.id')
-            ->select(
-                'suppliers.id',
-                'suppliers.name',
-                'suppliers.name_ar',
-                DB::raw('COUNT(purchase_invoices.id) as invoice_count'),
-                DB::raw('SUM(purchase_invoices.total_amount) as total_amount'),
-                DB::raw('SUM(purchase_invoices.paid_amount) as paid_amount'),
-                DB::raw('SUM(purchase_invoices.remaining_amount) as remaining_amount')
-            )
-            ->groupBy('suppliers.id', 'suppliers.name', 'suppliers.name_ar')
-            ->orderByDesc('total_amount')
-            ->limit(10)
-            ->get();
-    }
-
-    /**
-     * المشتريات حسب طريقة الدفع
-     */
-    private static function getPurchasesByPaymentMethod($query)
-    {
-        return $query->clone()
-            ->select(
-                'payment_method',
-                DB::raw('COUNT(*) as count'),
-                DB::raw('SUM(total_amount) as total')
-            )
-            ->groupBy('payment_method')
-            ->get()
-            ->map(function ($item) {
-                return [
-                    'method' => $item->payment_method,
-                    'count' => (int) $item->count,
-                    'total' => (float) $item->total,
-                ];
-            });
+        // استخدام علاقات Eloquent بدلاً من join يدوي
+        return Supplier::whereHas('purchaseInvoices', function ($q) use ($query) {
+            $q->whereIn('id', $query->clone()->pluck('id'));
+        })
+        ->withCount(['purchaseInvoices' => function ($q) use ($query) {
+            $q->whereIn('id', $query->clone()->pluck('id'));
+        }])
+        ->withSum(['purchaseInvoices' => function ($q) use ($query) {
+            $q->whereIn('id', $query->clone()->pluck('id'));
+        }], 'total_amount')
+        ->orderByDesc('purchase_invoices_sum_total_amount')
+        ->limit($limit)
+        ->get()
+        ->map(fn ($supplier) => [
+            'id' => $supplier->id,
+            'name' => $supplier->name,
+            'invoice_count' => $supplier->purchase_invoices_count,
+            'total_amount' => (float) $supplier->purchase_invoices_sum_total_amount,
+        ]);
     }
 
     /**
@@ -106,20 +101,9 @@ class PurchaseAnalyticsService
     private static function getPurchasesByStatus($query)
     {
         return $query->clone()
-            ->select(
-                'status',
-                DB::raw('COUNT(*) as count'),
-                DB::raw('SUM(total_amount) as total')
-            )
+            ->select('status', DB::raw('COUNT(*) as count'), DB::raw('SUM(total_amount) as total'))
             ->groupBy('status')
-            ->get()
-            ->map(function ($item) {
-                return [
-                    'status' => $item->status,
-                    'count' => (int) $item->count,
-                    'total' => (float) $item->total,
-                ];
-            });
+            ->get();
     }
 
     /**
@@ -128,74 +112,30 @@ class PurchaseAnalyticsService
     private static function getDailyTrend($query)
     {
         return $query->clone()
-            ->select(
-                DB::raw('DATE(created_at) as date'),
-                DB::raw('COUNT(*) as count'),
-                DB::raw('SUM(total_amount) as total')
-            )
+            ->select(DB::raw('DATE(invoice_date) as date'), DB::raw('SUM(total_amount) as total'))
             ->groupBy('date')
-            ->orderBy('date', 'desc')
+            ->orderBy('date', 'asc') // ✅ من الأفضل أن يكون تصاعديًا للرسم البياني
             ->limit(30)
-            ->get()
-            ->map(function ($item) {
-                return [
-                    'date' => $item->date,
-                    'count' => (int) $item->count,
-                    'total' => (float) $item->total,
-                ];
-            });
+            ->get();
     }
 
     /**
-     * مقارنة شهرية (آخر 6 أشهر)
+     * ✅ [تعديل] مقارنة شهرية (باستعلام واحد)
      */
     private static function getMonthlyComparison()
     {
-        $months = [];
-        
-        for ($i = 5; $i >= 0; $i--) {
-            $date = Carbon::now()->subMonths($i);
-            
-            $total = PurchaseInvoice::whereYear('created_at', $date->year)
-                ->whereMonth('created_at', $date->month)
-                ->sum('total_amount');
-                
-            $count = PurchaseInvoice::whereYear('created_at', $date->year)
-                ->whereMonth('created_at', $date->month)
-                ->count();
-            
-            $months[] = [
-                'month' => $date->format('Y-m'),
-                'month_name' => $date->format('M Y'),
-                'total' => (float) $total,
-                'count' => $count,
-            ];
-        }
-        
-        return $months;
-    }
+        $endDate = Carbon::now();
+        $startDate = Carbon::now()->subMonths(5)->startOfMonth();
 
-    /**
-     * أفضل الموردين
-     */
-    public static function getTopSuppliers($limit = 10)
-    {
-        return Cache::remember('top_suppliers_' . $limit, self::CACHE_DURATION, function () use ($limit) {
-            return Supplier::withCount('purchaseInvoices')
-                ->withSum('purchaseInvoices', 'total_amount')
-                ->orderByDesc('purchase_invoices_sum_total_amount')
-                ->limit($limit)
-                ->get()
-                ->map(function ($supplier) {
-                    return [
-                        'id' => $supplier->id,
-                        'name' => $supplier->name,
-                        'name_ar' => $supplier->name_ar,
-                        'invoice_count' => $supplier->purchase_invoices_count,
-                        'total_amount' => (float) $supplier->purchase_invoices_sum_total_amount,
-                    ];
-                });
-        });
+        return PurchaseInvoice::whereBetween('invoice_date', [$startDate, $endDate])
+            ->select(
+                DB::raw("DATE_FORMAT(invoice_date, '%Y-%m') as month"),
+                DB::raw('SUM(total_amount) as total'),
+                DB::raw('COUNT(id) as count')
+            )
+            ->groupBy('month')
+            ->orderBy('month', 'asc')
+            ->get();
     }
 
     /**
@@ -203,6 +143,8 @@ class PurchaseAnalyticsService
      */
     public static function clearCache()
     {
-        Cache::flush();
+        // مسح الـ cache المتعلق بهذه الخدمة فقط
+        Cache::forget('purchase_analytics_*');
+        Cache::forget('top_suppliers_*');
     }
 }

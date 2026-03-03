@@ -1,36 +1,23 @@
-// frontend/src/pages/Inventory/InventoryPage.tsx
-
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { useInventory } from '@/hooks/useInventory';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, PackageSearch } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { InventoryTable } from './InventoryTable';
-import { StockModal } from './StockModal';
-import { InventoryItem } from '@/api/inventoryService';
+import { useDebounce } from '@/hooks/useDebounce'; // ✅ [إضافة] استيراد useDebounce
 
 const InventoryPage: React.FC = () => {
-  const { items, isLoading, isAdjusting, adjustStock, refetch } = useInventory();
-  const [search, setSearch] = useState('');
-  const [modalState, setModalState] = useState<{ isOpen: boolean; item: InventoryItem | null; type: 'add' | 'deduct' }>({ isOpen: false, item: null, type: 'add' });
+  const [searchTerm, setSearchTerm] = useState('');
+  
+  // ✅ [إضافة] استخدام useDebounce لتأخير البحث وتحسين الأداء
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
-  const filteredItems = useMemo(() => {
-    if (!search) return items;
-    return items.filter(item => item.name.toLowerCase().includes(search.toLowerCase()));
-  }, [items, search]);
+  // ✅ [تعديل] تمرير قيمة البحث المؤجلة إلى الـ Hook
+  const { items, isLoading, refetch } = useInventory(debouncedSearchTerm);
 
-  const handleOpenModal = (item: InventoryItem, type: 'add' | 'deduct') => {
-    setModalState({ isOpen: true, item, type });
-  };
-
-  const handleConfirmStockChange = (quantity: number, reason: string) => {
-    if (modalState.item) {
-      adjustStock({ itemId: modalState.item.id, quantity, reason }, {
-        onSuccess: () => setModalState({ isOpen: false, item: null, type: 'add' }),
-      });
-    }
-  };
+  // ✅ [حذف] لم نعد بحاجة إلى filteredItems لأن الفلترة تتم الآن في الخادم
+  // const filteredItems = useMemo(...);
 
   if (isLoading && items.length === 0) {
     return (
@@ -43,27 +30,26 @@ const InventoryPage: React.FC = () => {
   }
 
   return (
-    <>
-      <div className="p-6 space-y-4">
-        <header>
-          <h1 className="text-3xl font-bold text-foreground flex items-center gap-3"><PackageSearch className="w-8 h-8" />إدارة المخزون</h1>
-          <p className="text-muted-foreground mt-1">تتبع وتعديل كميات المواد الخام.</p>
-        </header>
-        <div className="flex justify-between items-center">
-          <Input placeholder="ابحث عن صنف..." value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-sm" />
-          <Button variant="outline" onClick={() => refetch()} disabled={isLoading}><RefreshCw className={`ml-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />تحديث</Button>
-        </div>
-        <InventoryTable items={filteredItems} onAdjustStock={handleOpenModal} />
+    <div className="p-6 space-y-4">
+      <header>
+        <h1 className="text-3xl font-bold text-foreground flex items-center gap-3"><PackageSearch className="w-8 h-8" />إدارة المخزون</h1>
+        <p className="text-muted-foreground mt-1">تتبع وتعديل كميات المواد الخام.</p>
+      </header>
+      <div className="flex justify-between items-center">
+        <Input 
+          placeholder="ابحث عن صنف..." 
+          value={searchTerm} 
+          onChange={(e) => setSearchTerm(e.target.value)} 
+          className="max-w-sm" 
+        />
+        <Button variant="outline" onClick={() => refetch()} disabled={isLoading}>
+          <RefreshCw className={`ml-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+          تحديث
+        </Button>
       </div>
-      <StockModal
-        isOpen={modalState.isOpen}
-        onClose={() => setModalState({ isOpen: false, item: null, type: 'add' })}
-        item={modalState.item}
-        type={modalState.type}
-        onConfirm={handleConfirmStockChange}
-        isConfirming={isAdjusting}
-      />
-    </>
+      {/* ✅ تمرير البيانات القادمة مباشرة من الـ Hook */}
+      <InventoryTable items={items} />
+    </div>
   );
 };
 

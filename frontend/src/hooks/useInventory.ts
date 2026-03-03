@@ -1,35 +1,27 @@
-// frontend/src/hooks/useInventory.ts
+import { useQuery } from '@tanstack/react-query';
+import { fetchInventoryItems, InventoryItem } from '@/api/inventoryService';
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
-import { fetchInventoryItems, adjustStock, InventoryItem } from '@/api/inventoryService';
-
-export const useInventory = () => {
-  const queryClient = useQueryClient();
-
+/**
+ * ✅ [تعديل] Hook مخصص لجلب بيانات المخزون مع دعم للبحث
+ * 
+ * @param search - نص البحث الذي يتم تمريره من المكون
+ */
+export const useInventory = (search: string) => {
   const { data: items = [], isLoading, refetch } = useQuery<InventoryItem[], Error>({
-    queryKey: ['inventoryItems'],
-    queryFn: fetchInventoryItems,
-  });
+    // ✅ مفتاح الاستعلام يتضمن الآن نص البحث،
+    // بحيث يتم إعادة الجلب تلقائيًا عند تغير البحث
+    queryKey: ['inventoryItems', search], 
+    
+    // ✅ تمرير كائن البحث إلى دالة الجلب
+    queryFn: () => fetchInventoryItems({ search }),
 
-  const { mutate: adjustStockMutation, isPending: isAdjusting } = useMutation({
-    mutationFn: adjustStock,
-    onSuccess: (updatedItem) => {
-      queryClient.setQueryData<InventoryItem[]>(['inventoryItems'], (oldData = []) =>
-        oldData.map((item) => (item.id === updatedItem.id ? updatedItem : item))
-      );
-      toast.success(`تم تعديل مخزون "${updatedItem.name}" بنجاح.`);
-    },
-    onError: (error) => {
-      toast.error(`فشل التعديل: ${error.message}`);
-    },
+    // ✅ (اختياري) إضافة placeholderData لتحسين تجربة المستخدم
+    placeholderData: (previousData) => previousData,
   });
 
   return {
     items,
     isLoading,
-    isAdjusting,
-    adjustStock: adjustStockMutation,
     refetch,
   };
 };
