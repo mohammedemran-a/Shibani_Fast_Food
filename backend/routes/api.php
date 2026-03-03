@@ -3,7 +3,6 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
-// use App\Http\Controllers\Api\ProductController; // لم نعد بحاجة لهذا
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\BrandController;
 use App\Http\Controllers\Api\UnitController;
@@ -29,14 +28,17 @@ use App\Http\Controllers\Api\SalesPerformanceController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\SearchController;
 
-// ✅ استيراد الـ Controllers الجديدة الخاصة بالمنتجات
+// استيراد الـ Controllers الجديدة الخاصة بالمنتجات
 use App\Http\Controllers\Api\Product\ListProductsController;
 use App\Http\Controllers\Api\Product\StoreProductController;
 use App\Http\Controllers\Api\Product\ShowProductController;
 use App\Http\Controllers\Api\Product\UpdateProductController;
 use App\Http\Controllers\Api\Product\DestroyProductController;
 use App\Http\Controllers\Api\Product\SearchProductsController;
-use App\Http\Controllers\Api\Product\GetPosProductsController; // <-- تم تصحيح الاسم
+use App\Http\Controllers\Api\Product\GetPosProductsController;
+
+// ✅ [إضافة] استيراد متحكم الموظفين
+use App\Http\Controllers\Api\EmployeeController;
 
 /*
 |--------------------------------------------------------------------------
@@ -61,21 +63,31 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/profile/avatar', [ProfileController::class, 'deleteAvatar']);
     Route::post('/profile/change-password', [ProfileController::class, 'changePassword']);
 
+    // ===================================================================
+    // ✅✅✅ [إضافة] مسارات المستخدمين والموظفين (بمنطق الفصل) ✅✅✅
+    // ===================================================================
+    // مسارات المستخدمين (لإدارة الحسابات)
+    Route::apiResource('users', UserController::class);
+    Route::post('users/{id}/toggle-active', [UserController::class, 'toggleActive']);
+
+    // مسارات الموظفين (لإدارة البيانات الوظيفية)
+    Route::apiResource('employees', EmployeeController::class);
+    Route::get('unlinked-users', [EmployeeController::class, 'getUnlinkedUsers']);
+    // ===================================================================
+
+
     // مسارات البحث المخصصة
     Route::get('/search/products-for-purchase', [SearchController::class, 'searchProductsForPurchase']);
 
-    // ✅✅✅ مسارات المنتجات الجديدة والمُصححة ✅✅✅
-    // ===================================================================
-    // تم تعديل هذه الأسطر لتحديد الدالة __invoke بشكل صريح
+    // مسارات المنتجات الجديدة والمُصححة
     Route::get('/products', [ListProductsController::class, '__invoke']);
     Route::post('/products', [StoreProductController::class, '__invoke']);
     Route::get('/products/search', [SearchProductsController::class, '__invoke']);
     Route::get('/products/{product}', [ShowProductController::class, '__invoke'])->where('product', '[0-9]+');
     Route::put('/products/{product}', [UpdateProductController::class, '__invoke']);
     Route::delete('/products/{product}', [DestroyProductController::class, '__invoke']);
-    Route::get('/pos/products', [GetPosProductsController::class, '__invoke']); // <-- تم تصحيح اسم الـ Controller والدالة
-    // ===================================================================
-
+    Route::get('/pos/products', [GetPosProductsController::class, '__invoke']);
+    
     Route::post('products/import', [ImportController::class, 'importProducts']);
 
     // ... (كل المسارات الأخرى من هنا وحتى نهاية الملف تبقى بدون أي تغيير)
@@ -114,8 +126,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('product-returns', ProductReturnController::class);
     Route::post('product-returns/{return}/approve', [ProductReturnController::class, 'approve']);
     Route::post('product-returns/{return}/reject', [ProductReturnController::class, 'reject']);
-    Route::apiResource('users', UserController::class);
-    Route::post('users/{id}/toggle-active', [UserController::class, 'toggleActive']);
+    // تم نقل مسارات المستخدمين للأعلى
+    // Route::apiResource('users', UserController::class);
+    // Route::post('users/{id}/toggle-active', [UserController::class, 'toggleActive']);
     Route::apiResource('attendances', AttendanceController::class);
     Route::post('attendances/check-in', [AttendanceController::class, 'checkIn']);
     Route::post('attendances/check-out', [AttendanceController::class, 'checkOut']);
