@@ -114,6 +114,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ isOpen, onToggle }) => {
       icon: Package,
       path: "/inventory",
     },
+
     {
       label: t("nav.products"),
       icon: Package,
@@ -234,11 +235,18 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ isOpen, onToggle }) => {
           path: "/people/suppliers",
           permission: "view_suppliers",
         },
+
         {
           label: t("nav.users"),
           icon: UserCog,
           path: "/people/users",
           permission: "view_users",
+        },
+        {
+          label: t("nav.employeesList"), // الموظفين بدون صلاحية
+          icon: UsersRound,
+          path: "/people/employees",
+          // لا نضع permission هنا
         },
       ],
     },

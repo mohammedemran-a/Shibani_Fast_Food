@@ -1,65 +1,58 @@
 import { apiClient } from './apiClient';
+import type { Employee } from './employeeService'; // <-- استيراد واجهة الموظف
 
+// [تعديل] واجهة سجل الحضور
 export interface Attendance {
   id: number;
-  user_id: number;
+  employee_id: number; // <-- تعديل: من user_id إلى employee_id
   date: string;
   check_in: string | null;
   check_out: string | null;
   work_hours: number | null;
   status: 'present' | 'absent' | 'late' | 'half_day';
   notes?: string;
-  user?: {
-    id: number;
-    name: string;
-    email: string;
-    avatar?: string;
-  };
+  employee?: Employee; // <-- تعديل: الآن يحتوي على بيانات الموظف الكاملة (التي تحتوي بدورها على المستخدم)
   formatted_work_hours?: string;
   created_at?: string;
   updated_at?: string;
 }
 
+// [تعديل] واجهة إحصائيات الحضور
 export interface AttendanceStatistics {
-  total_days: number;
-  present_days: number;
-  absent_days: number;
-  late_days: number;
-  half_days: number;
-  total_work_hours: number;
-  average_work_hours: number;
+  present: number;
+  absent: number;
+  late: number;
+  half_day: number;
+  total_work_hours: string; // الواجهة الخلفية تعيدها كنص منسق
 }
 
+// واجهة استجابة قائمة الحضور (مع الترقيم)
 export interface AttendancesResponse {
-  success: boolean;
-  message?: string;
-  data: {
-    data: Attendance[];
-    current_page: number;
-    last_page: number;
-    per_page: number;
-    total: number;
-  };
+  data: Attendance[];
+  current_page: number;
+  last_page: number;
+  total: number;
 }
 
+// واجهة استجابة سجل حضور واحد
 export interface AttendanceResponse {
-  success: boolean;
-  message?: string;
+  success: any;
+  message: string;
   data: Attendance;
 }
 
+// واجهة استجابة الإحصائيات
 export interface StatisticsResponse {
   success: boolean;
-  message?: string;
   data: AttendanceStatistics;
 }
 
 export const attendanceService = {
   /**
-   * Get all attendances
+   * [تعديل] جلب جميع سجلات الحضور
    */
   async getAll(params?: {
-    user_id?: number;
+    employee_id?: number; // <-- تعديل: الفلترة بـ employee_id
     start_date?: string;
     end_date?: string;
     status?: string;
@@ -71,7 +64,7 @@ export const attendanceService = {
   },
 
   /**
-   * Get attendance by ID
+   * جلب سجل حضور بالـ ID
    */
   async getById(id: number): Promise<AttendanceResponse> {
     const response = await apiClient.get(`/attendances/${id}`);
@@ -79,60 +72,55 @@ export const attendanceService = {
   },
 
   /**
-   * Check in
+   * تسجيل حضور للمستخدم الحالي (لا يحتاج لإرسال ID)
    */
-  async checkIn(data?: {
-    user_id?: number;
-    status?: string;
-    notes?: string;
-  }): Promise<AttendanceResponse> {
+  async checkIn(data?: { notes?: string }): Promise<AttendanceResponse> {
     const response = await apiClient.post('/attendances/check-in', data);
     return response.data;
   },
 
   /**
-   * Check out
+   * تسجيل انصراف للمستخدم الحالي (لا يحتاج لإرسال ID)
    */
-  async checkOut(data?: {
-    user_id?: number;
-    notes?: string;
-  }): Promise<AttendanceResponse> {
+  async checkOut(data?: { notes?: string }): Promise<AttendanceResponse> {
     const response = await apiClient.post('/attendances/check-out', data);
     return response.data;
   },
 
   /**
-   * Create or update attendance
+   * [تعديل] إنشاء أو تحديث سجل حضور (للمدير)
    */
   async createOrUpdate(data: {
-    user_id: number;
+    employee_id: number; // <-- تعديل: employee_id مطلوب
     date: string;
     check_in?: string;
     check_out?: string;
     status: string;
     notes?: string;
   }): Promise<AttendanceResponse> {
+    // Laravel تستخدم POST لـ store و PUT/PATCH لـ update، لكن بما أننا دمجناها في دالة واحدة في المتحكم
+    // يمكننا استخدام POST هنا.
     const response = await apiClient.post('/attendances', data);
     return response.data;
   },
 
   /**
-   * Delete attendance
+   * حذف سجل حضور
    */
-  async delete(id: number): Promise<{ success: boolean; message: string }> {
+  async delete(id: number): Promise<{ message: string }> {
     const response = await apiClient.delete(`/attendances/${id}`);
     return response.data;
   },
 
   /**
-   * Get user statistics
+   * [تعديل] جلب إحصائيات الموظف
    */
   async getStatistics(
-    userId: number,
+    employeeId: number, // <-- تعديل: الآن يستقبل employeeId
     startDate: string,
     endDate: string
   ): Promise<StatisticsResponse> {
-    const response = await apiClient.get(`/attendances/statistics/${userId}`, {
+    const response = await apiClient.get(`/attendances/statistics/${employeeId}`, {
       params: { start_date: startDate, end_date: endDate },
     });
     return response.data;

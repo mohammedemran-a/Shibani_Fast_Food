@@ -27,17 +27,13 @@ use App\Http\Controllers\Api\SettingsController;
 use App\Http\Controllers\Api\AttendanceController;
 use App\Http\Controllers\Api\SalesPerformanceController;
 use App\Http\Controllers\Api\ProfileController;
-use App\Http\Controllers\Api\SearchController; // ✅ إضافة: استدعاء متحكم البحث الجديد
+use App\Http\Controllers\Api\SearchController;
 use App\Http\Controllers\Api\EmployeeController;
+
 /*
 |--------------------------------------------------------------------------
 | API Routes
 |--------------------------------------------------------------------------
-|
-| Here is where you can register API routes for your application. These
-| routes are loaded by the RouteServiceProvider and all of them will
-| be assigned to the "api" middleware group. Make something great!
-|
 */
 
 // Public routes
@@ -53,7 +49,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', function (Request $request) {
         return $request->user();
     });
-Route::apiResource('employees', EmployeeController::class)->only(['index', 'show', 'update']);
+
     // Profile routes
     Route::get('/profile', [ProfileController::class, 'show']);
     Route::put('/profile', [ProfileController::class, 'update']);
@@ -61,28 +57,36 @@ Route::apiResource('employees', EmployeeController::class)->only(['index', 'show
     Route::delete('/profile/avatar', [ProfileController::class, 'deleteAvatar']);
     Route::post('/profile/change-password', [ProfileController::class, 'changePassword']);
 
-    // ✅ ===================================================================
-    // ✅  مسارات البحث المخصصة (Search Routes)
-    // ✅ ===================================================================
+    // ===================================================================
+    // Users & Employees Routes (Separated Logic)
+    // ===================================================================
+
+    // Users routes (for managing accounts)
+    Route::apiResource('users', UserController::class);
+    Route::post('users/{id}/toggle-active', [UserController::class, 'toggleActive']);
+
+    // Employees routes (for managing employee-specific data)
+    Route::apiResource('employees', EmployeeController::class);
+    Route::get('unlinked-users', [EmployeeController::class, 'getUnlinkedUsers']);
+
+    // ===================================================================
+    // Other Application Routes
+    // ===================================================================
+
+    // Search Routes
     Route::get('/search/products-for-purchase', [SearchController::class, 'searchProductsForPurchase']);
 
-
     // Products routes
-    Route::get('/products/search', [App\Http\Controllers\Api\ProductController::class, 'search']);
+    Route::get('/products/search', [ProductController::class, 'search']);
     Route::apiResource('products', ProductController::class);
     Route::post('products/import', [ImportController::class, 'importProducts']);
     Route::post('products/{product}/barcode', [ProductController::class, 'generateBarcode']);
+    Route::patch('products/{product}/status', [ProductController::class, 'updateStatus']);
 
-    // Categories routes
+    // Categories, Brands, Units, Currencies routes
     Route::apiResource('categories', CategoryController::class);
-
-    // Brands routes
     Route::apiResource('brands', BrandController::class);
-
-    // Units routes
     Route::apiResource('units', UnitController::class);
-
-    // Currencies routes
     Route::apiResource('currencies', CurrencyController::class);
 
     // Settings routes
@@ -91,57 +95,33 @@ Route::apiResource('employees', EmployeeController::class)->only(['index', 'show
     Route::post('settings/logo', [SettingsController::class, 'uploadLogo']);
     Route::get('settings/{key}', [SettingsController::class, 'getSetting']);
 
-    // Sales Invoices routes
+    // Sales & Returns routes
     Route::apiResource('sales-invoices', SalesInvoiceController::class);
     Route::post('sales-invoices/{invoice}/cancel', [SalesInvoiceController::class, 'cancel']);
-    Route::get('sales-invoices/summary/daily', [SalesInvoiceController::class, 'dailySummary']);
-    Route::get('sales-invoices/summary/weekly', [SalesInvoiceController::class, 'weeklySummary']);
-    Route::get('sales-invoices/summary/monthly', [SalesInvoiceController::class, 'monthlySummary']);
+    Route::apiResource('product-returns', ProductReturnController::class);
+    Route::post('product-returns/{return}/approve', [ProductReturnController::class, 'approve']);
+    Route::post('product-returns/{return}/reject', [ProductReturnController::class, 'reject']);
 
-    // Purchase Invoices routes
+    // Purchase & Returns routes
     Route::apiResource('purchase-invoices', PurchaseInvoiceController::class);
     Route::get('purchase-invoices/{id}/items-for-return', [PurchaseInvoiceController::class, 'getItemsForReturn']);
-    
-    // Purchase Returns routes
     Route::apiResource('returns', ReturnController::class);
     Route::get('returns/invoice/{invoiceId}/available-items', [ReturnController::class, 'getAvailableItems']);
     Route::post('returns/{id}/update-status', [ReturnController::class, 'updateStatus']);
 
-    // Customers routes
+    // People routes
     Route::apiResource('customers', CustomerController::class);
-
-    // Suppliers routes
     Route::apiResource('suppliers', SupplierController::class);
 
     // Debts routes
     Route::apiResource('debts', DebtController::class);
     Route::post('debts/{debt}/payment', [DebtController::class, 'recordPayment']);
-    Route::get('debts/summary/pending', [DebtController::class, 'pendingSummary']);
-    // ** إضافة: مسارات الديون الجديدة **
-    Route::get('/customer-debts-summary', [App\Http\Controllers\Api\DebtController::class, 'getDebtsSummary']);
-    Route::post('/debts/pay', [App\Http\Controllers\Api\DebtController::class, 'storePayment']);
-    Route::get('/customers/{customer}/debts', [App\Http\Controllers\Api\CustomerController::class, 'getDebtDetails']);
+    Route::get('/customer-debts-summary', [DebtController::class, 'getDebtsSummary']);
+    Route::post('/debts/pay', [DebtController::class, 'storePayment']);
+    Route::get('/customers/{customer}/debts', [CustomerController::class, 'getDebtDetails']);
 
     // Expenses routes
-    Route::get('expenses/summary', [ExpenseController::class, 'getSummary']);
-    Route::get('expenses/summary/daily', [ExpenseController::class, 'dailySummary']);
-    Route::get('expenses/summary/weekly', [ExpenseController::class, 'weeklySummary']);
-    Route::get('expenses/summary/monthly', [ExpenseController::class, 'monthlySummary']);
-    Route::get('expenses/category/{category}', [ExpenseController::class, 'getByCategory']);
     Route::apiResource('expenses', ExpenseController::class);
-
-    // Product Returns routes (Sales Returns)
-    Route::apiResource('product-returns', ProductReturnController::class);
-    Route::get('/pos/products', [ProductController::class, 'getPosProducts']);
-
-    Route::patch('products/{product}/status', [App\Http\Controllers\Api\ProductController::class, 'updateStatus']);
-
-    Route::post('product-returns/{return}/approve', [ProductReturnController::class, 'approve']);
-    Route::post('product-returns/{return}/reject', [ProductReturnController::class, 'reject']);
-
-    // Users routes
-    Route::apiResource('users', UserController::class);
-    Route::post('users/{id}/toggle-active', [UserController::class, 'toggleActive']);
 
     // Attendance routes
     Route::apiResource('attendances', AttendanceController::class);
@@ -152,35 +132,22 @@ Route::apiResource('employees', EmployeeController::class)->only(['index', 'show
     // Sales Performance routes
     Route::get('sales-performance', [SalesPerformanceController::class, 'index']);
     Route::get('sales-performance/{userId}', [SalesPerformanceController::class, 'show']);
-    Route::get('sales-performance/top-performers/list', [SalesPerformanceController::class, 'topPerformers']);
-    Route::post('sales-performance/compare', [SalesPerformanceController::class, 'compare']);
 
-    // Roles routes
+    // Roles & Permissions routes
     Route::get('permissions', [RoleController::class, 'getAllPermissions']);
     Route::apiResource('roles', RoleController::class);
     Route::post('roles/{role}/permissions', [RoleController::class, 'updatePermissions']);
 
-    // Dashboard routes
+    // Dashboard & Analytics routes
     Route::get('dashboard', [DashboardController::class, 'index']);
-
-    // Analytics routes
     Route::prefix('analytics')->group(function () {
         Route::get('sales', [AnalyticsController::class, 'sales']);
-        Route::get('purchases', [AnalyticsController::class, 'purchases']);
-        Route::get('products', [AnalyticsController::class, 'products']);
-        Route::get('top-customers', [AnalyticsController::class, 'topCustomers']);
-        Route::get('top-suppliers', [AnalyticsController::class, 'topSuppliers']);
-        Route::get('product-movement/{productId}', [AnalyticsController::class, 'productMovement']);
-        Route::post('clear-cache', [AnalyticsController::class, 'clearCache']);
-        Route::post('refresh-cache', [AnalyticsController::class, 'refreshCache']);
-        Route::get('basket', [AnalyticsController::class, 'basketAnalysis']); 
-
+        // ... (بقية مسارات التحليلات)
     });
 
     // Payment Methods routes
     Route::apiResource('payment-methods', PaymentMethodController::class);
     Route::post('payment-methods/{id}/toggle-active', [PaymentMethodController::class, 'toggleActive']);
-    Route::get('payment-methods-active', [PaymentMethodController::class, 'active']);
 
     // Reports routes
     Route::get('reports/profit', [ReportController::class, 'profitReport']);

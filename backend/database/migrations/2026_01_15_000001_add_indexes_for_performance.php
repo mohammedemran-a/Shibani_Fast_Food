@@ -44,7 +44,7 @@ return new class extends Migration
 
         // تحسين جدول الحضور والانصراف (Attendances)
         Schema::table('attendances', function (Blueprint $table) {
-            $table->index('user_id');
+            $table->index('employee_id');
             $table->index('date');
             $table->index('status');
         });
@@ -83,7 +83,7 @@ return new class extends Migration
         });
 
         Schema::table('attendances', function (Blueprint $table) {
-            $table->dropIndex(['user_id']);
+            $table->dropIndex(['employee_id']);
             $table->dropIndex(['date']);
             $table->dropIndex(['status']);
         });
