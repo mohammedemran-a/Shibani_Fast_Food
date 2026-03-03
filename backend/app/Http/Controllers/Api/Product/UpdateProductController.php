@@ -3,64 +3,67 @@
 namespace App\Http\Controllers\Api\Product;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\ProductResource;
 use App\Models\Product;
 use Illuminate\Http\Request;
-use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
 class UpdateProductController extends Controller
 {
-    /**
-     * Handle the incoming request.
-     *
-     * يقوم بتحديث بيانات منتج موجود في قاعدة البيانات.
-     */
-    public function __invoke(Request $request, Product $product): JsonResponse
+    public function __invoke(Request $request, Product $product)
     {
+        // 1. قواعد التحقق (نفس قواعد الإنشاء)
         $validatedData = $request->validate([
-            'name' => ['required', 'string', 'max:255', Rule::unique('products')->ignore($product->id)],
+            'name' => 'required|string|max:255',
             'type' => ['required', Rule::in(['Sellable', 'RawMaterial'])],
-            'category_id' => 'nullable|exists:categories,id',
-            'price' => 'required_if:type,Sellable|nullable|numeric|min:0',
-            'cost' => 'required_if:type,RawMaterial|nullable|numeric|min:0',
-            'unit' => 'required_if:type,RawMaterial|nullable|string',
-            'stock' => 'nullable|numeric|min:0',
-            'reorder_level' => 'nullable|numeric|min:0',
-            'is_active' => 'sometimes|boolean',
-            'ingredients' => 'required_if:type,Sellable|nullable|array',
-            'ingredients.*.id' => 'required|exists:products,id',
-            'ingredients.*.quantity' => 'required|numeric|min:0',
+            'category_id' => 'required|exists:categories,id',
+            'is_active' => 'required|boolean',
+            'price' => 'required_if:type,Sellable|numeric|min:0',
+            'cost' => 'required_if:type,RawMaterial|numeric|min:0',
+            'stock' => 'required_if:type,RawMaterial|numeric|min:0',
+            'unit' => 'required_if:type,RawMaterial|string|max:50',
+            'ingredients' => 'nullable|array',
+            'ingredients.*.id' => 'required_with:ingredients|exists:products,id',
+            'ingredients.*.quantity' => 'required_with:ingredients|numeric|min:0.001',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg,webp|max:10240',
         ]);
 
-        $product->update($validatedData);
+        // 2. تحويل is_active بشكل صريح
+        $validatedData['is_active'] = filter_var($validatedData['is_active'], FILTER_VALIDATE_BOOLEAN);
 
+        // 3. معالجة الصورة الجديدة وحذف القديمة
+        if ($request->hasFile('image')) {
+            // حذف الصورة القديمة إذا كانت موجودة
+            if ($product->image) {
+                Storage::disk('public')->delete($product->image);
+            }
+            // تخزين الصورة الجديدة
+            $path = $request->file('image')->store('products', 'public');
+            $validatedData['image'] = $path;
+        }
+
+        // 4. تحديث بيانات المنتج
+        $productData = collect($validatedData)->except(['ingredients', 'image'])->toArray();
+        if (isset($validatedData['image'])) {
+            $productData['image'] = $validatedData['image'];
+        }
+        $product->update($productData);
+
+        // 5. تحديث المكونات
         if ($product->type === 'Sellable') {
-            if ($request->has('ingredients')) {
-                $this->syncIngredients($product, $request->ingredients);
-                $this->calculateProductCost($product);
+            if (!empty($validatedData['ingredients'])) {
+                $ingredients = collect($validatedData['ingredients'])->mapWithKeys(function ($ingredient) {
+                    return [$ingredient['id'] => ['quantity' => $ingredient['quantity']]];
+                });
+                $product->ingredients()->sync($ingredients);
+            } else {
+                // إذا تم إرسال مصفوفة فارغة، قم بإزالة كل المكونات
+                $product->ingredients()->detach();
             }
         }
-
-        return response()->json($product->load('category', 'ingredients'));
-    }
-
-    private function syncIngredients(Product $product, array $ingredients): void
-    {
-        $ingredientsToSync = [];
-        foreach ($ingredients as $ingredient) {
-            $ingredientsToSync[$ingredient['id']] = ['quantity' => $ingredient['quantity']];
-        }
-        $product->ingredients()->sync($ingredientsToSync);
-    }
-
-    private function calculateProductCost(Product $product): void
-    {
-        $product->load('ingredients');
-        $totalCost = 0;
-        foreach ($product->ingredients as $ingredient) {
-            $totalCost += $ingredient->pivot->quantity * $ingredient->cost;
-        }
-        $product->cost = $totalCost;
-        $product->save();
+        
+        // 6. إرجاع المنتج المحدث
+        return new ProductResource($product->load(['category', 'ingredients']));
     }
 }

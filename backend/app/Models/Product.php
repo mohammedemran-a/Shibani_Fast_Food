@@ -10,7 +10,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 class Product extends Model
 {
     use HasFactory;
-
+    
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var array<int, string>
+     */
     protected $fillable = [
         'name',
         'description',
@@ -25,6 +30,11 @@ class Product extends Model
         'is_active',
     ];
 
+    /**
+     * The attributes that should be cast.
+     *
+     * @var array<string, string>
+     */
     protected $casts = [
         'price' => 'decimal:2',
         'stock' => 'decimal:3',
@@ -47,6 +57,8 @@ class Product extends Model
      */
     public function ingredients(): BelongsToMany
     {
+        // ✅✅✅ هذا هو الإصلاح النهائي: استخدام أسماء الأعمدة الصحيحة ✅✅✅
+        // تم إرجاع أسماء الأعمدة لتتطابق مع تصميم قاعدة البيانات الأصلي لديك.
         return $this->belongsToMany(Product::class, 'product_ingredients', 'sellable_product_id', 'raw_material_product_id')
                     ->withPivot('quantity'); // لجلب كمية المكون في الوصفة
     }

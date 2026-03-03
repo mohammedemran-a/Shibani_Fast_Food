@@ -14,27 +14,28 @@ class ProductResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        // ✅✅✅ هذا هو الحل: التأكد من أن كل الحقول الأساسية موجودة دائمًا ✅✅✅
         return [
-            'id' => $this->id,
+            'id' => $this->id, // <-- التأكد من وجود الـ ID دائمًا
             'name' => $this->name,
             'type' => $this->type,
             'description' => $this->description,
             
-            // ✅✅✅ هذا هو الحل: تحويل النصوص إلى أرقام ✅✅✅
-            // نستخدم (float) للتأكد من أنها أرقام عشرية
-            'price' => $this->whenNotNull((float) $this->price),
-            'cost' => $this->whenNotNull((float) $this->cost),
-            'stock' => $this->whenNotNull((float) $this->stock),
+            // تحويل النصوص إلى أرقام
+            'price' => (float) $this->price,
+            'cost' => (float) $this->cost,
+            'stock' => (float) $this->stock,
             
             'unit' => $this->unit,
             'sku' => $this->sku,
             'barcode' => $this->barcode,
-            'is_active' => (bool) $this->is_active, // تحويل إلى boolean
+            'is_active' => (bool) $this->is_active,
             'preparation_time' => $this->preparation_time,
             'image_url' => $this->image_url,
             
-            // تحميل العلاقات (relations) فقط إذا كانت موجودة
             'category_id' => $this->category_id,
+            
+            // تحميل العلاقات (relations) فقط إذا كانت موجودة
             'category' => new CategoryResource($this->whenLoaded('category')),
             'ingredients' => IngredientResource::collection($this->whenLoaded('ingredients')),
             

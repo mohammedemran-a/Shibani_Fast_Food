@@ -8,7 +8,6 @@ import { Product, ProductPayload, ProductFilters, PaginatedResponse } from '@/ty
 // دالة لجلب المنتجات لصفحة الإدارة (مع فلترة وتقسيم صفحات)
 export const getAdminProducts = async (filters: ProductFilters): Promise<PaginatedResponse<Product>> => {
   try {
-    // ✅✅✅ هذا هو التعديل النهائي: تم تغيير المسار من '/admin/products' إلى '/products' ✅✅✅
     const response = await apiClient.get('/products', { params: filters });
     
     if (response && response.data) {
@@ -59,7 +58,8 @@ export const searchProducts = async (query: string): Promise<Product[]> => {
 // دالة لجلب منتج واحد بالـ ID
 export const getProductById = async (id: number | string): Promise<Product> => {
   const response = await apiClient.get(`/products/${id}`);
-  return response.data.data; 
+  // ✅✅✅ هذا هو التعديل الوحيد والنهائي لحل المشكلة ✅✅✅
+  return response.data; 
 };
 
 // دالة لإنشاء منتج جديد

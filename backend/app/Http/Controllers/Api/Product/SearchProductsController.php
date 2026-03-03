@@ -3,39 +3,47 @@
 namespace App\Http\Controllers\Api\Product;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\ProductResource;
 use App\Models\Product;
 use Illuminate\Http\Request;
-use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class SearchProductsController extends Controller
 {
     /**
-     * Handle the incoming request.
+     * يبحث عن المنتجات بناءً على الاسم والنوع.
      *
-     * يبحث عن المنتجات (خاصة المواد الخام) لإضافتها إلى الوصفات.
+     * @param Request $request
+     * @return AnonymousResourceCollection
      */
-    public function __invoke(Request $request): JsonResponse
+    public function __invoke(Request $request): AnonymousResourceCollection
     {
-        $request->validate([
-            'query' => 'required|string|min:2',
-            'type' => 'sometimes|in:Sellable,RawMaterial',
-            'limit' => 'sometimes|integer|min:1|max:50',
+        $validated = $request->validate([
+            'name' => 'nullable|string|max:255',
+            'type' => 'nullable|in:Sellable,RawMaterial',
         ]);
 
+        // 1. نبدأ الاستعلام الأساسي
         $query = Product::query();
 
-        // فلترة حسب الاسم
-        $query->where('name', 'like', '%' . $request->query('query') . '%');
-
-        // فلترة حسب النوع (إذا تم تحديده)
+        // 2. ✅✅✅ هذا هو الإصلاح الجذري والنهائي ✅✅✅
+        // إذا تم تحديد نوع المنتج في الطلب، نجعله شرطًا أساسيًا لا يمكن تجاوزه.
         if ($request->filled('type')) {
-            $query->where('type', $request->type);
+            $query->where('type', $validated['type']);
         }
 
-        // تحديد عدد النتائج
-        $limit = $request->input('limit', 15);
-        $products = $query->take($limit)->get(['id', 'name', 'unit']); // جلب الحقول المطلوبة فقط
+        // 3. إذا تم إرسال اسم، ابحث به ضمن النتائج المفلترة (إن وجدت).
+        if ($request->filled('name')) {
+            $query->where('name', 'like', '%' . $validated['name'] . '%');
+        } else {
+            // إذا لم يكن هناك بحث، أعد أحدث 10 منتجات (مع احترام فلتر النوع إن وجد).
+            $query->latest();
+        }
 
-        return response()->json($products);
+        // 4. جلب النتائج
+        $products = $query->take(10)->get();
+
+        // 5. إرجاع النتائج من خلال الـ Resource
+        return ProductResource::collection($products);
     }
 }
