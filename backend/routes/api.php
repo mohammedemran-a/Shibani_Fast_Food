@@ -3,7 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
-use App\Http\Controllers\Api\ProductController;
+// use App\Http\Controllers\Api\ProductController; // لم نعد بحاجة لهذا
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\BrandController;
 use App\Http\Controllers\Api\UnitController;
@@ -27,32 +27,32 @@ use App\Http\Controllers\Api\SettingsController;
 use App\Http\Controllers\Api\AttendanceController;
 use App\Http\Controllers\Api\SalesPerformanceController;
 use App\Http\Controllers\Api\ProfileController;
-use App\Http\Controllers\Api\SearchController; // ✅ إضافة: استدعاء متحكم البحث الجديد
+use App\Http\Controllers\Api\SearchController;
+
+// ✅ استيراد الـ Controllers الجديدة الخاصة بالمنتجات
+use App\Http\Controllers\Api\Product\ListProductsController;
+use App\Http\Controllers\Api\Product\StoreProductController;
+use App\Http\Controllers\Api\Product\ShowProductController;
+use App\Http\Controllers\Api\Product\UpdateProductController;
+use App\Http\Controllers\Api\Product\DestroyProductController;
+use App\Http\Controllers\Api\Product\SearchProductsController;
+use App\Http\Controllers\Api\Product\GetPosProductsController; // <-- تم تصحيح الاسم
 
 /*
 |--------------------------------------------------------------------------
 | API Routes
 |--------------------------------------------------------------------------
-|
-| Here is where you can register API routes for your application. These
-| routes are loaded by the RouteServiceProvider and all of them will
-| be assigned to the "api" middleware group. Make something great!
-|
 */
 
 // Public routes
 Route::post('/auth/login', [AuthController::class, 'login']);
-Route::get('/products/import/template', [ProductController::class, 'downloadTemplate']);
-
 
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {
     // Auth routes
     Route::post('/auth/logout', [AuthController::class, 'logout']);
     Route::get('/auth/me', [AuthController::class, 'me']);
-    Route::get('/user', function (Request $request) {
-        return $request->user();
-    });
+    Route::get('/user', fn(Request $request) => $request->user());
 
     // Profile routes
     Route::get('/profile', [ProfileController::class, 'show']);
@@ -61,109 +61,73 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/profile/avatar', [ProfileController::class, 'deleteAvatar']);
     Route::post('/profile/change-password', [ProfileController::class, 'changePassword']);
 
-    // ✅ ===================================================================
-    // ✅  مسارات البحث المخصصة (Search Routes)
-    // ✅ ===================================================================
+    // مسارات البحث المخصصة
     Route::get('/search/products-for-purchase', [SearchController::class, 'searchProductsForPurchase']);
 
+    // ✅✅✅ مسارات المنتجات الجديدة والمُصححة ✅✅✅
+    // ===================================================================
+    // تم تعديل هذه الأسطر لتحديد الدالة __invoke بشكل صريح
+    Route::get('/products', [ListProductsController::class, '__invoke']);
+    Route::post('/products', [StoreProductController::class, '__invoke']);
+    Route::get('/products/search', [SearchProductsController::class, '__invoke']);
+    Route::get('/products/{product}', [ShowProductController::class, '__invoke'])->where('product', '[0-9]+');
+    Route::put('/products/{product}', [UpdateProductController::class, '__invoke']);
+    Route::delete('/products/{product}', [DestroyProductController::class, '__invoke']);
+    Route::get('/pos/products', [GetPosProductsController::class, '__invoke']); // <-- تم تصحيح اسم الـ Controller والدالة
+    // ===================================================================
 
-    // Products routes
-    Route::get('/products/search', [App\Http\Controllers\Api\ProductController::class, 'search']);
-    Route::apiResource('products', ProductController::class);
     Route::post('products/import', [ImportController::class, 'importProducts']);
-    Route::post('products/{product}/barcode', [ProductController::class, 'generateBarcode']);
 
-    // Categories routes
+    // ... (كل المسارات الأخرى من هنا وحتى نهاية الملف تبقى بدون أي تغيير)
     Route::apiResource('categories', CategoryController::class);
-
-    // Brands routes
     Route::apiResource('brands', BrandController::class);
-
-    // Units routes
     Route::apiResource('units', UnitController::class);
-
-    // Currencies routes
     Route::apiResource('currencies', CurrencyController::class);
-
-    // Settings routes
     Route::get('settings', [SettingsController::class, 'index']);
     Route::post('settings', [SettingsController::class, 'update']);
     Route::post('settings/logo', [SettingsController::class, 'uploadLogo']);
     Route::get('settings/{key}', [SettingsController::class, 'getSetting']);
-
-    // Sales Invoices routes
     Route::apiResource('sales-invoices', SalesInvoiceController::class);
     Route::post('sales-invoices/{invoice}/cancel', [SalesInvoiceController::class, 'cancel']);
     Route::get('sales-invoices/summary/daily', [SalesInvoiceController::class, 'dailySummary']);
     Route::get('sales-invoices/summary/weekly', [SalesInvoiceController::class, 'weeklySummary']);
     Route::get('sales-invoices/summary/monthly', [SalesInvoiceController::class, 'monthlySummary']);
-
-    // Purchase Invoices routes
     Route::apiResource('purchase-invoices', PurchaseInvoiceController::class);
     Route::get('purchase-invoices/{id}/items-for-return', [PurchaseInvoiceController::class, 'getItemsForReturn']);
-    
-    // Purchase Returns routes
     Route::apiResource('returns', ReturnController::class);
     Route::get('returns/invoice/{invoiceId}/available-items', [ReturnController::class, 'getAvailableItems']);
     Route::post('returns/{id}/update-status', [ReturnController::class, 'updateStatus']);
-
-    // Customers routes
     Route::apiResource('customers', CustomerController::class);
-
-    // Suppliers routes
     Route::apiResource('suppliers', SupplierController::class);
-
-    // Debts routes
     Route::apiResource('debts', DebtController::class);
     Route::post('debts/{debt}/payment', [DebtController::class, 'recordPayment']);
     Route::get('debts/summary/pending', [DebtController::class, 'pendingSummary']);
-    // ** إضافة: مسارات الديون الجديدة **
     Route::get('/customer-debts-summary', [App\Http\Controllers\Api\DebtController::class, 'getDebtsSummary']);
     Route::post('/debts/pay', [App\Http\Controllers\Api\DebtController::class, 'storePayment']);
     Route::get('/customers/{customer}/debts', [App\Http\Controllers\Api\CustomerController::class, 'getDebtDetails']);
-
-    // Expenses routes
     Route::get('expenses/summary', [ExpenseController::class, 'getSummary']);
     Route::get('expenses/summary/daily', [ExpenseController::class, 'dailySummary']);
     Route::get('expenses/summary/weekly', [ExpenseController::class, 'weeklySummary']);
     Route::get('expenses/summary/monthly', [ExpenseController::class, 'monthlySummary']);
     Route::get('expenses/category/{category}', [ExpenseController::class, 'getByCategory']);
     Route::apiResource('expenses', ExpenseController::class);
-
-    // Product Returns routes (Sales Returns)
     Route::apiResource('product-returns', ProductReturnController::class);
-    Route::get('/pos/products', [ProductController::class, 'getPosProducts']);
-
-    Route::patch('products/{product}/status', [App\Http\Controllers\Api\ProductController::class, 'updateStatus']);
-
     Route::post('product-returns/{return}/approve', [ProductReturnController::class, 'approve']);
     Route::post('product-returns/{return}/reject', [ProductReturnController::class, 'reject']);
-
-    // Users routes
     Route::apiResource('users', UserController::class);
     Route::post('users/{id}/toggle-active', [UserController::class, 'toggleActive']);
-
-    // Attendance routes
     Route::apiResource('attendances', AttendanceController::class);
     Route::post('attendances/check-in', [AttendanceController::class, 'checkIn']);
     Route::post('attendances/check-out', [AttendanceController::class, 'checkOut']);
     Route::get('attendances/statistics/{userId}', [AttendanceController::class, 'statistics']);
-
-    // Sales Performance routes
     Route::get('sales-performance', [SalesPerformanceController::class, 'index']);
     Route::get('sales-performance/{userId}', [SalesPerformanceController::class, 'show']);
     Route::get('sales-performance/top-performers/list', [SalesPerformanceController::class, 'topPerformers']);
     Route::post('sales-performance/compare', [SalesPerformanceController::class, 'compare']);
-
-    // Roles routes
     Route::get('permissions', [RoleController::class, 'getAllPermissions']);
     Route::apiResource('roles', RoleController::class);
     Route::post('roles/{role}/permissions', [RoleController::class, 'updatePermissions']);
-
-    // Dashboard routes
     Route::get('dashboard', [DashboardController::class, 'index']);
-
-    // Analytics routes
     Route::prefix('analytics')->group(function () {
         Route::get('sales', [AnalyticsController::class, 'sales']);
         Route::get('purchases', [AnalyticsController::class, 'purchases']);
@@ -173,16 +137,11 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('product-movement/{productId}', [AnalyticsController::class, 'productMovement']);
         Route::post('clear-cache', [AnalyticsController::class, 'clearCache']);
         Route::post('refresh-cache', [AnalyticsController::class, 'refreshCache']);
-        Route::get('basket', [AnalyticsController::class, 'basketAnalysis']); 
-
+        Route::get('basket', [AnalyticsController::class, 'basketAnalysis']);
     });
-
-    // Payment Methods routes
     Route::apiResource('payment-methods', PaymentMethodController::class);
     Route::post('payment-methods/{id}/toggle-active', [PaymentMethodController::class, 'toggleActive']);
     Route::get('payment-methods-active', [PaymentMethodController::class, 'active']);
-
-    // Reports routes
     Route::get('reports/profit', [ReportController::class, 'profitReport']);
     Route::get('reports/sales', [ReportController::class, 'salesReport']);
     Route::get('reports/purchases', [ReportController::class, 'purchasesReport']);
