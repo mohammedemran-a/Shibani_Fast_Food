@@ -17,32 +17,45 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { searchProductsForPurchase, Product } from '@/api/productService';
-import { useDebounce } from '@/hooks/useDebounce'; // سنحتاج لإنشاء هذا الخطاف
+
+// ✅ الخطوة 1: استيراد الدالة الصحيحة والنوع الصحيح
+import { searchProducts } from '@/api'; 
+import { Product } from '@/types';
+
+// ✅ الخطوة 2: استيراد الـ hook المساعد
+import { useDebounce } from '@/hooks/useDebounce';
 
 interface ProductSearchComboboxProps {
-  value?: number;
-  selectedValue?: Product | null;
+  value?: number; // ID المنتج المختار
+  selectedValue?: Product | null; // كائن المنتج المختار
   onChange: (product: Product | null) => void;
   disabled?: boolean;
+  productType?: 'Sellable' | 'RawMaterial'; // لتحديد نوع المنتجات التي نبحث عنها
 }
 
-export function ProductSearchCombobox({ value, selectedValue, onChange, disabled }: ProductSearchComboboxProps) {
+export function ProductSearchCombobox({ 
+  value, 
+  selectedValue, 
+  onChange, 
+  disabled,
+  productType // يمكن تمرير هذا لتحديد نوع البحث
+}: ProductSearchComboboxProps) {
   const [open, setOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const debouncedSearchQuery = useDebounce(searchQuery, 300); // تأخير 300ms
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
+  // ✅ الخطوة 3: استخدام الدالة الصحيحة في useQuery
   const { data: products = [], isLoading } = useQuery({
-    queryKey: ['purchaseProductSearch', debouncedSearchQuery],
-    queryFn: () => searchProductsForPurchase(debouncedSearchQuery),
-    enabled: debouncedSearchQuery.length > 0, // تفعيل البحث فقط عند وجود نص
+    queryKey: ['productSearch', debouncedSearchQuery, productType], // إضافة productType لمفتاح الكويري
+    queryFn: () => searchProducts(debouncedSearchQuery, productType), // تمرير نوع المنتج
+    enabled: debouncedSearchQuery.length > 1, // تفعيل البحث فقط عند وجود حرفين أو أكثر
   });
 
   const selectedProductDisplay = useMemo(() => {
     if (selectedValue) {
-      return `${selectedValue.name} (${selectedValue.sku})`;
+      return selectedValue.name;
     }
-    return "ابحث عن منتج بالاسم أو SKU...";
+    return "ابحث عن منتج...";
   }, [selectedValue]);
 
   return (
@@ -64,7 +77,7 @@ export function ProductSearchCombobox({ value, selectedValue, onChange, disabled
           <CommandInput
             value={searchQuery}
             onValueChange={setSearchQuery}
-            placeholder="ابحث بالاسم أو SKU..."
+            placeholder="ابحث بالاسم..."
           />
           <CommandList>
             {isLoading && (
@@ -73,14 +86,14 @@ export function ProductSearchCombobox({ value, selectedValue, onChange, disabled
                 جاري البحث...
               </div>
             )}
-            {!isLoading && !products.length && debouncedSearchQuery.length > 0 && (
+            {!isLoading && !products.length && debouncedSearchQuery.length > 1 && (
                 <CommandEmpty>لم يتم العثور على منتجات.</CommandEmpty>
             )}
             <CommandGroup>
               {products.map((product) => (
                 <CommandItem
                   key={product.id}
-                  value={`${product.name} ${product.sku}`}
+                  value={product.name} // استخدام الاسم للفلترة الداخلية (إذا كانت مفعلة)
                   onSelect={() => {
                     onChange(product);
                     setOpen(false);
@@ -92,7 +105,7 @@ export function ProductSearchCombobox({ value, selectedValue, onChange, disabled
                       value === product.id ? "opacity-100" : "opacity-0"
                     )}
                   />
-                  {product.name} ({product.sku})
+                  {product.name}
                 </CommandItem>
               ))}
             </CommandGroup>

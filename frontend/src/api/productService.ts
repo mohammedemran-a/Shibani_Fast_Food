@@ -1,188 +1,84 @@
 import apiClient from './apiClient';
-import { PRODUCTS_ENDPOINTS } from './endpoints';
+import { Product, ProductPayload, ProductFilters, PaginatedResponse } from '@/types';
 
+/**
+ * خدمة API لإدارة المنتجات.
+ */
 
-// =================================================================
-// 1. تعريف الأنواع (لا تغيير هنا)
-// =================================================================
-
-export interface ProductStockBatch {
-    id: number;
-    product_id: number;
-    quantity_received: number;
-    quantity_remaining: number;
-    purchase_price_per_unit: number;
-    expiry_date?: string | null;
-    notes?: string | null;
-    created_at: string;
-    updated_at: string;
-}
-
-// ✅ إضافة: تعريف سعر الشراء الافتراضي في الوحدة
-export interface ProductBarcode {
-    id: number;
-    product_id: number;
-    barcode?: string | null;
-    unit_name: string;
-    unit_quantity: number;
-    purchase_price?: number | null; // ✅ إضافة: سعر الشراء الافتراضي
-    selling_price?: number | null;
-    is_base_unit: boolean;
-    created_at: string;
-    updated_at: string;
-}
-
-export interface Category {
-    id: number;
-    name: string;
-    name_ar?: string;
-}
-
-export interface Brand {
-    id: number;
-    name: string;
-    name_ar?: string;
-}
-
-export interface Product {
-    id: number;
-    name: string;
-    name_ar?: string;
-    sku: string;
-    description?: string | null;
-    category_id: number;
-    brand_id?: number | null;
-    product_type: 'Standard' | 'Weighted';
-    reorder_level?: number;
-    image?: string | null;
-    image_url?: string | null;
-    is_active: boolean;
-    created_at: string;
-    updated_at: string;
-    category?: Category;
-    brand?: Brand;
-    stock_batches?: ProductStockBatch[];
-    barcodes?: ProductBarcode[];
-}
-
-export interface ProductsResponse {
-  success: boolean;
-  data: {
-    data: Product[];
-    current_page: number;
-    last_page: number;
-    per_page: number;
-    total: number;
-  };
-}
-
-export interface ProductResponse {
-  success: boolean;
-  message?: string;
-  data: Product;
-}
-
-export interface GenericResponse {
-    success: boolean;
-    message: string;
-    data?: any;
-}
-
-// =================================================================
-// 2. تحديث كلاس الخدمة (لا تغيير هنا)
-// =================================================================
-
-class ProductService {
-  
-  async getProducts(params?: Record<string, any>): Promise<ProductsResponse> {
-    const response = await apiClient.get<ProductsResponse>(PRODUCTS_ENDPOINTS.LIST, { params });
-    return response.data;
+// دالة لجلب المنتجات لصفحة الإدارة (مع فلترة وتقسيم صفحات)
+export const getAdminProducts = async (filters: ProductFilters): Promise<PaginatedResponse<Product>> => {
+  try {
+    // ✅✅✅ هذا هو التعديل النهائي: تم تغيير المسار من '/admin/products' إلى '/products' ✅✅✅
+    const response = await apiClient.get('/products', { params: filters });
+    
+    if (response && response.data) {
+      return response.data;
+    }
+    return { data: [], current_page: 1, last_page: 1, total: 0 };
+  } catch (error) {
+    console.error("Error fetching admin products:", error);
+    return { data: [], current_page: 1, last_page: 1, total: 0 };
   }
+};
 
-  async getProduct(id: number): Promise<ProductResponse> {
-    const response = await apiClient.get<ProductResponse>(PRODUCTS_ENDPOINTS.GET(id));
-    return response.data;
+// دالة لجلب المنتجات لصفحة نقطة البيع (POS)
+export const getPosProducts = async (categoryId?: number): Promise<Product[]> => {
+  try {
+    const response = await apiClient.get('/pos/products', {
+      params: { category_id: categoryId }
+    });
+    if (response && Array.isArray(response.data.data)) {
+      return response.data.data;
+    }
+    return [];
+  } catch (error) {
+    console.error("Error fetching POS products:", error);
+    return [];
   }
-
-  async createProduct(data: FormData): Promise<GenericResponse> {
-    const response = await apiClient.post<GenericResponse>(
-      PRODUCTS_ENDPOINTS.CREATE,
-      data,
-      {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      }
-    );
-    return response.data;
-  }
-
-  async updateProduct(id: number, data: FormData): Promise<GenericResponse> {
-    data.append('_method', 'PUT');
-    const response = await apiClient.post<GenericResponse>(
-      PRODUCTS_ENDPOINTS.UPDATE(id),
-      data,
-      {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      }
-    );
-    return response.data;
-  }
-  async searchProducts(query: string) {
-    const response = await apiClient.get('/products/search', { params: { query, limit: 10 } });
-    return response.data;
-  }
-  async deleteProduct(id: number): Promise<GenericResponse> {
-    const response = await apiClient.delete<GenericResponse>(PRODUCTS_ENDPOINTS.DELETE(id));
-    return response.data;
-  }
-
-  async searchByBarcode(barcode: string): Promise<ProductsResponse> {
-    return this.getProducts({ search: barcode });
-  }
-
-  async getByCategory(categoryId: number): Promise<ProductsResponse> {
-    return this.getProducts({ category_id: categoryId });
-  }
-
-  async getLowStockProducts(): Promise<ProductsResponse> {
-    const response = await this.getProducts({ per_page: 1000 });
-    const lowStock = response.data.data.filter(
-      (product) => {
-        const totalStock = product.stock_batches?.reduce((sum, batch) => sum + batch.quantity_remaining, 0) ?? 0;
-        return product.reorder_level ? totalStock <= product.reorder_level : false;
-      }
-    );
-    return {
-      ...response,
-      data: {
-        ...response.data,
-        data: lowStock,
-      },
-    };
-  }
-}
-
-export const updateProductStatus = async (id: number, isActive: boolean): Promise<GenericResponse> => {
-    const response = await apiClient.patch<GenericResponse>(`/products/${id}/status`, { is_active: isActive });
-    return response.data;
 };
 
 /**
- * ✅ ===================================================================
- * ✅  دالة جديدة: بحث مخصص عن المنتجات لشاشة "إضافة فاتورة شراء"
- * ✅ ===================================================================
- * 
- * تستدعي هذه الدالة نقطة النهاية المخصصة للبحث عن المنتجات في شاشة المشتريات.
- * @param query - مصطلح البحث (اسم المنتج أو SKU).
- * @returns قائمة بالمنتجات المطابقة مع الوحدات الخاصة بها.
+ * دالة للبحث عن المنتجات القابلة للبيع بالاسم (لشاشة POS).
+ * @param query - النص المستخدم للبحث.
  */
-export const searchProductsForPurchase = async (query: string): Promise<Product[]> => {
-    const response = await apiClient.get<Product[]>('/search/products-for-purchase', {
-        params: { query, limit: 15 } 
+export const searchProducts = async (query: string): Promise<Product[]> => {
+  try {
+    const response = await apiClient.get('/products/search', {
+      params: { name: query }
     });
-    return response.data;
+    if (response && Array.isArray(response.data.data)) {
+      return response.data.data;
+    }
+    return [];
+  } catch (error) {
+    console.error("Error searching products:", error);
+    return [];
+  }
 };
 
+// دالة لجلب منتج واحد بالـ ID
+export const getProductById = async (id: number | string): Promise<Product> => {
+  const response = await apiClient.get(`/products/${id}`);
+  return response.data.data; 
+};
 
-const productService = new ProductService();
+// دالة لإنشاء منتج جديد
+export const createProduct = async (productData: ProductPayload): Promise<Product> => {
+  const response = await apiClient.post('/products', productData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return response.data.data;
+};
 
-export { productService };
+// دالة لتحديث منتج موجود
+export const updateProduct = async ({ id, productData }: { id: number; productData: ProductPayload }): Promise<Product> => {
+  const response = await apiClient.post(`/products/${id}`, productData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return response.data.data;
+};
+
+// دالة لحذف منتج
+export const deleteProduct = async (id: number): Promise<void> => {
+  await apiClient.delete(`/products/${id}`);
+};

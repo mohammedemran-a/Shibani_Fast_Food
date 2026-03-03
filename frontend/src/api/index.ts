@@ -8,15 +8,22 @@ export * from './endpoints';
 export { authService } from './authService';
 export type { LoginCredentials, User, LoginResponse, AuthResponse } from './authService';
 
-// Product Service
-export { productService } from './productService';
-export type {
-  Product,
-  CreateProductRequest,
-  UpdateProductRequest,
-  ProductsResponse,
-  ProductResponse,
+// ===================================================================
+// Product Service (الجزء المُصحح)
+// ===================================================================
+export {
+  getAdminProducts,
+  getProductById,
+  createProduct,
+  updateProduct,
+  deleteProduct,
+  getPosProducts,
+  searchProducts, // ✅ تم إضافة الدالة المفقودة هنا
 } from './productService';
+
+// نقوم بتصدير الأنواع الجديدة التي عرفناها في ملف types/index.ts
+export type { Product, Category, Modifier, Ingredient, PosProduct, CartItem } from '@/types';
+// ===================================================================
 
 // Sales Service
 export { salesService } from './salesService';

@@ -1,58 +1,27 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Loader2, ArrowRight, ArrowLeft } from 'lucide-react';
-import { useProduct } from '@/hooks/useProducts';
-import ProductForm from './ProductForm'; // تأكد من أن المسار صحيح
+import { Loader2, ArrowLeft } from 'lucide-react';
+
+// ✅ الخطوة 1: استيراد الـ hook الموجود (بالجمع)
+import { useProducts } from '@/hooks/useProducts'; 
+
+import ProductForm from './ProductForm';
 import { Button } from '@/components/ui/button';
-import { useTheme } from '@/contexts/ThemeContext';
 
 export default function EditProduct() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
-    const { isRTL } = useTheme();
-    const BackIcon = isRTL ? ArrowRight : ArrowLeft;
 
-    // الخطوة 1: جلب البيانات
-    const { data: productData, isLoading, isError } = useProduct(Number(id!));
+    // ✅ الخطوة 2: استخدام الـ hook الموجود لجلب قائمة كل المنتجات
+    // نحن لا نستخدم الفلاتر هنا، لذلك سيعيد كل المنتجات
+    const { products, loading, error } = useProducts();
 
-    // الخطوة 2: تحويل البيانات (لن يتم تشغيله إلا بعد وصول البيانات)
-    const formattedProductData = useMemo(() => {
-        if (!productData?.data) return null; // **مهم جدًا: إرجاع null إذا لم تكن البيانات موجودة**
+    // ✅ الخطوة 3: البحث عن المنتج المطلوب داخل القائمة التي تم جلبها
+    // نستخدم Number(id) للتأكد من أننا نقارن أرقامًا
+    const productToEdit = products.find(p => p.id === Number(id));
 
-        const product = productData.data;
-        
-        const baseBarcode = product.barcodes.find(b => b.is_base_unit);
-        const additionalBarcodes = product.barcodes.filter(b => !b.is_base_unit);
-
-        return {
-            id: product.id,
-            name: product.name,
-            category_id: String(product.category_id),
-            brand_id: product.brand_id ? String(product.brand_id) : undefined,
-            product_type: product.product_type,
-            description: product.description ?? '',
-            sku: product.sku ?? '',
-            reorder_level: product.reorder_level,
-            is_active: product.is_active,
-            image_url: product.image_url,
-            stock_batches: product.stock_batches,
-            base_unit: {
-                name: baseBarcode?.unit_name || '',
-                barcode: baseBarcode?.barcode || '',
-            },
-            base_selling_price: baseBarcode?.selling_price ?? 0,
-            additional_units: additionalBarcodes.map(unit => ({
-                id: unit.id,
-                name: unit.unit_name,
-                conversion_factor: unit.unit_quantity,
-                barcode: unit.barcode ?? '',
-                selling_price: unit.selling_price,
-            })),
-        };
-    }, [productData]);
-
-    // الخطوة 3: عرض شاشة التحميل إذا كانت البيانات قيد الجلب
-    if (isLoading) {
+    // ✅ الخطوة 4: عرض شاشة التحميل أثناء جلب القائمة الكاملة
+    if (loading) {
         return (
             <div className="flex items-center justify-center h-96">
                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -61,31 +30,33 @@ export default function EditProduct() {
         );
     }
 
-    // الخطوة 4: عرض رسالة خطأ إذا فشل الجلب أو لم يتم العثور على البيانات
-    if (isError || !formattedProductData) {
+    // ✅ الخطوة 5: عرض رسالة خطأ إذا فشل جلب القائمة أو لم يتم العثور على المنتج
+    if (error || !productToEdit) {
         return (
             <div className="text-center py-12">
-                <p className="text-destructive mb-4">فشل في تحميل المنتج أو أن المنتج غير موجود.</p>
+                <p className="text-destructive mb-4">
+                    {error ? `فشل في تحميل المنتجات. السبب: ${error}` : 'لم يتم العثور على المنتج المطلوب.'}
+                </p>
                 <Button onClick={() => navigate('/products')}>العودة إلى القائمة</Button>
             </div>
         );
     }
 
-    // الخطوة 5: عرض الفورم فقط عندما تكون البيانات جاهزة ومُهيأة
+    // ✅ الخطوة 6: عرض الفورم وتمرير المنتج الذي تم العثور عليه
     return (
         <div className="space-y-6 animate-fade-in">
             <div className="flex items-center gap-4">
                 <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-                    <BackIcon className="w-5 h-5" />
+                    <ArrowLeft className="w-5 h-5" />
                 </Button>
                 <div>
                     <h1 className="text-2xl md:text-3xl font-bold text-foreground">تعديل المنتج</h1>
-                    <p className="text-muted-foreground mt-1">تحديث بيانات: {formattedProductData.name}</p>
+                    <p className="text-muted-foreground mt-1">تحديث بيانات: {productToEdit?.name}</p>
                 </div>
             </div>
             
-            {/* **الضمانة النهائية**: نحن لا نعرض ProductForm إلا إذا كانت formattedProductData تحتوي على بيانات حقيقية */}
-            <ProductForm existingProduct={formattedProductData} />
+            {/* تمرير المنتج الذي تم العثور عليه في القائمة إلى الفورم */}
+            <ProductForm existingProduct={productToEdit} />
         </div>
     );
 }
