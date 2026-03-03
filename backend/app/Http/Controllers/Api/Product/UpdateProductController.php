@@ -13,24 +13,27 @@ class UpdateProductController extends Controller
 {
     public function __invoke(Request $request, Product $product)
     {
-        // 1. قواعد التحقق (نفس قواعد الإنشاء)
+        // ✅✅✅ هذا هو الإصلاح الجذري والنهائي ✅✅✅
+        // 1. قواعد التحقق المحدثة (تم إزالة cost و stock)
         $validatedData = $request->validate([
-            'name' => 'required|string|max:255',
-            'type' => ['required', Rule::in(['Sellable', 'RawMaterial'])],
-            'category_id' => 'required|exists:categories,id',
-            'is_active' => 'required|boolean',
-            'price' => 'required_if:type,Sellable|numeric|min:0',
-            'cost' => 'required_if:type,RawMaterial|numeric|min:0',
-            'stock' => 'required_if:type,RawMaterial|numeric|min:0',
-            'unit' => 'required_if:type,RawMaterial|string|max:50',
+            'name' => 'sometimes|required|string|max:255',
+            // لا يمكن تغيير النوع بعد الإنشاء، لذلك نستخدم 'sometimes'
+            'type' => ['sometimes', 'required', Rule::in(['Sellable', 'RawMaterial'])],
+            'category_id' => 'sometimes|required|exists:categories,id',
+            // تم تغيير القاعدة لتقبل القيم النصية من FormData
+            'is_active' => ['sometimes', 'required', Rule::in(['true', 'false', '1', '0'])],
+            'price' => 'nullable|required_if:type,Sellable|numeric|min:0',
+            'unit' => 'nullable|required_if:type,RawMaterial|string|max:50',
             'ingredients' => 'nullable|array',
             'ingredients.*.id' => 'required_with:ingredients|exists:products,id',
             'ingredients.*.quantity' => 'required_with:ingredients|numeric|min:0.001',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg,webp|max:10240',
         ]);
 
-        // 2. تحويل is_active بشكل صريح
-        $validatedData['is_active'] = filter_var($validatedData['is_active'], FILTER_VALIDATE_BOOLEAN);
+        // 2. تحويل is_active بشكل صريح إذا تم إرسالها
+        if (isset($validatedData['is_active'])) {
+            $validatedData['is_active'] = filter_var($validatedData['is_active'], FILTER_VALIDATE_BOOLEAN);
+        }
 
         // 3. معالجة الصورة الجديدة وحذف القديمة
         if ($request->hasFile('image')) {
@@ -44,14 +47,10 @@ class UpdateProductController extends Controller
         }
 
         // 4. تحديث بيانات المنتج
-        $productData = collect($validatedData)->except(['ingredients', 'image'])->toArray();
-        if (isset($validatedData['image'])) {
-            $productData['image'] = $validatedData['image'];
-        }
-        $product->update($productData);
+        $product->update($validatedData);
 
-        // 5. تحديث المكونات
-        if ($product->type === 'Sellable') {
+        // 5. تحديث المكونات (فقط إذا تم إرسالها)
+        if (isset($validatedData['ingredients']) && $product->type === 'Sellable') {
             if (!empty($validatedData['ingredients'])) {
                 $ingredients = collect($validatedData['ingredients'])->mapWithKeys(function ($ingredient) {
                     return [$ingredient['id'] => ['quantity' => $ingredient['quantity']]];
@@ -63,7 +62,7 @@ class UpdateProductController extends Controller
             }
         }
         
-        // 6. إرجاع المنتج المحدث
+        // 6. إرجاع المنتج المحدث مع العلاقات
         return new ProductResource($product->load(['category', 'ingredients']));
     }
 }

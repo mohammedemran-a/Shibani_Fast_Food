@@ -57,7 +57,6 @@ export enum OrderType {
   Takeaway = 'سفري',
   Delivery = 'توصيل',
   DineIn = 'محلي',
-  // تم حذف Apps لأنه غير موجود في التحليل الجديد
 }
 
 export enum DiscountType {
@@ -70,22 +69,40 @@ export enum DiscountType {
 // 3. أنواع استجابات الـ API وأخرى
 // ===================================================================
 
+/**
+ * ✅✅✅ تم توسيع الواجهة لتشمل كل حقول Laravel Pagination ✅✅✅
+ */
 export interface PaginatedResponse<T> {
   data: T[];
   current_page: number;
   last_page: number;
   total: number;
+  per_page?: number;
+  from?: number;
+  to?: number;
+  first_page_url?: string;
+  last_page_url?: string;
+  next_page_url?: string | null;
+  prev_page_url?: string | null;
+  path?: string;
 }
 
-// ✅✅✅ إصلاح الخطأ: إضافة الواجهة المفقودة هنا ✅✅✅
+/**
+ * ✅✅✅ تم إضافة الواجهة المفقودة هنا ✅✅✅
+ */
 export interface ProductFilters {
   name?: string;
   type?: 'Sellable' | 'RawMaterial' | '';
+  page?: number;
 }
-// ... (كل الأنواع الأخرى الموجودة لديك)
 
-// ✅✅✅ أضف هذا التعريف الجديد هنا ✅✅✅
+/**
+ * ✅✅✅ تم إضافة التعريف الجديد هنا ✅✅✅
+ */
 export type ProductPayload = Partial<Omit<Product, 'id' | 'category' | 'ingredients' | 'availableModifiers'>> & {
   ingredients?: { id: number; quantity: number }[];
   category_id?: number;
+  image?: File | null;
+  _method?: 'PUT';
+  is_active: 0 | 1;
 };
