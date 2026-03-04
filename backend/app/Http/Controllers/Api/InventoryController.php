@@ -3,33 +3,39 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\InventoryItem;
+use App\Models\Product; // ✅ [تصحيح] استخدام موديل Product
 use Illuminate\Http\Request;
 
 class InventoryController extends Controller
 {
     /**
-     * عرض قائمة بجميع أصناف المخزون.
+     * ✅ [تصحيح جذري] عرض قائمة المخزون من جدول المنتجات
      */
     public function index(Request $request)
     {
-        $items = InventoryItem::query()
+        $items = Product::query()
+            // 1. جلب المواد الخام فقط
+            ->where('type', 'RawMaterial')
+            
+            // 2. تطبيق البحث على اسم المادة الخام
             ->when($request->search, function ($query, $search) {
                 $query->where('name', 'like', "%{$search}%");
             })
+            
             ->orderBy('name')
+            ->with('category') // ✅ جلب الفئة مع المنتج لتحسين الأداء
             ->get();
 
-        // إعادة تسمية الحقول لتطابق الواجهة الأمامية
+        // 3. إعادة تسمية الحقول لتطابق الواجهة الأمامية
         $formattedItems = $items->map(function ($item) {
             return [
                 'id' => $item->id,
                 'name' => $item->name,
-                'category' => $item->category,
+                'category' => $item->category->name ?? 'غير محدد', // اسم الفئة
                 'unit' => $item->unit,
-                'currentQty' => $item->current_quantity,
-                'minQty' => $item->min_quantity,
-                'costPerUnit' => $item->average_cost_per_unit,
+                'currentQty' => (float) $item->stock, // ✅ استخدام حقل `stock`
+                'minQty' => (float) $item->reorder_level,
+                'costPerUnit' => (float) $item->cost,
             ];
         });
 

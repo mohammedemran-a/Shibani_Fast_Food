@@ -5,73 +5,40 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-/**
- * ✅ نموذج عنصر فاتورة المشتريات (النسخة النهائية والمحدثة)
- * 
- * يمثل كل صنف مخزون في فاتورة الشراء مع تفاصيله.
- */
 class PurchaseInvoiceItem extends Model
 {
     use HasFactory;
 
     /**
-     * ✅ [تعديل] الحقول القابلة للتعبئة
-     * 
-     * @var array
+     * ✅ [تصحيح] الحقول القابلة للتعبئة لتستخدم `product_id`
      */
     protected $fillable = [
         'purchase_invoice_id',
-        'inventory_item_id', // ✅ التغيير هنا
+        'product_id', // ✅ التغيير هنا
         'quantity',
         'unit_price',
         'total_price',
         'notes',
+        'expiry_date', // إضافة تاريخ الصلاحية
     ];
 
-    /**
-     * ✅ [تعديل] تحويل أنواع البيانات
-     * 
-     * @var array
-     */
     protected $casts = [
-        'quantity' => 'decimal:2', // ✅ من الأفضل أن يكون عشريًا ليدعم (1.5 كجم)
+        'quantity' => 'decimal:2',
         'unit_price' => 'decimal:2',
         'total_price' => 'decimal:2',
+        'expiry_date' => 'date',
     ];
 
-    /**
-     * ✅ [حذف] تم حذف مصفوفة $appends لتحسين الأداء.
-     * سيتم حساب هذه القيم عند الحاجة فقط.
-     */
-    // protected $appends = [...]; // <-- محذوف
-
-    /**
-     * العلاقة مع فاتورة الشراء
-     * 
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
-     */
     public function purchaseInvoice()
     {
         return $this->belongsTo(PurchaseInvoice::class);
     }
 
     /**
-     * ✅ [تعديل] العلاقة مع صنف المخزون
-     * 
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     * ✅ [تصحيح] العلاقة مع موديل `Product`
      */
-    public function inventoryItem()
+    public function product()
     {
-        return $this->belongsTo(InventoryItem::class);
+        return $this->belongsTo(Product::class);
     }
-
-    /**
-     * ✅ [حذف] تم حذف كل الدوال الملحقة (Accessors) المعقدة.
-     * هذا المنطق يجب أن يكون في مكان آخر (مثل Services) إذا احتجناه،
-     * وليس في النموذج نفسه لتحسين الأداء والحفاظ على فصل المسؤوليات.
-     */
-    // public function getReturnedQuantityAttribute() { ... } // <-- محذوف
-    // public function getSoldQuantityAttribute() { ... } // <-- محذوف
-    // public function getAvailableReturnQuantityAttribute() { ... } // <-- محذوف
-    // public function getProductNameAttribute() { ... } // <-- محذوف
 }

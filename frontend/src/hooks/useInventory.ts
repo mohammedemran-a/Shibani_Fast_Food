@@ -1,27 +1,44 @@
 import { useQuery } from '@tanstack/react-query';
-import { fetchInventoryItems, InventoryItem } from '@/api/inventoryService';
+import { apiClient } from '@/api/apiClient'; // تأكد من المسار الصحيح
 
-/**
- * ✅ [تعديل] Hook مخصص لجلب بيانات المخزون مع دعم للبحث
- * 
- * @param search - نص البحث الذي يتم تمريره من المكون
- */
-export const useInventory = (search: string) => {
-  const { data: items = [], isLoading, refetch } = useQuery<InventoryItem[], Error>({
-    // ✅ مفتاح الاستعلام يتضمن الآن نص البحث،
-    // بحيث يتم إعادة الجلب تلقائيًا عند تغير البحث
-    queryKey: ['inventoryItems', search], 
-    
-    // ✅ تمرير كائن البحث إلى دالة الجلب
-    queryFn: () => fetchInventoryItems({ search }),
+// تأكد من أن هذا النوع يتطابق مع ما يرسله المتحكم
+export interface InventoryItem {
+  id: number;
+  name: string;
+  category: string;
+  unit: string;
+  currentQty: number;
+  minQty: number;
+  costPerUnit: number;
+}
 
-    // ✅ (اختياري) إضافة placeholderData لتحسين تجربة المستخدم
-    placeholderData: (previousData) => previousData,
+// الخدمة التي تجلب بيانات المخزون
+const getInventory = async (search: string = ''): Promise<InventoryItem[]> => {
+  const response = await apiClient.get('/inventory', {
+    // ✅✅✅ هذا هو التعديل الحاسم ✅✅✅
+    // إرسال مصطلح البحث إلى الواجهة الخلفية
+    params: {
+      search: search,
+    },
+  });
+  return response.data;
+};
+
+// الـ Hook الذي يستخدم الخدمة
+export const useInventory = (searchTerm: string) => {
+  const { data, isLoading, isError, refetch } = useQuery({
+    // ✅ مفتاح الكاش يجب أن يتضمن مصطلح البحث ليعمل بشكل صحيح
+    queryKey: ['inventory', searchTerm],
+    queryFn: () => getInventory(searchTerm),
+    // خيارات إضافية لتحسين تجربة المستخدم
+    placeholderData: (previousData) => previousData, // إبقاء البيانات القديمة ظاهرة أثناء التحميل
+    staleTime: 5 * 60 * 1000, // 5 دقائق قبل أن تعتبر البيانات قديمة
   });
 
   return {
-    items,
+    items: data ?? [], // إرجاع مصفوفة فارغة دائمًا لتجنب الأخطاء
     isLoading,
+    isError,
     refetch,
   };
 };

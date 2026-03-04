@@ -1,39 +1,33 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Check, ChevronsUpDown, Loader2 } from 'lucide-react';
-
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-
-import { searchProducts } from '@/api'; 
-import { Product } from '@/types';
+import { searchProducts, Product } from '@/api/productService';
 import { useDebounce } from '@/hooks/useDebounce';
 
+// ✅ [تعديل] توحيد الخصائص لتكون واضحة وقابلة لإعادة الاستخدام
 interface ProductSearchComboboxProps {
-  onSelect: (product: Product) => void;
-  productType: 'Sellable' | 'RawMaterial';
-  placeholder?: string;
+  value: Product | null; // القيمة الحالية المختارة
+  onSelect: (product: Product | null) => void; // دالة التحديث عند الاختيار
+  productType?: 'Sellable' | 'RawMaterial'; // نوع المنتج للبحث (اختياري)
 }
 
 export function ProductSearchCombobox({ 
+  value, 
   onSelect, 
-  productType,
-  placeholder = "ابحث عن مادة خام..."
+  productType 
 }: ProductSearchComboboxProps) {
   const [open, setOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
-  // ✅✅✅ هذا هو المنطق الجديد ✅✅✅
-  // يتم جلب البيانات الأولية (عندما يكون debouncedSearchQuery فارغًا)
-  // أو نتائج البحث (عندما يحتوي debouncedSearchQuery على قيمة).
   const { data: products = [], isLoading } = useQuery({
     queryKey: ['productSearch', debouncedSearchQuery, productType],
     queryFn: () => searchProducts(debouncedSearchQuery, productType),
-    // جلب البيانات فقط إذا كانت القائمة مفتوحة
-    enabled: open, 
+    enabled: open, // جلب البيانات فقط إذا كانت القائمة مفتوحة
   });
 
   return (
@@ -45,7 +39,7 @@ export function ProductSearchCombobox({
           aria-expanded={open}
           className="w-full justify-between"
         >
-          <span className="truncate">{placeholder}</span>
+          <span className="truncate">{value ? value.name : "ابحث عن منتج..."}</span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
@@ -72,11 +66,12 @@ export function ProductSearchCombobox({
                   key={product.id}
                   value={product.name}
                   onSelect={() => {
-                    onSelect(product);
-                    setSearchQuery(''); // تفريغ حقل البحث بعد الاختيار
+                    onSelect(product); // ✅ استدعاء الدالة الممررة
+                    setSearchQuery('');
                     setOpen(false);
                   }}
                 >
+                  <Check className={cn("mr-2 h-4 w-4", value?.id === product.id ? "opacity-100" : "opacity-0")} />
                   {product.name}
                 </CommandItem>
               ))}

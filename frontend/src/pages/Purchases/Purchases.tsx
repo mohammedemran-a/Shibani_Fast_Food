@@ -38,11 +38,16 @@ const PurchasesContent: React.FC = () => {
     }),
   });
 
-  // حذف فاتورة
+  // ✅✅✅ هذا هو التعديل الوحيد والمهم ✅✅✅
   const deleteMutation = useMutation({
     mutationFn: (id: number) => purchaseService.deletePurchase(id),
     onSuccess: () => {
+      // إبطال كاش المشتريات (لإزالة الفاتورة من القائمة الحالية)
       queryClient.invalidateQueries({ queryKey: ['purchases'] });
+      
+      // إبطال كاش المخزون (لإجباره على التحديث في صفحته)
+      queryClient.invalidateQueries({ queryKey: ['inventory'] });
+
       toast.success('تم حذف الفاتورة بنجاح');
     },
     onError: (error: any) => {

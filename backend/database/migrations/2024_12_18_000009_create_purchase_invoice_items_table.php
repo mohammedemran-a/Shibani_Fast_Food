@@ -6,31 +6,24 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * ✅ جدول تفاصيل فواتير الشراء (النسخة النهائية والمحدثة)
-     * 
-     * يسجل كل صنف مخزون تم شراؤه في فاتورة معينة.
-     */
     public function up(): void
     {
         Schema::create('purchase_invoice_items', function (Blueprint $table) {
             $table->id();
+            
+            // ✅✅✅ هذا هو التصحيح الحاسم ✅✅✅
+            // علاقة الحذف المتتالي يجب أن تكون هنا على الفاتورة
             $table->foreignId('purchase_invoice_id')->constrained('purchase_invoices')->onDelete('cascade');
             
-            // ✅ [تعديل] الربط مع جدول أصناف المخزون
-            $table->foreignId('inventory_item_id')->constrained('inventory_items')->onDelete('cascade');
+            // الربط مع جدول المنتجات (بدون حذف متتالي من هنا)
+            // هذا يمنع حذف المنتج عند حذف الفاتورة، وهو السلوك الصحيح
+            $table->foreignId('product_id')->constrained('products');
             
-            // الكمية المشتراة (decimal لدعم الأوزان)
             $table->decimal('quantity', 10, 2);
-            
-            // سعر شراء الوحدة الواحدة من الصنف
             $table->decimal('unit_price', 10, 2);
-            
-            // الإجمالي (يمكن حسابه، لكن وجوده يسهل مراجعة الفواتير)
             $table->decimal('total_price', 10, 2);
-
-            $table->text('notes')->nullable(); // إضافة حقل الملاحظات
-            
+            $table->date('expiry_date')->nullable();
+            $table->text('notes')->nullable();
             $table->timestamps();
         });
     }
